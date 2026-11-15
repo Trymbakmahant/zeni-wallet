@@ -1,0 +1,51 @@
+# Hackathon Architecture & Rulebook (Confidential / Local Reference)
+EXTENSION_ARCHITECTURE.md
+IOS_WALLET_ARCHITECTURE.md
+PROJECT_RULEBOOK.md
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build & Bundles
+dist/
+build/
+out/
+.next/
+.turbo/
+
+# Foundry / Solidity
+broadcast/
+cache/
+artifacts/
+
+# Environment Variables & Keys
+.env
+.env.*
+!.env.example
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Xcode & Apple Swift
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+*.xcworkspace/*
+!*.xcworkspace/contents.xcworkspacedata
+xcuserdata/
+DerivedData/
+.build/
+*.xcuserstate
+
+# Logs & Diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
