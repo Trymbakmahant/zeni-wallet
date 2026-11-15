@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import {
-  ShieldCheck,
-  Send,
+  ArrowUpRight,
+  ArrowDownLeft,
   ArrowUpDown,
-  QrCode,
-  Flame,
-  Copy,
-  Check,
-  Sparkles,
   RotateCw,
+  Sparkles,
+  CheckCircle2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
@@ -18,8 +16,8 @@ import { SwapModal } from "./SwapModal";
 import { ApprovalModal } from "./ApprovalModal";
 
 export const PortfolioView: React.FC = () => {
-  const { activeAddress, cosmosAddress, tokens, activeModal, openModal, pendingApprovals, refreshState } = useWallet();
-  const [copied, setCopied] = useState(false);
+  const { tokens, activeModal, openModal, pendingApprovals, refreshState } = useWallet();
+  const [activeSubTab, setActiveSubTab] = useState<"tokens" | "defi" | "nfts">("tokens");
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -31,137 +29,197 @@ export const PortfolioView: React.FC = () => {
     }
   };
 
-  const copyAddress = () => {
-    if (!activeAddress) return;
-    navigator.clipboard.writeText(activeAddress);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const totalUsd = tokens
     .reduce((acc, t) => acc + (parseFloat(t.usdValue.replace("$", "").replace(",", "")) || 0), 0)
     .toLocaleString("en-US", { style: "currency", currency: "USD" });
 
   return (
-    <div className="flex flex-col space-y-4 pb-3">
-      {/* Top Address & Network Header */}
-      <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#E06341] animate-pulse"></span>
-          <span className="text-[11px] font-semibold text-zinc-300">QoreChain Diana</span>
-          <button
-            onClick={handleRefresh}
-            title="Refresh Live On-Chain Balance"
-            className="p-1 rounded-md hover:bg-[#18181B] text-zinc-400 hover:text-white transition-all ml-0.5 cursor-pointer"
-          >
-            <RotateCw className={`w-3 h-3 ${refreshing ? "animate-spin text-[#E06341]" : ""}`} />
-          </button>
-        </div>
-
-        {/* Copy Address Pill */}
-        <button
-          onClick={copyAddress}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0D0D10] hover:bg-[#18181B] text-xs font-mono transition-colors border border-[#222226] text-zinc-300 cursor-pointer"
-          title="Click to copy 0x address"
-        >
-          {activeAddress ? `${activeAddress.slice(0, 6)}...${activeAddress.slice(-4)}` : "Loading..."}
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
-        </button>
-      </div>
-
-      {/* Portfolio Balance Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#141416] via-[#0D0D0F] to-[#000000] p-5 border border-[#222226] shadow-2xl shrink-0">
-        <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-          <ShieldCheck className="w-24 h-24 text-[#E06341]" />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-zinc-400 font-semibold">Total Portfolio</span>
-          <span className="text-[10px] bg-[#D45D3E]/15 text-[#E06341] border border-[#D45D3E]/30 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3 text-[#E06341]" /> PQC Protected
-          </span>
-        </div>
-        <div className="text-3xl font-extrabold tracking-tight mt-1.5 text-white font-mono">
+    <div className="flex flex-col space-y-3 pb-3">
+      {/* 1. Hero Balance Section - MetaMask Style */}
+      <div className="pt-2 pb-1 px-1">
+        <div className="text-[38px] font-bold tracking-tight text-white font-sans leading-none">
           {totalUsd}
         </div>
-        <div className="flex items-center gap-1.5 mt-2.5 text-xs text-zinc-300">
-          <Sparkles className="w-3.5 h-3.5 text-[#E06341]" />
-          <span>ML-DSA-87 Quantum Vault Active</span>
+        <div className="flex items-center gap-2 text-xs mt-2 font-medium">
+          <span className="text-emerald-400 font-mono">+$0.00 (+0.00%)</span>
+          <span className="text-zinc-600">•</span>
+          <span className="text-zinc-400 text-[11px] flex items-center gap-1 font-mono">
+            <Sparkles className="w-3 h-3 text-[#E06341]" /> ML-DSA-87 Protected
+          </span>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-4 gap-2 shrink-0">
+      {/* 2. Action Buttons Row: Send | Receive | Swap (MetaMask Squircles) */}
+      <div className="grid grid-cols-3 gap-2.5 pt-1 pb-1">
+        {/* Send */}
         <button
           onClick={() => openModal("send")}
-          className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-[#0D0D10] hover:bg-[#16161A] border border-[#222226] transition-all hover:scale-[1.02] text-xs font-medium cursor-pointer"
+          className="flex flex-col items-center justify-center py-3.5 px-2 rounded-2xl bg-[#141417] hover:bg-[#1E1E22] border border-[#222226] transition-all hover:scale-[1.02] cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-full bg-[#E06341]/15 text-[#E06341] flex items-center justify-center mb-1.5">
-            <Send className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white mb-1 group-hover:scale-110 transition-transform">
+            <ArrowUpRight className="w-5 h-5 text-white" />
           </div>
-          <span className="text-[11px] font-medium text-white">Send</span>
+          <span className="text-xs font-semibold text-white">Send</span>
         </button>
 
+        {/* Receive */}
         <button
           onClick={() => openModal("receive")}
-          className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-[#0D0D10] hover:bg-[#16161A] border border-[#222226] transition-all hover:scale-[1.02] text-xs font-medium cursor-pointer"
+          className="flex flex-col items-center justify-center py-3.5 px-2 rounded-2xl bg-[#141417] hover:bg-[#1E1E22] border border-[#222226] transition-all hover:scale-[1.02] cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-full bg-[#E06341]/15 text-[#E06341] flex items-center justify-center mb-1.5">
-            <QrCode className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white mb-1 group-hover:scale-110 transition-transform">
+            <ArrowDownLeft className="w-5 h-5 text-white" />
           </div>
-          <span className="text-[11px] font-medium text-white">Receive</span>
+          <span className="text-xs font-semibold text-white">Receive</span>
         </button>
 
+        {/* Swap */}
         <button
           onClick={() => openModal("swap")}
-          className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-[#0D0D10] hover:bg-[#16161A] border border-[#222226] transition-all hover:scale-[1.02] text-xs font-medium cursor-pointer"
+          className="flex flex-col items-center justify-center py-3.5 px-2 rounded-2xl bg-[#141417] hover:bg-[#1E1E22] border border-[#222226] transition-all hover:scale-[1.02] cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-full bg-[#E06341]/15 text-[#E06341] flex items-center justify-center mb-1.5">
-            <ArrowUpDown className="w-4 h-4" />
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white mb-1 group-hover:scale-110 transition-transform">
+            <ArrowUpDown className="w-5 h-5 text-white" />
           </div>
-          <span className="text-[11px] font-medium text-white">Swap</span>
+          <span className="text-xs font-semibold text-white">Swap</span>
         </button>
+      </div>
 
+      {/* 3. Faucet Card (MetaMask Money/Yield style) */}
+      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#111114] border border-[#222226] my-1">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="font-semibold text-white">Diana Faucet</span>
+            <span className="text-[#E06341] font-mono font-medium text-[10px] bg-[#E06341]/10 px-1.5 py-0.2 rounded-full">
+              Free Gas
+            </span>
+          </div>
+          <div className="text-xs font-bold text-zinc-300 font-mono mt-0.5">
+            Claim testnet QOR & tokens
+          </div>
+        </div>
         <a
           href="https://build.qorechain.io"
           target="_blank"
           rel="noreferrer"
-          className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-[#0D0D10] hover:bg-[#16161A] border border-[#222226] transition-all hover:scale-[1.02] text-xs font-medium cursor-pointer"
+          className="py-1.5 px-4 rounded-full bg-white hover:bg-zinc-200 text-black text-xs font-bold transition-colors cursor-pointer"
         >
-          <div className="w-10 h-10 rounded-full bg-amber-500/15 text-amber-400 flex items-center justify-center mb-1.5">
-            <Flame className="w-4 h-4" />
-          </div>
-          <span className="text-[11px] font-medium text-white">Faucet</span>
+          Claim
         </a>
       </div>
 
-      {/* Asset Token List */}
-      <div className="pt-1">
-        <div className="flex justify-between items-center mb-2.5 px-1">
-          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Your Assets</span>
-          <span className="text-[10px] text-zinc-400 font-mono">QoreChain Diana</span>
-        </div>
-        <div className="flex flex-col gap-2">
-          {tokens.map((token) => (
-            <div
-              key={token.symbol}
-              onClick={() => openModal("send")}
-              className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0D0D10] hover:bg-[#151518] border border-[#1E1E22] transition-all hover:border-[#2E2E34] cursor-pointer group"
+      {/* 4. Tabs: Tokens | DeFi | NFTs (MetaMask style) */}
+      <div className="flex items-center border-b border-[#1E1E22] pt-2 text-sm">
+        <button
+          onClick={() => setActiveSubTab("tokens")}
+          className={`pb-2 px-1 font-semibold transition-colors mr-6 relative cursor-pointer ${
+            activeSubTab === "tokens" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          Tokens
+          {activeSubTab === "tokens" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveSubTab("defi")}
+          className={`pb-2 px-1 font-semibold transition-colors mr-6 relative cursor-pointer ${
+            activeSubTab === "defi" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          DeFi
+          {activeSubTab === "defi" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveSubTab("nfts")}
+          className={`pb-2 px-1 font-semibold transition-colors relative cursor-pointer ${
+            activeSubTab === "nfts" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          NFTs
+          {activeSubTab === "nfts" && (
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white rounded-full" />
+          )}
+        </button>
+      </div>
+
+      {/* 5. Sub-Tab Content */}
+      {activeSubTab === "tokens" && (
+        <div className="space-y-2 pt-1">
+          {/* Network Filter Pill (MetaMask style) */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#141416] border border-[#222226] text-[11px] text-zinc-300 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>QoreChain Diana</span>
+            </div>
+
+            <button
+              onClick={handleRefresh}
+              title="Refresh balances"
+              className="p-1 rounded-lg hover:bg-[#141416] text-zinc-400 hover:text-white transition-colors cursor-pointer"
             >
-              <div className="flex items-center gap-3">
-                <CryptoIcon symbol={token.symbol} className="w-9 h-9 shrink-0 transition-transform group-hover:scale-105 shadow-sm" />
-                <div>
-                  <div className="font-bold text-sm leading-tight text-white">{token.symbol}</div>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">{token.name}</div>
+              <RotateCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-[#E06341]" : ""}`} />
+            </button>
+          </div>
+
+          {/* Token List (MetaMask style borderless list with hover) */}
+          <div className="flex flex-col divide-y divide-[#18181B]/60">
+            {tokens.map((token) => (
+              <div
+                key={token.symbol}
+                onClick={() => openModal("send")}
+                className="flex items-center justify-between py-2.5 px-2 rounded-xl hover:bg-[#121215] transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <CryptoIcon
+                      symbol={token.symbol}
+                      className="w-9 h-9 shrink-0 transition-transform group-hover:scale-105"
+                    />
+                    {/* Small network badge on bottom right of token icon */}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-black border border-[#222226] flex items-center justify-center">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E06341]" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-sm text-white leading-tight">
+                        {token.name}
+                      </span>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#E06341]" />
+                    </div>
+                    <div className="text-[11px] text-emerald-400 font-mono mt-0.5 leading-none">
+                      +0.00%
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right font-mono">
+                  <div className="font-bold text-sm leading-tight text-white">{token.usdValue}</div>
+                  <div className="text-[11px] text-zinc-400 mt-0.5 leading-none">
+                    {token.balance} {token.symbol}
+                  </div>
                 </div>
               </div>
-              <div className="text-right font-mono">
-                <div className="font-bold text-sm leading-tight text-white">{token.balance}</div>
-                <div className="text-[11px] text-zinc-400 mt-0.5">{token.usdValue}</div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeSubTab === "defi" && (
+        <div className="py-8 text-center text-zinc-500 text-xs flex flex-col items-center justify-center space-y-1">
+          <span className="font-medium text-zinc-400">No DeFi positions found</span>
+          <span>Interact with QoreChain DEX pools or liquidity vaults to view positions here.</span>
+        </div>
+      )}
+
+      {activeSubTab === "nfts" && (
+        <div className="py-8 text-center text-zinc-500 text-xs flex flex-col items-center justify-center space-y-1">
+          <span className="font-medium text-zinc-400">No NFTs yet</span>
+          <span>Minted or transferred post-quantum NFTs on QoreChain will appear here.</span>
+        </div>
+      )}
 
       {/* Modals */}
       {activeModal === "send" && <SendModal />}
