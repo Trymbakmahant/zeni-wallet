@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Send, Flame, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
+import { CryptoIcon } from "../components/CryptoIcon";
 
 export const SendModal: React.FC = () => {
   const { openModal, tokens, sendTokens } = useWallet();
@@ -87,17 +88,20 @@ export const SendModal: React.FC = () => {
             {/* Asset Selector */}
             <div>
               <label className="text-xs text-[#8892B0] block mb-1">Asset</label>
-              <select
-                value={selectedToken}
-                onChange={(e) => setSelectedToken(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-[#20283E] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#9939FF]"
-              >
-                {tokens.map((t) => (
-                  <option key={t.symbol} value={t.symbol}>
-                    {t.symbol} — {t.name} (Bal: {t.balance})
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center bg-[#0B0E14] border border-[#20283E] rounded-xl px-3 py-2">
+                <CryptoIcon symbol={selectedToken} className="w-6 h-6 shrink-0 mr-2" />
+                <select
+                  value={selectedToken}
+                  onChange={(e) => setSelectedToken(e.target.value)}
+                  className="w-full bg-transparent text-sm font-semibold focus:outline-none text-white cursor-pointer"
+                >
+                  {tokens.map((t) => (
+                    <option key={t.symbol} value={t.symbol} className="bg-[#141824] text-white">
+                      {t.symbol} — {t.name} (Bal: {t.balance})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Recipient */}

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, ArrowUpDown, Flame, ShieldCheck, CheckCircle2, Settings2 } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
+import { CryptoIcon } from "../components/CryptoIcon";
 
 export const SwapModal: React.FC = () => {
   const { openModal, tokens, executeSwap } = useWallet();
@@ -152,17 +153,20 @@ export const SwapModal: React.FC = () => {
                   required
                   className="w-full bg-transparent text-xl font-bold font-mono focus:outline-none text-white"
                 />
-                <select
-                  value={tokenIn}
-                  onChange={(e) => setTokenIn(e.target.value)}
-                  className="bg-[#20283E] rounded-xl px-2.5 py-1 text-sm font-semibold focus:outline-none text-white"
-                >
-                  {tokens.map((t) => (
-                    <option key={t.symbol} value={t.symbol} disabled={t.symbol === tokenOut}>
-                      {t.symbol}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center bg-[#20283E] rounded-xl px-2.5 py-1.5 shrink-0">
+                  <CryptoIcon symbol={tokenIn} className="w-5 h-5 mr-1.5 shrink-0" />
+                  <select
+                    value={tokenIn}
+                    onChange={(e) => setTokenIn(e.target.value)}
+                    className="bg-transparent text-sm font-semibold focus:outline-none text-white cursor-pointer"
+                  >
+                    {tokens.map((t) => (
+                      <option key={t.symbol} value={t.symbol} disabled={t.symbol === tokenOut} className="bg-[#141824] text-white">
+                        {t.symbol}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -185,17 +189,20 @@ export const SwapModal: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-full text-xl font-bold font-mono text-[#00F0FF]">{amountOut}</div>
-                <select
-                  value={tokenOut}
-                  onChange={(e) => setTokenOut(e.target.value)}
-                  className="bg-[#20283E] rounded-xl px-2.5 py-1 text-sm font-semibold focus:outline-none text-white"
-                >
-                  {tokens.map((t) => (
-                    <option key={t.symbol} value={t.symbol} disabled={t.symbol === tokenIn}>
-                      {t.symbol}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center bg-[#20283E] rounded-xl px-2.5 py-1.5 shrink-0">
+                  <CryptoIcon symbol={tokenOut} className="w-5 h-5 mr-1.5 shrink-0" />
+                  <select
+                    value={tokenOut}
+                    onChange={(e) => setTokenOut(e.target.value)}
+                    className="bg-transparent text-sm font-semibold focus:outline-none text-white cursor-pointer"
+                  >
+                    {tokens.map((t) => (
+                      <option key={t.symbol} value={t.symbol} disabled={t.symbol === tokenIn} className="bg-[#141824] text-white">
+                        {t.symbol}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
