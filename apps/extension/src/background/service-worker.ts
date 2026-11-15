@@ -261,12 +261,17 @@ class BackgroundController {
           "tokenBalances",
         ]);
 
-        const currentAddress = active?.classicalAddress || stored.activeAddress || null;
+        const currentAddress =
+          active?.classicalAddress ||
+          stored.activeAddress ||
+          active?.cosmosAddress ||
+          stored.cosmosAddress ||
+          null;
         let onChainBalance = "0.0000";
 
         if (currentAddress) {
           try {
-            const bal = await this.client.getBalance(currentAddress);
+            const bal = await this.client.getNativeBalance(currentAddress);
             onChainBalance = formatEther(bal);
           } catch (e) {
             console.warn("Could not query live RPC balance:", e);
@@ -315,11 +320,16 @@ class BackgroundController {
 
       case "GET_BALANCE": {
         const active = this.getActiveAccount();
-        const stored = await chrome.storage.local.get(["activeAddress"]);
-        const target = message.address || active?.classicalAddress || stored.activeAddress;
+        const stored = await chrome.storage.local.get(["activeAddress", "cosmosAddress"]);
+        const target =
+          message.address ||
+          active?.classicalAddress ||
+          stored.activeAddress ||
+          active?.cosmosAddress ||
+          stored.cosmosAddress;
         if (!target) return { balance: "0.0000" };
         try {
-          const bal = await this.client.getBalance(target);
+          const bal = await this.client.getNativeBalance(target);
           return { balance: formatEther(bal) };
         } catch (e: any) {
           return { balance: "0.0000", error: e?.message };

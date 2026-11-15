@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { UserOperationData } from "../account/userop.js";
+import { bech32ToEvmAddress } from "../crypto/derivation.js";
 
 export interface SponsorOpResponse {
   paymasterAndData: string;
@@ -31,10 +32,20 @@ export class QoreChainClient {
   }
 
   /**
-   * Fetches native QOR balance
+   * Fetches native QOR balance. Accepts both EVM 0x... and Cosmos qor1... addresses.
    */
   async getNativeBalance(address: string): Promise<bigint> {
-    return this.provider.getBalance(address);
+    const evmAddr = (address.startsWith("qor1") || address.startsWith("cosmos1"))
+      ? bech32ToEvmAddress(address)
+      : address;
+    return this.provider.getBalance(evmAddr);
+  }
+
+  /**
+   * Alias for getNativeBalance
+   */
+  async getBalance(address: string): Promise<bigint> {
+    return this.getNativeBalance(address);
   }
 
   /**
@@ -46,12 +57,15 @@ export class QoreChainClient {
       if (!code || code === "0x") {
         return 0n;
       }
+      const evmAddr = (accountAddress.startsWith("qor1") || accountAddress.startsWith("cosmos1"))
+        ? bech32ToEvmAddress(accountAddress)
+        : accountAddress;
       const contract = new ethers.Contract(
         tokenAddress,
         ["function balanceOf(address) view returns (uint256)"],
         this.provider
       );
-      return await contract.balanceOf(accountAddress);
+      return await contract.balanceOf(evmAddr);
     } catch {
       return 0n;
     }
