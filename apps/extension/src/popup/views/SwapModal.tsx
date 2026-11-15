@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ArrowUpDown, Flame, ShieldCheck, CheckCircle2, Settings2 } from "lucide-react";
+import { X, ArrowUpDown, Flame, ShieldCheck, CheckCircle2, Settings2, ChevronDown, Check } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
 
@@ -10,6 +10,7 @@ export const SwapModal: React.FC = () => {
   const [amountIn, setAmountIn] = useState("");
   const [slippage, setSlippage] = useState("0.5");
   const [showSettings, setShowSettings] = useState(false);
+  const [selectingTokenFor, setSelectingTokenFor] = useState<"in" | "out" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +66,73 @@ export const SwapModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex flex-col justify-end">
-      <div className="bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto animate-slide-up">
+      <div className="relative bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto animate-slide-up">
+        {/* Custom Token Selection Drawer */}
+        {selectingTokenFor && (
+          <div className="absolute inset-0 bg-[#0D0D10] z-30 flex flex-col p-5 rounded-t-3xl animate-fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-[#222226]">
+              <div>
+                <h3 className="font-bold text-base text-white">Select a Token</h3>
+                <span className="text-[11px] text-zinc-400">
+                  Choose token to {selectingTokenFor === "in" ? "pay" : "receive"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectingTokenFor(null)}
+                className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-3 space-y-1.5 pr-0.5">
+              {tokens.map((token) => {
+                const isSelected = selectingTokenFor === "in" ? tokenIn === token.symbol : tokenOut === token.symbol;
+                const isOpposite = selectingTokenFor === "in" ? tokenOut === token.symbol : tokenIn === token.symbol;
+
+                return (
+                  <button
+                    key={token.symbol}
+                    type="button"
+                    disabled={isOpposite}
+                    onClick={() => {
+                      if (selectingTokenFor === "in") {
+                        setTokenIn(token.symbol);
+                      } else {
+                        setTokenOut(token.symbol);
+                      }
+                      setSelectingTokenFor(null);
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#18181C] border border-[#E06341]/50 shadow-sm"
+                        : isOpposite
+                        ? "opacity-35 cursor-not-allowed border border-transparent"
+                        : "hover:bg-[#18181C] border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <CryptoIcon symbol={token.symbol} className="w-9 h-9 shrink-0" />
+                      <div className="text-left">
+                        <div className="flex items-center gap-1.5 font-bold text-sm text-white">
+                          <span>{token.symbol}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#E06341]" />}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">{token.name}</div>
+                      </div>
+                    </div>
+                    <div className="text-right font-mono">
+                      <div className="font-bold text-sm text-white">{token.balance}</div>
+                      <div className="text-[11px] text-zinc-500">{token.usdValue}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#222226]">
           <div className="flex items-center gap-2">
@@ -80,13 +147,13 @@ export const SwapModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}
-              className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400"
+              className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400 cursor-pointer"
             >
               <Settings2 className="w-4 h-4" />
             </button>
             <button
               onClick={() => openModal(null)}
-              className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400"
+              className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -153,20 +220,15 @@ export const SwapModal: React.FC = () => {
                   required
                   className="w-full bg-transparent text-xl font-bold font-mono focus:outline-none text-white"
                 />
-                <div className="flex items-center bg-[#18181C] border border-[#27272A] rounded-xl px-2.5 py-1.5 shrink-0">
-                  <CryptoIcon symbol={tokenIn} className="w-5 h-5 mr-1.5 shrink-0" />
-                  <select
-                    value={tokenIn}
-                    onChange={(e) => setTokenIn(e.target.value)}
-                    className="bg-transparent text-sm font-semibold focus:outline-none text-white cursor-pointer"
-                  >
-                    {tokens.map((t) => (
-                      <option key={t.symbol} value={t.symbol} disabled={t.symbol === tokenOut} className="bg-[#0D0D10] text-white">
-                        {t.symbol}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectingTokenFor("in")}
+                  className="flex items-center gap-2 bg-[#18181C] hover:bg-[#222226] border border-[#27272A] rounded-2xl px-3 py-1.5 shrink-0 transition-all hover:scale-[1.02] cursor-pointer group"
+                >
+                  <CryptoIcon symbol={tokenIn} className="w-5 h-5 shrink-0" />
+                  <span className="font-bold text-sm text-white">{tokenIn}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
+                </button>
               </div>
             </div>
 
@@ -175,7 +237,7 @@ export const SwapModal: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSwitch}
-                className="w-8 h-8 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center border border-[#27272A] text-[#E06341] transition-transform hover:rotate-180 shadow-md"
+                className="w-8 h-8 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center border border-[#27272A] text-[#E06341] transition-transform hover:rotate-180 shadow-md cursor-pointer"
               >
                 <ArrowUpDown className="w-4 h-4" />
               </button>
@@ -189,20 +251,15 @@ export const SwapModal: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-full text-xl font-bold font-mono text-white">{amountOut}</div>
-                <div className="flex items-center bg-[#18181C] border border-[#27272A] rounded-xl px-2.5 py-1.5 shrink-0">
-                  <CryptoIcon symbol={tokenOut} className="w-5 h-5 mr-1.5 shrink-0" />
-                  <select
-                    value={tokenOut}
-                    onChange={(e) => setTokenOut(e.target.value)}
-                    className="bg-transparent text-sm font-semibold focus:outline-none text-white cursor-pointer"
-                  >
-                    {tokens.map((t) => (
-                      <option key={t.symbol} value={t.symbol} disabled={t.symbol === tokenIn} className="bg-[#0D0D10] text-white">
-                        {t.symbol}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectingTokenFor("out")}
+                  className="flex items-center gap-2 bg-[#18181C] hover:bg-[#222226] border border-[#27272A] rounded-2xl px-3 py-1.5 shrink-0 transition-all hover:scale-[1.02] cursor-pointer group"
+                >
+                  <CryptoIcon symbol={tokenOut} className="w-5 h-5 shrink-0" />
+                  <span className="font-bold text-sm text-white">{tokenOut}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
+                </button>
               </div>
             </div>
 

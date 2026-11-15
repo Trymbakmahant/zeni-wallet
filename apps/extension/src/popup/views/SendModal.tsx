@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Send, Flame, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Send, Flame, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
 
@@ -8,6 +8,7 @@ export const SendModal: React.FC = () => {
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [selectedToken, setSelectedToken] = useState("QOR");
+  const [showTokenSelect, setShowTokenSelect] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +47,63 @@ export const SendModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex flex-col justify-end">
-      <div className="bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto animate-slide-up">
+      <div className="relative bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto animate-slide-up">
+        {/* Custom Token Selection Drawer */}
+        {showTokenSelect && (
+          <div className="absolute inset-0 bg-[#0D0D10] z-30 flex flex-col p-5 rounded-t-3xl animate-fade-in">
+            <div className="flex items-center justify-between pb-3 border-b border-[#222226]">
+              <div>
+                <h3 className="font-bold text-base text-white">Select Asset</h3>
+                <span className="text-[11px] text-zinc-400">Choose token to send</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTokenSelect(false)}
+                className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-3 space-y-1.5 pr-0.5">
+              {tokens.map((token) => {
+                const isSelected = selectedToken === token.symbol;
+
+                return (
+                  <button
+                    key={token.symbol}
+                    type="button"
+                    onClick={() => {
+                      setSelectedToken(token.symbol);
+                      setShowTokenSelect(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#18181C] border border-[#E06341]/50 shadow-sm"
+                        : "hover:bg-[#18181C] border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <CryptoIcon symbol={token.symbol} className="w-9 h-9 shrink-0" />
+                      <div className="text-left">
+                        <div className="flex items-center gap-1.5 font-bold text-sm text-white">
+                          <span>{token.symbol}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#E06341]" />}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">{token.name}</div>
+                      </div>
+                    </div>
+                    <div className="text-right font-mono">
+                      <div className="font-bold text-sm text-white">{token.balance}</div>
+                      <div className="text-[11px] text-zinc-500">{token.usdValue}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#222226]">
           <div className="flex items-center gap-2">
@@ -88,20 +145,25 @@ export const SendModal: React.FC = () => {
             {/* Asset Selector */}
             <div>
               <label className="text-xs text-zinc-400 block mb-1">Asset</label>
-              <div className="flex items-center bg-black border border-[#222226] rounded-xl px-3 py-2">
-                <CryptoIcon symbol={selectedToken} className="w-6 h-6 shrink-0 mr-2" />
-                <select
-                  value={selectedToken}
-                  onChange={(e) => setSelectedToken(e.target.value)}
-                  className="w-full bg-transparent text-sm font-semibold focus:outline-none text-white cursor-pointer"
-                >
-                  {tokens.map((t) => (
-                    <option key={t.symbol} value={t.symbol} className="bg-[#0D0D10] text-white">
-                      {t.symbol} — {t.name} (Bal: {t.balance})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowTokenSelect(true)}
+                className="w-full flex items-center justify-between bg-black hover:bg-[#141416] border border-[#222226] hover:border-[#2E2E34] rounded-2xl px-3.5 py-2.5 transition-colors cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <CryptoIcon symbol={selectedToken} className="w-7 h-7 shrink-0" />
+                  <div className="text-left">
+                    <div className="font-bold text-sm text-white leading-tight">{activeToken.symbol}</div>
+                    <div className="text-[11px] text-zinc-400 mt-0.5">{activeToken.name}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right font-mono">
+                    <div className="text-xs font-bold text-white">Bal: {activeToken.balance}</div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
+                </div>
+              </button>
             </div>
 
             {/* Recipient */}
