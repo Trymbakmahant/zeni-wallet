@@ -258,6 +258,7 @@ class BackgroundController {
           "activeAddress",
           "cosmosAddress",
           "pqcPublicKeyHash",
+          "tokenBalances",
         ]);
 
         const currentAddress = active?.classicalAddress || stored.activeAddress || null;
@@ -272,6 +273,35 @@ class BackgroundController {
           }
         }
 
+        // Secondary token balances start strictly at 0 until funded/swapped
+        const savedTokenBalances = stored.tokenBalances || {
+          fUSD: "0.00",
+          fETH: "0.0000",
+          fBTC: "0.0000",
+        };
+
+        // Query on-chain ERC20 contracts if deployed
+        if (currentAddress) {
+          try {
+            const fusdRaw = await this.client.getTokenBalance(QORECHAIN_CONFIG.contracts.fUSD, currentAddress);
+            if (fusdRaw > 0n) {
+              savedTokenBalances.fUSD = formatEther(fusdRaw);
+            }
+          } catch {}
+          try {
+            const fethRaw = await this.client.getTokenBalance(QORECHAIN_CONFIG.contracts.fETH, currentAddress);
+            if (fethRaw > 0n) {
+              savedTokenBalances.fETH = formatEther(fethRaw);
+            }
+          } catch {}
+          try {
+            const fbtcRaw = await this.client.getTokenBalance(QORECHAIN_CONFIG.contracts.fBTC, currentAddress);
+            if (fbtcRaw > 0n) {
+              savedTokenBalances.fBTC = (Number(fbtcRaw) / 1e8).toFixed(4);
+            }
+          } catch {}
+        }
+
         return {
           isInitialized: initialized,
           isUnlocked: unlocked,
@@ -279,6 +309,7 @@ class BackgroundController {
           cosmosAddress: active?.cosmosAddress || stored.cosmosAddress || null,
           pqcPublicKeyHash: active?.pqcPublicKeyHash || stored.pqcPublicKeyHash || null,
           onChainBalance,
+          tokenBalances: savedTokenBalances,
         };
       }
 
@@ -378,6 +409,20 @@ class BackgroundController {
         // Returns deterministic transaction confirmation hash
         const txHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 
+        // Deduct transfer amount from local token balance if secondary token
+        if (token !== "QOR") {
+          const stored = await chrome.storage.local.get(["tokenBalances"]);
+          const balances = stored.tokenBalances || {
+            fUSD: "0.00",
+            fETH: "0.0000",
+            fBTC: "0.0000",
+          };
+          const current = parseFloat(balances[token] || "0");
+          const dec = token === "fUSD" ? 2 : 4;
+          balances[token] = Math.max(0, current - (parseFloat(amount) || 0)).toFixed(dec);
+          await chrome.storage.local.set({ tokenBalances: balances });
+        }
+
         // Store in activity history
         const historyData = await chrome.storage.local.get(["activityHistory"]);
         const history = historyData.activityHistory || [];
@@ -403,6 +448,28 @@ class BackgroundController {
 
         const txHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 
+        // Update stored token balances reflecting the swap
+        const stored = await chrome.storage.local.get(["tokenBalances"]);
+        const balances = stored.tokenBalances || {
+          fUSD: "0.00",
+          fETH: "0.0000",
+          fBTC: "0.0000",
+        };
+        const inVal = parseFloat(amountIn) || 0;
+        const outVal = parseFloat(amountOut) || 0;
+
+        if (tokenIn !== "QOR") {
+          const currentIn = parseFloat(balances[tokenIn] || "0");
+          const decIn = tokenIn === "fUSD" ? 2 : 4;
+          balances[tokenIn] = Math.max(0, currentIn - inVal).toFixed(decIn);
+        }
+        if (tokenOut !== "QOR") {
+          const currentOut = parseFloat(balances[tokenOut] || "0");
+          const decOut = tokenOut === "fUSD" ? 2 : 4;
+          balances[tokenOut] = (currentOut + outVal).toFixed(decOut);
+        }
+        await chrome.storage.local.set({ tokenBalances: balances });
+
         const historyData = await chrome.storage.local.get(["activityHistory"]);
         const history = historyData.activityHistory || [];
         history.unshift({
@@ -418,7 +485,7 @@ class BackgroundController {
         });
         await chrome.storage.local.set({ activityHistory: history.slice(0, 50) });
 
-        return { txHash };
+        return { txHash, tokenBalances: balances };
       }
 
       case "GET_ACTIVITY": {

@@ -22,10 +22,10 @@ public final class AppState: ObservableObject {
     @Published public var activeAccount: PublicAccountInfo?
     @Published public var isUnlocked: Bool = false
     @Published public var tokens: [TokenItem] = [
-        TokenItem(symbol: "QOR", name: "QoreChain Native", balance: "142.50", usdValue: "$285.00", icon: "💎"),
-        TokenItem(symbol: "fUSD", name: "Faucet USD", balance: "520.00", usdValue: "$520.00", icon: "💵"),
-        TokenItem(symbol: "fETH", name: "Faucet Ethereum", balance: "1.25", usdValue: "$3,875.00", icon: "Ξ"),
-        TokenItem(symbol: "fBTC", name: "Faucet Bitcoin", balance: "0.084", usdValue: "$5,460.00", icon: "₿")
+        TokenItem(symbol: "QOR", name: "QoreChain Native", balance: "0.00", usdValue: "$0.00", icon: "💎"),
+        TokenItem(symbol: "fUSD", name: "Faucet USD", balance: "0.00", usdValue: "$0.00", icon: "💵"),
+        TokenItem(symbol: "fETH", name: "Faucet Ethereum", balance: "0.0000", usdValue: "$0.00", icon: "Ξ"),
+        TokenItem(symbol: "fBTC", name: "Faucet Bitcoin", balance: "0.0000", usdValue: "$0.00", icon: "₿")
     ]
 
     public init() {

@@ -38,15 +38,23 @@ export class QoreChainClient {
   }
 
   /**
-   * Fetches ERC-20 token balance
+   * Fetches ERC-20 token balance, defaulting to 0n if contract is undeployed or reverts
    */
   async getTokenBalance(tokenAddress: string, accountAddress: string): Promise<bigint> {
-    const contract = new ethers.Contract(
-      tokenAddress,
-      ["function balanceOf(address) view returns (uint256)"],
-      this.provider
-    );
-    return contract.balanceOf(accountAddress);
+    try {
+      const code = await this.provider.getCode(tokenAddress);
+      if (!code || code === "0x") {
+        return 0n;
+      }
+      const contract = new ethers.Contract(
+        tokenAddress,
+        ["function balanceOf(address) view returns (uint256)"],
+        this.provider
+      );
+      return await contract.balanceOf(accountAddress);
+    } catch {
+      return 0n;
+    }
   }
 
   /**
