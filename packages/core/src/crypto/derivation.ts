@@ -1,14 +1,17 @@
-import { mnemonicToSeedSync, validateMnemonic } from "@scure/bip39";
+import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english";
 import { HDKey } from "@scure/bip32";
 import { shake256 } from "@noble/hashes/sha3.js";
-import { ethers, keccak256 } from "ethers";
+import { bech32 } from "@scure/base";
+import { ethers, getBytes, keccak256 } from "ethers";
 
 export interface DerivedAccountKeys {
   classicalPrivateKey: string;
   classicalAddress: string;
+  cosmosAddress: string;
   pqcSeedHex: string;
   pqcContext: string;
+  pqcPublicKeyHash: string;
 }
 
 /**
@@ -23,11 +26,37 @@ export function normalizeMnemonic(rawMnemonic: string): string {
 }
 
 /**
+ * Generates a fresh 12-word BIP-39 mnemonic
+ */
+export function generateNewMnemonic(strength = 128): string {
+  return generateMnemonic(wordlist, strength);
+}
+
+/**
  * Validates a 12- or 24-word BIP-39 mnemonic
  */
 export function isValidMnemonic(mnemonic: string): boolean {
   const normalized = normalizeMnemonic(mnemonic);
   return validateMnemonic(normalized, wordlist);
+}
+
+/**
+ * Converts a 20-byte EVM hex address (0x...) into QoreChain Cosmos Bech32 format (qor1...)
+ */
+export function evmToBech32Address(evmAddress: string, prefix = "qor"): string {
+  const cleanHex = evmAddress.toLowerCase().replace(/^0x/, "");
+  const bytes = getBytes("0x" + cleanHex);
+  const words = bech32.toWords(bytes);
+  return bech32.encode(prefix, words);
+}
+
+/**
+ * Converts a QoreChain Cosmos Bech32 format (qor1...) into a 20-byte EVM hex address (0x...)
+ */
+export function bech32ToEvmAddress(bech32Address: string): string {
+  const decoded = bech32.decode(bech32Address as `${string}1${string}`);
+  const bytes = bech32.fromWords(decoded.words);
+  return ethers.hexlify(bytes);
 }
 
 /**
@@ -56,18 +85,22 @@ export function deriveAccountKeys(
   const classicalPrivateKey = "0x" + Buffer.from(child.privateKey).toString("hex");
   const classicalWallet = new ethers.Wallet(classicalPrivateKey);
   const classicalAddress = classicalWallet.address;
+  const cosmosAddress = evmToBech32Address(classicalAddress);
 
   // 3. Post-Quantum Seed Derivation using SHAKE-256
-  // Context string binds account address and credentials
-  const pqcContext = `qorechain:pqc:v1|${classicalAddress.toLowerCase()}|${cleanMnemonic}|${cleanPassphrase}`;
+  // Context string binds account address, Cosmos format, and credentials
+  const pqcContext = `qorechain:pqc:v1|${cosmosAddress}|${cleanMnemonic}|${cleanPassphrase}`;
   const seedBytes = shake256(new TextEncoder().encode(pqcContext), { dkLen: 32 });
   const pqcSeedHex = "0x" + Buffer.from(seedBytes).toString("hex");
+  const pqcPublicKeyHash = keccak256(seedBytes);
 
   return {
     classicalPrivateKey,
     classicalAddress,
+    cosmosAddress,
     pqcSeedHex,
     pqcContext,
+    pqcPublicKeyHash,
   };
 }
 
