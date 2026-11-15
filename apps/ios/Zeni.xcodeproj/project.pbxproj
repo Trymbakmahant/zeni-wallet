@@ -9,27 +9,27 @@
 /* Begin PBXBuildFile section */
 		AA0100012CE0000100000001 /* ZeniApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200012CE0000100000001 /* ZeniApp.swift */; };
 		AA0100022CE0000100000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200022CE0000100000001 /* AppState.swift */; };
-		AA0100032CE0000100000001 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200032CE0000100000001 /* KeychainManager.swift */; };
-		AA0100042CE0000100000001 /* SecureData.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200042CE0000100000001 /* SecureData.swift */; };
-		AA0100052CE0000100000001 /* KeyDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200052CE0000100000001 /* KeyDerivation.swift */; };
-		AA0100062CE0000100000001 /* HybridSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200062CE0000100000001 /* HybridSigner.swift */; };
-		AA0100072CE0000100000001 /* RPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200072CE0000100000001 /* RPCClient.swift */; };
 		AA0100082CE0000100000001 /* PortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200082CE0000100000001 /* PortfolioView.swift */; };
 		AA0100092CE0000100000001 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200092CE0000100000001 /* Colors.swift */; };
+		F2AE353930A995D200FE1DD4 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353830A995D200FE1DD4 /* KeychainManager.swift */; };
+		F2AE353B30A995D200FE1DD4 /* SecureData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353A30A995D200FE1DD4 /* SecureData.swift */; };
+		F2AE353D30A995D300FE1DD4 /* KeyDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353C30A995D300FE1DD4 /* KeyDerivation.swift */; };
+		F2AE353F30A995D300FE1DD4 /* HybridSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353E30A995D300FE1DD4 /* HybridSigner.swift */; };
+		F2AE354130A995D300FE1DD4 /* RPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE354030A995D300FE1DD4 /* RPCClient.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		AA0000012CE0000100000001 /* Zeni.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zeni.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0200012CE0000100000001 /* ZeniApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniApp.swift; sourceTree = "<group>"; };
 		AA0200022CE0000100000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		AA0200032CE0000100000001 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
-		AA0200042CE0000100000001 /* SecureData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureData.swift; sourceTree = "<group>"; };
-		AA0200052CE0000100000001 /* KeyDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDerivation.swift; sourceTree = "<group>"; };
-		AA0200062CE0000100000001 /* HybridSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridSigner.swift; sourceTree = "<group>"; };
-		AA0200072CE0000100000001 /* RPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCClient.swift; sourceTree = "<group>"; };
 		AA0200082CE0000100000001 /* PortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
 		AA0200092CE0000100000001 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		AA0200102CE0000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F2AE353830A995D200FE1DD4 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
+		F2AE353A30A995D200FE1DD4 /* SecureData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureData.swift; sourceTree = "<group>"; };
+		F2AE353C30A995D300FE1DD4 /* KeyDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDerivation.swift; sourceTree = "<group>"; };
+		F2AE353E30A995D300FE1DD4 /* HybridSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridSigner.swift; sourceTree = "<group>"; };
+		F2AE354030A995D300FE1DD4 /* RPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,7 +56,7 @@
 			children = (
 				AA0400042CE0000100000001 /* App */,
 				AA0400052CE0000100000001 /* Core */,
-				AA0400062CE0000100000001 /* Features */,
+				AA0400062CE0000100000001 /* Features/Portfolio/Views */,
 				AA0400072CE0000100000001 /* DesignSystem */,
 				AA0200102CE0000100000001 /* Info.plist */,
 			);
@@ -83,16 +83,14 @@
 		AA0400052CE0000100000001 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				AA0200032CE0000100000001 /* KeychainManager.swift */,
-				AA0200042CE0000100000001 /* SecureData.swift */,
-				AA0200052CE0000100000001 /* KeyDerivation.swift */,
-				AA0200062CE0000100000001 /* HybridSigner.swift */,
-				AA0200072CE0000100000001 /* RPCClient.swift */,
+				F2AE353530A995CA00FE1DD4 /* Security */,
+				F2AE353630A995CA00FE1DD4 /* Crypto */,
+				F2AE353730A995CA00FE1DD4 /* Network */,
 			);
 			path = Core;
 			sourceTree = "<group>";
 		};
-		AA0400062CE0000100000001 /* Features */ = {
+		AA0400062CE0000100000001 /* Features/Portfolio/Views */ = {
 			isa = PBXGroup;
 			children = (
 				AA0200082CE0000100000001 /* PortfolioView.swift */,
@@ -106,6 +104,32 @@
 				AA0200092CE0000100000001 /* Colors.swift */,
 			);
 			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		F2AE353530A995CA00FE1DD4 /* Security */ = {
+			isa = PBXGroup;
+			children = (
+				F2AE353830A995D200FE1DD4 /* KeychainManager.swift */,
+				F2AE353A30A995D200FE1DD4 /* SecureData.swift */,
+			);
+			path = Security;
+			sourceTree = "<group>";
+		};
+		F2AE353630A995CA00FE1DD4 /* Crypto */ = {
+			isa = PBXGroup;
+			children = (
+				F2AE353C30A995D300FE1DD4 /* KeyDerivation.swift */,
+				F2AE353E30A995D300FE1DD4 /* HybridSigner.swift */,
+			);
+			path = Crypto;
+			sourceTree = "<group>";
+		};
+		F2AE353730A995CA00FE1DD4 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				F2AE354030A995D300FE1DD4 /* RPCClient.swift */,
+			);
+			path = Network;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -175,15 +199,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F2AE354130A995D300FE1DD4 /* RPCClient.swift in Sources */,
 				AA0100012CE0000100000001 /* ZeniApp.swift in Sources */,
 				AA0100022CE0000100000001 /* AppState.swift in Sources */,
-				AA0100032CE0000100000001 /* KeychainManager.swift in Sources */,
-				AA0100042CE0000100000001 /* SecureData.swift in Sources */,
-				AA0100052CE0000100000001 /* KeyDerivation.swift in Sources */,
-				AA0100062CE0000100000001 /* HybridSigner.swift in Sources */,
-				AA0100072CE0000100000001 /* RPCClient.swift in Sources */,
+				F2AE353D30A995D300FE1DD4 /* KeyDerivation.swift in Sources */,
+				F2AE353F30A995D300FE1DD4 /* HybridSigner.swift in Sources */,
 				AA0100082CE0000100000001 /* PortfolioView.swift in Sources */,
 				AA0100092CE0000100000001 /* Colors.swift in Sources */,
+				F2AE353B30A995D200FE1DD4 /* SecureData.swift in Sources */,
+				F2AE353930A995D200FE1DD4 /* KeychainManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,7 +317,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = AA0900012CE0000100000001 /* Project object */;
 }
