@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ArrowUpDown, Flame, ShieldCheck, CheckCircle2, Settings2, ChevronDown, Check } from "lucide-react";
+import { X, ArrowUpDown, Fuel, ShieldCheck, CheckCircle2, Settings2, ChevronDown, Check } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
 
@@ -193,7 +193,7 @@ export const SwapModal: React.FC = () => {
               Tx: {txHash.slice(0, 16)}...{txHash.slice(-8)}
             </p>
             <div className="text-[11px] text-[#E06341] bg-[#E06341]/10 px-3 py-1 rounded-full border border-[#E06341]/25 font-mono">
-              Gas Sponsored • Routed via Uniswap v2
+              Network Fee Paid • Routed via Uniswap v2
             </div>
           </div>
         ) : (
@@ -268,13 +268,13 @@ export const SwapModal: React.FC = () => {
               <span>1 {tokenIn} ≈ {rate.toFixed(4)} {tokenOut}</span>
             </div>
 
-            {/* Paymaster sponsorship badge */}
-            <div className="p-2.5 rounded-xl bg-[#E06341]/10 border border-[#E06341]/25 flex items-center justify-between text-xs text-zinc-300">
-              <div className="flex items-center gap-1.5">
-                <Flame className="w-4 h-4 text-[#E06341]" />
-                <span>Gas Fee</span>
+            {/* Network Gas Fee Badge */}
+            <div className="p-2.5 rounded-xl bg-[#141418] border border-[#222226] flex items-center justify-between text-xs text-zinc-300">
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <Fuel className="w-4 h-4 text-[#E06341]" />
+                <span>Est. Network Fee</span>
               </div>
-              <span className="font-mono font-bold text-[#E06341]">0.00 QOR (Sponsored)</span>
+              <span className="font-mono font-medium text-white">~0.0030 QOR</span>
             </div>
 
             <div className="pt-2 mt-auto">

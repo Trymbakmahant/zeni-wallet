@@ -1,5 +1,5 @@
 import React from "react";
-import { Send, ArrowUpDown, ExternalLink, Clock, Trash2, Flame } from "lucide-react";
+import { Send, ArrowUpDown, ExternalLink, Clock, Trash2, Fuel } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { QORECHAIN_CONFIG } from "@zeni/core";
 
@@ -60,8 +60,8 @@ export const ActivityView: React.FC = () => {
                   <div className="text-[10px] text-zinc-400 font-mono flex items-center gap-1.5 mt-0.5">
                     <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     <span>•</span>
-                    <span className="text-[#E06341] flex items-center gap-0.5">
-                      <Flame className="w-3 h-3 text-[#E06341]" /> Free Gas
+                    <span className="text-zinc-500 font-mono flex items-center gap-1">
+                      <Fuel className="w-3 h-3 text-[#E06341]" /> {item.gasCost || "~0.0030 QOR"}
                     </span>
                   </div>
                 </div>

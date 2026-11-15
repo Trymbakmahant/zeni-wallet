@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldAlert, Globe, Check, X, ShieldCheck, Flame } from "lucide-react";
+import { ShieldAlert, Globe, Check, X, ShieldCheck, Fuel } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 
 export const ApprovalModal: React.FC = () => {
@@ -53,9 +53,9 @@ export const ApprovalModal: React.FC = () => {
               <div className="text-xs font-mono bg-black p-2 rounded-lg border border-[#222226] overflow-x-auto text-zinc-300">
                 <pre>{JSON.stringify(current.payload.params, null, 2)}</pre>
               </div>
-              <div className="flex items-center gap-1 text-[11px] text-zinc-300">
-                <Flame className="w-3.5 h-3.5 text-[#E06341]" />
-                <span>Gas sponsored by ZeniPaymaster</span>
+              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                <Fuel className="w-3.5 h-3.5 text-[#E06341]" />
+                <span>Standard QOR Network Fee</span>
               </div>
             </div>
           )}

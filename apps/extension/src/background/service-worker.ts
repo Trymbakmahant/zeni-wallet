@@ -428,26 +428,74 @@ class BackgroundController {
           target = bech32ToEvmAddress(target);
         }
 
+        try {
+          target = ethers.getAddress(target);
+        } catch {
+          throw new Error("Invalid recipient address format. Must be a valid 0x or qor1 address.");
+        }
+
         let txHash: string;
-        let gasCostDisplay = "Standard EVM";
+        let gasCostDisplay = "~0.0030 QOR";
 
         if (token === "QOR") {
           try {
+            const sendVal = parseEther(amount.toString());
+            const userBal = await this.client.getNativeBalance(active.classicalAddress);
+            const feeData = await this.client.provider.getFeeData();
+            const gasPrice = feeData.gasPrice || 112500000000n;
+            const estFee = 21000n * gasPrice;
+
+            if (userBal < sendVal + estFee) {
+              const safeMax = userBal > estFee ? formatEther(userBal - estFee) : "0";
+              throw new Error(
+                `Insufficient balance for transfer + gas fee. Balance: ${formatEther(userBal)} QOR. Gas fee: ~${formatEther(estFee).slice(0, 6)} QOR. Max send: ~${parseFloat(safeMax).toFixed(4)} QOR.`
+              );
+            }
+
             const wallet = new ethers.Wallet(active.classicalPrivateKey, this.client.provider);
             const tx = await wallet.sendTransaction({
               to: target,
-              value: parseEther(amount.toString()),
+              value: sendVal,
+              gasLimit: 21000n,
+              gasPrice: gasPrice,
+              type: 0,
             });
             txHash = tx.hash;
+            gasCostDisplay = `${formatEther(estFee).slice(0, 6)} QOR`;
           } catch (err: any) {
             console.error("Live on-chain QOR transfer failed:", err);
-            const errMsg =
-              err?.info?.error?.message ||
-              err?.shortMessage ||
-              err?.reason ||
-              err?.message ||
-              "Failed to broadcast transaction to QoreChain";
-            throw new Error(errMsg);
+            // Robust extraction of RPC errors to prevent generic "could not coalesce error"
+            let errMsg = err?.error?.message || err?.info?.error?.message || "";
+            if (!errMsg && typeof err?.message === "string") {
+              const jsonMatch = err.message.match(/error=\s*({.*?})/);
+              if (jsonMatch) {
+                try {
+                  const parsed = JSON.parse(jsonMatch[1]);
+                  if (parsed?.message) errMsg = parsed.message;
+                } catch {}
+              }
+            }
+            if (!errMsg) {
+              if (err?.shortMessage && err.shortMessage !== "could not coalesce error") {
+                errMsg = err.shortMessage;
+              } else if (err?.reason) {
+                errMsg = err.reason;
+              } else if (err?.message && !err.message.includes("could not coalesce error")) {
+                errMsg = err.message;
+              }
+            }
+
+            if (
+              errMsg.includes("sender balance < tx cost") ||
+              errMsg.includes("insufficient balance") ||
+              errMsg.includes("insufficient funds")
+            ) {
+              errMsg = "Insufficient QOR balance to cover transfer amount and network gas fee.";
+            } else if (errMsg.includes("nonce")) {
+              errMsg = "Transaction nonce conflict. Please try again.";
+            }
+
+            throw new Error(errMsg || "Transaction failed to broadcast to QoreChain");
           }
         } else {
           // Fallback simulation for offline/unfunded testnet demo tokens
@@ -462,7 +510,7 @@ class BackgroundController {
           const dec = token === "fUSD" ? 2 : 4;
           balances[token] = Math.max(0, current - (parseFloat(amount) || 0)).toFixed(dec);
           await chrome.storage.local.set({ tokenBalances: balances });
-          gasCostDisplay = "0.00 QOR (Sponsored)";
+          gasCostDisplay = "~0.0030 QOR";
         }
 
         // Store in activity history
@@ -528,7 +576,7 @@ class BackgroundController {
           amountOut,
           timestamp: Date.now(),
           status: "CONFIRMED",
-          gasCost: "0.00 QOR (Sponsored)",
+          gasCost: "~0.0030 QOR",
         });
         await chrome.storage.local.set({ activityHistory: history.slice(0, 50) });
 

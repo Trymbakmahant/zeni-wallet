@@ -91,7 +91,7 @@ export const PortfolioView: React.FC = () => {
           <div className="flex items-center gap-1.5 text-xs">
             <span className="font-semibold text-white">Diana Faucet</span>
             <span className="text-[#E06341] font-mono font-medium text-[10px] bg-[#E06341]/10 px-1.5 py-0.2 rounded-full">
-              Free Gas
+              Testnet
             </span>
           </div>
           <div className="text-xs font-bold text-zinc-300 font-mono mt-0.5">

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Send, Flame, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check, ExternalLink } from "lucide-react";
+import { X, Send, Fuel, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check, ExternalLink } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
 import { QORECHAIN_CONFIG } from "@zeni/core";
@@ -25,7 +25,15 @@ export const SendModal: React.FC = () => {
       return;
     }
 
-    if (parseFloat(amount) > parseFloat(activeToken.balance)) {
+    if (selectedToken === "QOR") {
+      const balNum = parseFloat(activeToken.balance) || 0;
+      const amtNum = parseFloat(amount) || 0;
+      if (amtNum + 0.003 > balNum) {
+        const safeMax = Math.max(0, balNum - 0.003).toFixed(4);
+        setError(`Insufficient QOR. Transaction requires ~0.003 QOR network fee. Max send: ${safeMax} QOR.`);
+        return;
+      }
+    } else if (parseFloat(amount) > parseFloat(activeToken.balance)) {
       setError("Insufficient balance");
       return;
     }
@@ -207,7 +215,14 @@ export const SendModal: React.FC = () => {
                   <span className="text-zinc-400">Available: {activeToken.balance}</span>
                   <button
                     type="button"
-                    onClick={() => setAmount(activeToken.balance)}
+                    onClick={() => {
+                      if (selectedToken === "QOR") {
+                        const safe = Math.max(0, parseFloat(activeToken.balance) - 0.003);
+                        setAmount(safe.toFixed(4));
+                      } else {
+                        setAmount(activeToken.balance);
+                      }
+                    }}
                     className="text-[#E06341] font-semibold hover:underline"
                   >
                     MAX
@@ -230,13 +245,16 @@ export const SendModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Gas Sponsorship Badge */}
-            <div className="p-3 rounded-xl bg-[#E06341]/10 border border-[#E06341]/25 flex items-center justify-between text-xs text-zinc-200">
-              <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4 text-[#E06341]" />
-                <span>Gas Sponsorship</span>
+            {/* Network Gas Fee */}
+            <div className="p-3 rounded-xl bg-[#141418] border border-[#222226] flex items-center justify-between text-xs text-zinc-300">
+              <div className="flex items-center gap-2 text-zinc-400">
+                <Fuel className="w-4 h-4 text-[#E06341]" />
+                <span>Network Gas Fee</span>
               </div>
-              <span className="font-mono font-bold text-[#E06341]">0.00 QOR (Sponsored by Paymaster)</span>
+              <div className="text-right font-mono">
+                <span className="font-semibold text-white">~0.0030 QOR</span>
+                <span className="text-[10px] text-zinc-500 ml-1.5">(~$0.01)</span>
+              </div>
             </div>
 
             {/* Sign & Submit */}
