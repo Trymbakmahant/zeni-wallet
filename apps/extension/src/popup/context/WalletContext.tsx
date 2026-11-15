@@ -67,10 +67,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activity, setActivity] = useState<ActivityItem[]>([]);
 
   const [tokens, setTokens] = useState<TokenItem[]>([
-    { symbol: "QOR", name: "QoreChain Native", balance: "142.50", usdValue: "$285.00", icon: "💎" },
-    { symbol: "fUSD", name: "Faucet USD", balance: "520.00", usdValue: "$520.00", icon: "💵" },
-    { symbol: "fETH", name: "Faucet Ethereum", balance: "1.25", usdValue: "$3,875.00", icon: "Ξ" },
-    { symbol: "fBTC", name: "Faucet Bitcoin", balance: "0.084", usdValue: "$5,460.00", icon: "₿" },
+    { symbol: "QOR", name: "QoreChain Native (Live)", balance: "0.0000", usdValue: "$0.00", icon: "💎" },
+    { symbol: "fUSD", name: "Faucet USD (Demo)", balance: "520.00", usdValue: "$520.00", icon: "💵" },
+    { symbol: "fETH", name: "Faucet Ethereum (Demo)", balance: "1.25", usdValue: "$3,875.00", icon: "Ξ" },
+    { symbol: "fBTC", name: "Faucet Bitcoin (Demo)", balance: "0.084", usdValue: "$5,460.00", icon: "₿" },
   ]);
 
   const sendMessage = (type: string, payload: Record<string, any> = {}): Promise<any> => {
@@ -95,6 +95,22 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setActiveAddress(status.activeAddress);
       setCosmosAddress(status.cosmosAddress);
       setPqcPublicKeyHash(status.pqcPublicKeyHash);
+
+      if (status.onChainBalance !== undefined) {
+        const rawNum = parseFloat(status.onChainBalance) || 0;
+        const qorFormatted = rawNum.toFixed(4);
+        const qorUsd = (rawNum * 2.0).toLocaleString("en-US", { style: "currency", currency: "USD" });
+        setTokens((prev) => [
+          {
+            symbol: "QOR",
+            name: "QoreChain Native (Live)",
+            balance: qorFormatted,
+            usdValue: qorUsd,
+            icon: "💎",
+          },
+          ...prev.filter((t) => t.symbol !== "QOR"),
+        ]);
+      }
 
       const approvals = await sendMessage("GET_PENDING_APPROVALS");
       setPendingApprovals(approvals || []);

@@ -9,6 +9,7 @@ import {
   Check,
   Sparkles,
   ExternalLink,
+  RotateCw,
 } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { SendModal } from "./SendModal";
@@ -17,8 +18,18 @@ import { SwapModal } from "./SwapModal";
 import { ApprovalModal } from "./ApprovalModal";
 
 export const PortfolioView: React.FC = () => {
-  const { activeAddress, cosmosAddress, tokens, activeModal, openModal, pendingApprovals } = useWallet();
+  const { activeAddress, cosmosAddress, tokens, activeModal, openModal, pendingApprovals, refreshState } = useWallet();
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshState();
+    } finally {
+      setTimeout(() => setRefreshing(false), 600);
+    }
+  };
 
   const copyAddress = () => {
     if (!activeAddress) return;
@@ -38,6 +49,13 @@ export const PortfolioView: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span className="text-[11px] font-semibold text-[#8892B0]">QoreChain Diana</span>
+          <button
+            onClick={handleRefresh}
+            title="Refresh Live On-Chain Balance"
+            className="p-1 rounded-md hover:bg-[#1E2638] text-[#8892B0] hover:text-[#00F0FF] transition-all ml-0.5"
+          >
+            <RotateCw className={`w-3 h-3 ${refreshing ? "animate-spin text-[#00F0FF]" : ""}`} />
+          </button>
         </div>
 
         {/* Copy Address Pill */}

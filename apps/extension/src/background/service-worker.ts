@@ -260,13 +260,39 @@ class BackgroundController {
           "pqcPublicKeyHash",
         ]);
 
+        const currentAddress = active?.classicalAddress || stored.activeAddress || null;
+        let onChainBalance = "0.0000";
+
+        if (currentAddress) {
+          try {
+            const bal = await this.client.getBalance(currentAddress);
+            onChainBalance = formatEther(bal);
+          } catch (e) {
+            console.warn("Could not query live RPC balance:", e);
+          }
+        }
+
         return {
           isInitialized: initialized,
           isUnlocked: unlocked,
-          activeAddress: active?.classicalAddress || stored.activeAddress || null,
+          activeAddress: currentAddress,
           cosmosAddress: active?.cosmosAddress || stored.cosmosAddress || null,
           pqcPublicKeyHash: active?.pqcPublicKeyHash || stored.pqcPublicKeyHash || null,
+          onChainBalance,
         };
+      }
+
+      case "GET_BALANCE": {
+        const active = this.getActiveAccount();
+        const stored = await chrome.storage.local.get(["activeAddress"]);
+        const target = message.address || active?.classicalAddress || stored.activeAddress;
+        if (!target) return { balance: "0.0000" };
+        try {
+          const bal = await this.client.getBalance(target);
+          return { balance: formatEther(bal) };
+        } catch (e: any) {
+          return { balance: "0.0000", error: e?.message };
+        }
       }
 
       case "CREATE_VAULT": {
