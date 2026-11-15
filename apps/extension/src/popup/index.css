@@ -5,7 +5,7 @@
 body {
   width: 360px;
   height: 600px;
-  background-color: #0B0E14;
+  background-color: #000000;
   color: #FFFFFF;
   margin: 0;
   padding: 0;
@@ -21,6 +21,6 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #20283E;
+  background: #26262B;
   border-radius: 4px;
 }

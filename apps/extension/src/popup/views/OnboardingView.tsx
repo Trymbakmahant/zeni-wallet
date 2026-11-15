@@ -76,7 +76,7 @@ export const OnboardingView: React.FC = () => {
               <div className="text-[32px] tracking-tight text-zinc-200">Wallet</div>
             </div>
 
-            <p className="text-xs text-[#8892B0] text-center max-w-[260px] mt-3 leading-relaxed">
+            <p className="text-xs text-zinc-400 text-center max-w-[260px] mt-3 leading-relaxed">
               The Zen of Web3. Next-generation post-quantum security on QoreChain.
             </p>
           </div>
@@ -85,19 +85,19 @@ export const OnboardingView: React.FC = () => {
           <div className="px-6 w-full max-w-[340px] mx-auto z-10 space-y-3 mb-2">
             <button
               onClick={startCreate}
-              className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 shadow-lg shadow-white/10 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-full bg-[#E06341] hover:bg-[#EB6841] text-white font-bold text-sm shadow-lg shadow-[#E06341]/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Create a new wallet</span>
             </button>
 
             <button
               onClick={startImport}
-              className="w-full py-3.5 rounded-full bg-[#11131A] hover:bg-[#1A1D27] border border-[#27272A] text-white font-semibold text-sm active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-full bg-[#121215] hover:bg-[#1A1A1E] border border-[#27272A] text-white font-semibold text-sm active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>I already have a wallet</span>
             </button>
 
-            <p className="text-[10px] text-[#656C82] text-center pt-1">
+            <p className="text-[10px] text-zinc-500 text-center pt-1">
               By continuing, you agree to Zeni's Terms of Use
             </p>
           </div>
@@ -121,27 +121,27 @@ export const OnboardingView: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => setStep("welcome")}
-                className="w-8 h-8 rounded-full bg-[#141824] hover:bg-[#1E2638] flex items-center justify-center text-gray-300 transition-colors"
+                className="w-8 h-8 rounded-full bg-[#141416] hover:bg-[#1F1F24] border border-[#27272A] flex items-center justify-center text-zinc-300 transition-colors cursor-pointer"
                 title="Go back"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <span className="text-[11px] font-mono text-[#8892B0]">Step 1 of 2</span>
+              <span className="text-[11px] font-mono text-zinc-400">Step 1 of 2</span>
               <div className="w-8" />
             </div>
 
             <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Secret Recovery Phrase</h2>
-            <p className="text-xs text-[#8892B0] mb-4 leading-relaxed">
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
               Write down these 12 words in order and store them offline safely. Do not share them with anyone.
             </p>
 
-            <div className="grid grid-cols-3 gap-2 bg-[#0B0E14] p-3.5 rounded-2xl border border-[#20283E]">
+            <div className="grid grid-cols-3 gap-2 bg-[#0D0D10] p-3.5 rounded-2xl border border-[#222226]">
               {mnemonic.split(" ").map((word, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#141824] px-2 py-2 rounded-xl border border-[#20283E] text-xs font-mono flex items-center gap-1.5"
+                  className="bg-black px-2 py-2 rounded-xl border border-[#222226] text-xs font-mono flex items-center gap-1.5"
                 >
-                  <span className="text-[10px] text-[#8892B0] w-3">{idx + 1}.</span>
+                  <span className="text-[10px] text-zinc-500 w-3">{idx + 1}.</span>
                   <span className="font-semibold text-white truncate">{word}</span>
                 </div>
               ))}
@@ -150,21 +150,21 @@ export const OnboardingView: React.FC = () => {
             <div className="mt-3">
               <button
                 onClick={copyWords}
-                className="w-full py-2.5 bg-[#141824] hover:bg-[#1E2638] text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 text-gray-300 border border-[#20283E] transition-colors"
+                className="w-full py-2.5 bg-[#141416] hover:bg-[#1F1F24] text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 text-zinc-300 border border-[#27272A] transition-colors cursor-pointer"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-[#8892B0]" />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
                 <span>{copied ? "Copied to Clipboard" : "Copy to clipboard"}</span>
               </button>
             </div>
 
-            <label className="flex items-start gap-2.5 pt-4 cursor-pointer text-xs text-gray-300 select-none">
+            <label className="flex items-start gap-2.5 pt-4 cursor-pointer text-xs text-zinc-300 select-none">
               <input
                 type="checkbox"
                 checked={backedUpChecked}
                 onChange={(e) => setBackedUpChecked(e.target.checked)}
-                className="mt-0.5 rounded accent-white w-4 h-4"
+                className="mt-0.5 rounded accent-[#E06341] w-4 h-4"
               />
-              <span className="leading-tight text-xs text-[#8892B0]">
+              <span className="leading-tight text-xs text-zinc-400">
                 I have saved these 12 secret words in a safe place.
               </span>
             </label>
@@ -173,7 +173,7 @@ export const OnboardingView: React.FC = () => {
           <button
             disabled={!backedUpChecked}
             onClick={() => setStep("set_password")}
-            className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-white/10 transition-all active:scale-[0.99] cursor-pointer"
+            className="w-full py-3.5 rounded-full bg-[#E06341] hover:bg-[#EB6841] text-white font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#E06341]/20 transition-all active:scale-[0.99] cursor-pointer"
           >
             Continue
           </button>
@@ -187,17 +187,17 @@ export const OnboardingView: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => setStep("welcome")}
-                className="w-8 h-8 rounded-full bg-[#141824] hover:bg-[#1E2638] flex items-center justify-center text-gray-300 transition-colors"
+                className="w-8 h-8 rounded-full bg-[#141416] hover:bg-[#1F1F24] border border-[#27272A] flex items-center justify-center text-zinc-300 transition-colors cursor-pointer"
                 title="Go back"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <span className="text-[11px] font-mono text-[#8892B0]">Import Wallet</span>
+              <span className="text-[11px] font-mono text-zinc-400">Import Wallet</span>
               <div className="w-8" />
             </div>
 
             <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Import Secret Phrase</h2>
-            <p className="text-xs text-[#8892B0] mb-4 leading-relaxed">
+            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
               Enter your 12- or 24-word Secret Recovery Phrase separated by single spaces.
             </p>
 
@@ -206,14 +206,14 @@ export const OnboardingView: React.FC = () => {
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
               placeholder="e.g. quantum horizon energy matrix pulse velvet nebula crystal flame shadow drift solar"
-              className="w-full bg-[#0A0D14] border border-[#27272A] rounded-2xl p-4 text-xs font-mono focus:outline-none focus:border-white text-white resize-none placeholder-[#71717A]"
+              className="w-full bg-[#0D0D10] border border-[#27272A] rounded-2xl p-4 text-xs font-mono focus:outline-none focus:border-white text-white resize-none placeholder-zinc-500"
             />
           </div>
 
           <button
             disabled={importText.trim().split(/\s+/).length < 12}
             onClick={() => setStep("set_password")}
-            className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-white/10 transition-all active:scale-[0.99] cursor-pointer"
+            className="w-full py-3.5 rounded-full bg-[#E06341] hover:bg-[#EB6841] text-white font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#E06341]/20 transition-all active:scale-[0.99] cursor-pointer"
           >
             Continue
           </button>
@@ -229,19 +229,19 @@ export const OnboardingView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setStep(importText ? "import_words" : "create_backup")}
-                  className="w-8 h-8 rounded-full bg-[#141824] hover:bg-[#1E2638] flex items-center justify-center text-gray-300 transition-colors"
+                  className="w-8 h-8 rounded-full bg-[#141416] hover:bg-[#1F1F24] border border-[#27272A] flex items-center justify-center text-zinc-300 transition-colors cursor-pointer"
                   title="Go back"
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <span className="text-[11px] font-mono text-[#8892B0]">
+                <span className="text-[11px] font-mono text-zinc-400">
                   {importText ? "Step 2 of 2" : "Step 2 of 2"}
                 </span>
                 <div className="w-8" />
               </div>
 
               <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Set Unlock Password</h2>
-              <p className="text-xs text-[#8892B0] mb-4 leading-relaxed">
+              <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
                 This password will unlock your Zeni wallet only on this device.
               </p>
 
@@ -253,7 +253,7 @@ export const OnboardingView: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs text-[#8892B0] block mb-1.5">New Password (min 8 chars)</label>
+                  <label className="text-xs text-zinc-400 block mb-1.5">New Password (min 8 chars)</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -261,12 +261,12 @@ export const OnboardingView: React.FC = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       placeholder="Enter new password"
-                      className="w-full bg-[#0A0D14] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-[#71717A]"
+                      className="w-full bg-[#0D0D10] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-zinc-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-3.5 text-[#8892B0] hover:text-white"
+                      className="absolute right-3.5 top-3.5 text-zinc-400 hover:text-white cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -274,14 +274,14 @@ export const OnboardingView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs text-[#8892B0] block mb-1.5">Confirm Password</label>
+                  <label className="text-xs text-zinc-400 block mb-1.5">Confirm Password</label>
                   <input
                     type={showPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Confirm your password"
-                    className="w-full bg-[#0A0D14] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-[#71717A]"
+                    className="w-full bg-[#0D0D10] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-zinc-500"
                   />
                 </div>
               </div>
@@ -290,7 +290,7 @@ export const OnboardingView: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading || password.length < 8 || password !== confirmPassword}
-              className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-white/10 transition-all active:scale-[0.99] cursor-pointer mt-4"
+              className="w-full py-3.5 rounded-full bg-[#E06341] hover:bg-[#EB6841] text-white font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#E06341]/20 transition-all active:scale-[0.99] cursor-pointer mt-4"
             >
               {isLoading ? "Encrypting Vault..." : "Complete Setup"}
             </button>

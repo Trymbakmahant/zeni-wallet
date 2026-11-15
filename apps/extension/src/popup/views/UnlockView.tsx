@@ -71,7 +71,7 @@ export const UnlockView: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               autoFocus
               required
-              className="w-full bg-[#0A0D14]/80 backdrop-blur-sm border border-[#27272A] rounded-xl px-4 py-3.5 text-sm text-white placeholder-[#71717A] focus:outline-none focus:border-white transition-colors"
+              className="w-full bg-[#0D0D10] border border-[#27272A] rounded-xl px-4 py-3.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-white transition-colors"
             />
           </div>
 
@@ -80,8 +80,8 @@ export const UnlockView: React.FC = () => {
             disabled={isLoading || !password}
             className={`w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-200 flex items-center justify-center ${
               !password
-                ? "bg-[#4B5162] text-[#141824] cursor-not-allowed opacity-80"
-                : "bg-white text-black hover:bg-zinc-200 shadow-lg shadow-white/10 cursor-pointer active:scale-[0.99]"
+                ? "bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-80"
+                : "bg-[#E06341] text-white hover:bg-[#EB6841] shadow-lg shadow-[#E06341]/20 cursor-pointer active:scale-[0.99]"
             }`}
           >
             {isLoading ? "Unlocking..." : "Unlock"}
@@ -91,7 +91,7 @@ export const UnlockView: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowForgotModal(true)}
-              className="text-[#8892B0] hover:text-white text-xs font-medium transition-colors cursor-pointer"
+              className="text-zinc-400 hover:text-white text-xs font-medium transition-colors cursor-pointer"
             >
               Forgot password?
             </button>
@@ -112,8 +112,8 @@ export const UnlockView: React.FC = () => {
 
       {/* Forgot Password Reset Modal */}
       {showForgotModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-5 animate-fade-in">
-          <div className="bg-[#141824] border border-[#20283E] rounded-2xl p-5 w-full max-w-[310px] space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-5 animate-fade-in">
+          <div className="bg-[#0D0D10] border border-[#222226] rounded-2xl p-5 w-full max-w-[310px] space-y-4 shadow-2xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -123,13 +123,13 @@ export const UnlockView: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowForgotModal(false)}
-                className="w-6 h-6 rounded-full hover:bg-[#20283E] flex items-center justify-center text-gray-400"
+                className="w-6 h-6 rounded-full hover:bg-[#18181C] flex items-center justify-center text-zinc-400 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <p className="text-xs text-[#8892B0] leading-relaxed">
+            <p className="text-xs text-zinc-400 leading-relaxed">
               Zeni cannot recover your password. To set a new password, you must reset your wallet and restore your account using your 12-word Secret Recovery Phrase.
             </p>
 
@@ -137,13 +137,13 @@ export const UnlockView: React.FC = () => {
               <button
                 onClick={handleReset}
                 disabled={isResetting}
-                className="w-full py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors flex items-center justify-center"
+                className="w-full py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors flex items-center justify-center cursor-pointer"
               >
                 {isResetting ? "Resetting..." : "Reset & Restore with Phrase"}
               </button>
               <button
                 onClick={() => setShowForgotModal(false)}
-                className="w-full py-2.5 rounded-xl bg-[#20283E] hover:bg-[#2A3550] text-gray-300 text-xs font-medium transition-colors"
+                className="w-full py-2.5 rounded-xl bg-[#18181C] hover:bg-[#222226] border border-[#27272A] text-zinc-300 text-xs font-medium transition-colors cursor-pointer"
               >
                 Cancel
               </button>

@@ -39,21 +39,21 @@ export const QorIcon: React.FC<{ className?: string }> = ({ className = "w-9 h-9
   <svg className={className} viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="qorBorderGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#00F0FF" />
-        <stop offset="100%" stopColor="#9939FF" />
+        <stop offset="0%" stopColor="#F58742" />
+        <stop offset="100%" stopColor="#C04A2A" />
       </linearGradient>
       <linearGradient id="qorTopGrad" x1="10" y1="8" x2="26" y2="14" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#38F9D7" />
-        <stop offset="100%" stopColor="#00F0FF" />
+        <stop offset="0%" stopColor="#F89B5F" />
+        <stop offset="100%" stopColor="#E06341" />
       </linearGradient>
     </defs>
-    <circle cx="18" cy="18" r="18" fill="#0D111A" />
+    <circle cx="18" cy="18" r="18" fill="#000000" />
     <circle cx="18" cy="18" r="17" stroke="url(#qorBorderGrad)" strokeWidth="1.5" />
-    {/* Quantum Faceted Crystal / Gem Logo */}
-    <path d="M18 7.5L26 13.5L18 28.5L10 13.5L18 7.5Z" fill="#00F0FF" fillOpacity="0.15" />
+    {/* Quantum Faceted Crystal / Gem Logo in Zen Terracotta Red-Orange */}
+    <path d="M18 7.5L26 13.5L18 28.5L10 13.5L18 7.5Z" fill="#E06341" fillOpacity="0.25" />
     <path d="M18 7.5L26 13.5H10L18 7.5Z" fill="url(#qorTopGrad)" />
-    <path d="M10 13.5L18 28.5V13.5H10Z" fill="#00D2E0" fillOpacity="0.85" />
-    <path d="M26 13.5L18 28.5V13.5H26Z" fill="#9939FF" fillOpacity="0.9" />
+    <path d="M10 13.5L18 28.5V13.5H10Z" fill="#D4522E" fillOpacity="0.9" />
+    <path d="M26 13.5L18 28.5V13.5H26Z" fill="#A83818" fillOpacity="0.95" />
   </svg>
 );
 
