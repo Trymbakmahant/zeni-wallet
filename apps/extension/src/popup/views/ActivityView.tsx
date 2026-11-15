@@ -1,10 +1,10 @@
 import React from "react";
-import { Send, ArrowUpDown, ExternalLink, Clock, CheckCircle2, Flame } from "lucide-react";
+import { Send, ArrowUpDown, ExternalLink, Clock, Trash2, Flame } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { QORECHAIN_CONFIG } from "@zeni/core";
 
 export const ActivityView: React.FC = () => {
-  const { activity } = useWallet();
+  const { activity, clearActivity } = useWallet();
 
   const explorerBase = QORECHAIN_CONFIG.blockExplorerUrls[0];
 
@@ -12,7 +12,18 @@ export const ActivityView: React.FC = () => {
     <div className="flex flex-col h-full space-y-3">
       <div className="flex justify-between items-center px-1">
         <h2 className="text-base font-bold text-white">Activity History</h2>
-        <span className="text-[11px] text-zinc-400 font-mono">{activity.length} Records</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-zinc-400 font-mono">{activity.length} Records</span>
+          {activity.length > 0 && (
+            <button
+              onClick={() => clearActivity()}
+              className="text-xs text-zinc-400 hover:text-[#E06341] transition-colors p-1 rounded cursor-pointer"
+              title="Clear activity log"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {activity.length === 0 ? (

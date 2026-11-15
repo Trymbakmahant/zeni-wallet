@@ -10,7 +10,7 @@ export const QORECHAIN_CONFIG = {
     "https://evm-testnet.qore.host",
   ],
   blockExplorerUrls: [
-    "https://explorer-testnet.qore.host",
+    "https://dashboard.qorechain.io/explorer",
   ],
   contracts: {
     pqcPrecompile: "0x0000000000000000000000000000000000000a01",

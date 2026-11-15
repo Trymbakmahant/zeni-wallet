@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { X, Send, Flame, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check } from "lucide-react";
+import { X, Send, Flame, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check, ExternalLink } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
+import { QORECHAIN_CONFIG } from "@zeni/core";
 
 export const SendModal: React.FC = () => {
   const { openModal, tokens, sendTokens } = useWallet();
@@ -35,9 +36,6 @@ export const SendModal: React.FC = () => {
     try {
       const hash = await sendTokens(recipient, amount, selectedToken);
       setTxHash(hash);
-      setTimeout(() => {
-        openModal(null);
-      }, 2500);
     } catch (err: any) {
       setError(err?.message || "Transfer failed");
     } finally {
@@ -121,16 +119,38 @@ export const SendModal: React.FC = () => {
         </div>
 
         {txHash ? (
-          <div className="py-10 flex flex-col items-center text-center space-y-3">
-            <div className="w-16 h-16 rounded-full bg-[#E06341]/20 text-[#E06341] flex items-center justify-center animate-bounce">
+          <div className="py-8 flex flex-col items-center text-center space-y-3.5">
+            <div className="w-14 h-14 rounded-full bg-[#E06341]/20 text-[#E06341] flex items-center justify-center">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white">Transaction Confirmed!</h3>
-            <p className="text-xs text-zinc-400 max-w-xs font-mono break-all">
-              Tx: {txHash.slice(0, 16)}...{txHash.slice(-8)}
-            </p>
+            <div>
+              <h3 className="text-lg font-bold text-white">Transaction Broadcasted!</h3>
+              <p className="text-xs text-zinc-400 max-w-xs font-mono break-all mt-1">
+                {txHash.slice(0, 18)}...{txHash.slice(-10)}
+              </p>
+            </div>
             <div className="text-[11px] text-[#E06341] bg-[#E06341]/10 px-3 py-1 rounded-full border border-[#E06341]/25 font-mono">
               Hybrid Signed: secp256k1 + ML-DSA-87
+            </div>
+
+            <div className="pt-2 w-full flex flex-col gap-2">
+              <a
+                href={`${QORECHAIN_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2.5 rounded-xl bg-[#18181C] hover:bg-[#222226] border border-[#2E2E34] text-xs font-medium text-white flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span>View on QoreChain Explorer</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[#E06341]" />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => openModal(null)}
+                className="w-full py-2.5 rounded-xl bg-[#E06341] hover:bg-[#EB6841] text-xs font-semibold text-white transition-colors cursor-pointer"
+              >
+                Done
+              </button>
             </div>
           </div>
         ) : (

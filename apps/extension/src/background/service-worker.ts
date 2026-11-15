@@ -4,6 +4,7 @@ import {
   DerivedAccountKeys,
   EncryptedVaultEnvelope,
   deriveAccountKeys,
+  bech32ToEvmAddress,
   encryptVault,
   decryptVault,
   encodeAccountExecute,
@@ -417,16 +418,40 @@ class BackgroundController {
       }
 
       case "EXECUTE_TRANSFER": {
-        // Broadcasts token transfer with Paymaster gas sponsorship
+        // Broadcasts token transfer to QoreChain Testnet
         const { to, amount, token } = message;
         const active = this.getActiveAccount();
         if (!active) throw new Error("Wallet is locked");
 
-        // Returns deterministic transaction confirmation hash
-        const txHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+        let target = (to || "").trim();
+        if (target.startsWith("qor1") || target.startsWith("cosmos1")) {
+          target = bech32ToEvmAddress(target);
+        }
 
-        // Deduct transfer amount from local token balance if secondary token
-        if (token !== "QOR") {
+        let txHash: string;
+        let gasCostDisplay = "Standard EVM";
+
+        if (token === "QOR") {
+          try {
+            const wallet = new ethers.Wallet(active.classicalPrivateKey, this.client.provider);
+            const tx = await wallet.sendTransaction({
+              to: target,
+              value: parseEther(amount.toString()),
+            });
+            txHash = tx.hash;
+          } catch (err: any) {
+            console.error("Live on-chain QOR transfer failed:", err);
+            const errMsg =
+              err?.info?.error?.message ||
+              err?.shortMessage ||
+              err?.reason ||
+              err?.message ||
+              "Failed to broadcast transaction to QoreChain";
+            throw new Error(errMsg);
+          }
+        } else {
+          // Fallback simulation for offline/unfunded testnet demo tokens
+          txHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
           const stored = await chrome.storage.local.get(["tokenBalances"]);
           const balances = stored.tokenBalances || {
             fUSD: "0.00",
@@ -437,6 +462,7 @@ class BackgroundController {
           const dec = token === "fUSD" ? 2 : 4;
           balances[token] = Math.max(0, current - (parseFloat(amount) || 0)).toFixed(dec);
           await chrome.storage.local.set({ tokenBalances: balances });
+          gasCostDisplay = "0.00 QOR (Sponsored)";
         }
 
         // Store in activity history
@@ -450,11 +476,16 @@ class BackgroundController {
           token,
           timestamp: Date.now(),
           status: "CONFIRMED",
-          gasCost: "0.00 QOR (Sponsored)",
+          gasCost: gasCostDisplay,
         });
         await chrome.storage.local.set({ activityHistory: history.slice(0, 50) });
 
         return { txHash };
+      }
+
+      case "CLEAR_ACTIVITY": {
+        await chrome.storage.local.set({ activityHistory: [] });
+        return true;
       }
 
       case "EXECUTE_SWAP": {
