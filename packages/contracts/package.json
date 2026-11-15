@@ -1,0 +1,11 @@
+{
+  "name": "@zeni/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Smart contracts for Zeni Smart Account and Paymaster on QoreChain",
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "clean": "forge clean"
+  }
+}
