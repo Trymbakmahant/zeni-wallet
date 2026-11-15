@@ -52,6 +52,7 @@ interface WalletContextType {
   resolveApproval: (internalId: string, approved: boolean) => Promise<void>;
   exportMnemonic: (password: string) => Promise<string>;
   refreshState: () => Promise<void>;
+  resetWallet: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -225,6 +226,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return sendMessage("EXPORT_MNEMONIC", { password });
   };
 
+  const resetWallet = async () => {
+    await sendMessage("RESET_WALLET");
+    await refreshState();
+  };
+
   return (
     <WalletContext.Provider
       value={{
@@ -246,6 +252,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         resolveApproval,
         exportMnemonic,
         refreshState,
+        resetWallet,
       }}
     >
       {children}

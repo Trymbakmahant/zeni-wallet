@@ -339,6 +339,12 @@ class BackgroundController {
         return true;
       }
 
+      case "RESET_WALLET": {
+        this.lockVault();
+        await chrome.storage.local.clear();
+        return true;
+      }
+
       case "EXPORT_MNEMONIC": {
         if (!this.unlockedVault) throw new Error("Wallet is locked");
         const envelope = await this.getEncryptedVault();

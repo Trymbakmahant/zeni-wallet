@@ -167,7 +167,7 @@ export const OnboardingView: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold mb-1">Set Unlock Password</h2>
               <p className="text-[11px] text-[#8892B0]">
-                This password encrypts your keys locally using PBKDF2 (600,000 iterations) + AES-256-GCM.
+                This password will unlock your Zeni wallet only on this device.
               </p>
             </div>
 
