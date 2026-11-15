@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShieldCheck, KeyRound, ArrowRight, Copy, Check, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Copy, Check, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { generateNewMnemonic } from "@zeni/core";
 
@@ -32,8 +32,8 @@ export const OnboardingView: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleFinish = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFinish = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (password.length < 8) {
       setError("Password must be at least 8 characters");
       return;
@@ -57,210 +57,246 @@ export const OnboardingView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0B0E14] text-white p-5 justify-between">
-      {/* Top Branding */}
-      <div>
-        <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center bg-black shadow-sm">
-            <div className="w-2.5 h-2.5 border-[1.5px] border-white" />
-          </div>
-          <div>
-            <div className="font-extrabold text-base tracking-tight">Zeni Wallet</div>
-            <div className="text-[10px] text-[#00F0FF] font-mono flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-[#00F0FF]" /> Post-Quantum Defense
+    <div className="flex flex-col h-full bg-[#000000] text-white justify-between relative overflow-hidden select-none">
+      {/* Step: Welcome Screen */}
+      {step === "welcome" && (
+        <div className="flex flex-col h-full justify-between relative overflow-hidden select-none">
+          {/* Top Brand Identity */}
+          <div className="flex flex-col items-center pt-10 pb-2 z-10">
+            {/* Zeni Coin Emblem */}
+            <div className="relative mb-3 flex items-center justify-center">
+              <div className="w-14 h-14 rounded-full border-[3px] border-white flex items-center justify-center shadow-[0_0_24px_rgba(255,255,255,0.18)] transition-transform hover:scale-105">
+                <div className="w-4 h-4 border-[2.5px] border-white" />
+              </div>
             </div>
+
+            {/* Clean Bold Brand Typography */}
+            <div className="text-center font-black tracking-[-0.04em] text-white leading-[0.92] font-sans">
+              <div className="text-[38px] tracking-tight">Zeni</div>
+              <div className="text-[32px] tracking-tight text-zinc-200">Wallet</div>
+            </div>
+
+            <p className="text-xs text-[#8892B0] text-center max-w-[260px] mt-3 leading-relaxed">
+              The Zen of Web3. Next-generation post-quantum security on QoreChain.
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="px-6 w-full max-w-[340px] mx-auto z-10 space-y-3 mb-2">
+            <button
+              onClick={startCreate}
+              className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 shadow-lg shadow-white/10 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Create a new wallet</span>
+            </button>
+
+            <button
+              onClick={startImport}
+              className="w-full py-3.5 rounded-full bg-[#11131A] hover:bg-[#1A1D27] border border-[#27272A] text-white font-semibold text-sm active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>I already have a wallet</span>
+            </button>
+
+            <p className="text-[10px] text-[#656C82] text-center pt-1">
+              By continuing, you agree to Zeni's Terms of Use
+            </p>
+          </div>
+
+          {/* Bottom Zen Sumi-e Landscape Art */}
+          <div className="w-full relative pointer-events-none select-none mt-auto overflow-hidden">
+            <img
+              src="/art/zen-landscape-blended.png"
+              alt="Zen Japanese Landscape"
+              className="w-full h-32 object-cover object-bottom block opacity-85"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#000000]" />
           </div>
         </div>
+      )}
 
-        {/* Welcome Screen */}
-        {step === "welcome" && (
-          <div className="space-y-6 pt-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight mb-2">Welcome to Zeni</h1>
-              <p className="text-xs text-[#8892B0] leading-relaxed">
-                The quantum-resistant smart account wallet for QoreChain. Dual-key security (secp256k1 + ML-DSA-87) with gasless onboarding.
-              </p>
-            </div>
-
-            <div className="space-y-3 pt-4">
+      {/* Step: Create Backup Mnemonic */}
+      {step === "create_backup" && (
+        <div className="flex flex-col h-full justify-between p-5 z-10">
+          <div>
+            <div className="flex items-center justify-between mb-4">
               <button
-                onClick={startCreate}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#9939FF] to-[#8324E6] text-white font-semibold text-sm shadow-xl shadow-[#9939FF]/20 flex items-center justify-between hover:scale-[1.01] transition-transform"
+                onClick={() => setStep("welcome")}
+                className="w-8 h-8 rounded-full bg-[#141824] hover:bg-[#1E2638] flex items-center justify-center text-gray-300 transition-colors"
+                title="Go back"
               >
-                <span>Create New Wallet</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4" />
               </button>
-
-              <button
-                onClick={startImport}
-                className="w-full py-3.5 px-4 rounded-xl bg-[#141824] hover:bg-[#1A2033] border border-[#20283E] text-white font-semibold text-sm flex items-center justify-between transition-colors"
-              >
-                <span>Import Existing Phrase</span>
-                <KeyRound className="w-4 h-4 text-[#8892B0]" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Create Backup Mnemonic */}
-        {step === "create_backup" && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-bold mb-1">Backup Recovery Phrase</h2>
-              <p className="text-[11px] text-[#8892B0]">
-                Write down these 12 secret words in order and store them offline. Anyone with these words can access your assets.
-              </p>
+              <span className="text-[11px] font-mono text-[#8892B0]">Step 1 of 2</span>
+              <div className="w-8" />
             </div>
 
-            <div className="grid grid-cols-3 gap-2 bg-[#141824] p-3 rounded-2xl border border-[#20283E]">
+            <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Secret Recovery Phrase</h2>
+            <p className="text-xs text-[#8892B0] mb-4 leading-relaxed">
+              Write down these 12 words in order and store them offline safely. Do not share them with anyone.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2 bg-[#0B0E14] p-3.5 rounded-2xl border border-[#20283E]">
               {mnemonic.split(" ").map((word, idx) => (
-                <div key={idx} className="bg-[#0B0E14] px-2 py-1.5 rounded-lg border border-[#20283E] text-xs font-mono flex items-center gap-1.5">
+                <div
+                  key={idx}
+                  className="bg-[#141824] px-2 py-2 rounded-xl border border-[#20283E] text-xs font-mono flex items-center gap-1.5"
+                >
                   <span className="text-[10px] text-[#8892B0] w-3">{idx + 1}.</span>
-                  <span className="font-semibold text-white">{word}</span>
+                  <span className="font-semibold text-white truncate">{word}</span>
                 </div>
               ))}
             </div>
 
-            <button
-              onClick={copyWords}
-              className="w-full py-2 bg-[#20283E] hover:bg-[#2A3450] text-xs font-mono rounded-lg flex items-center justify-center gap-1.5 text-gray-300 transition-colors"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? "Copied to Clipboard" : "Copy Words"}</span>
-            </button>
+            <div className="mt-3">
+              <button
+                onClick={copyWords}
+                className="w-full py-2.5 bg-[#141824] hover:bg-[#1E2638] text-xs font-medium rounded-xl flex items-center justify-center gap-1.5 text-gray-300 border border-[#20283E] transition-colors"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-[#8892B0]" />}
+                <span>{copied ? "Copied to Clipboard" : "Copy to clipboard"}</span>
+              </button>
+            </div>
 
-            <label className="flex items-start gap-2 pt-2 cursor-pointer text-xs text-gray-300">
+            <label className="flex items-start gap-2.5 pt-4 cursor-pointer text-xs text-gray-300 select-none">
               <input
                 type="checkbox"
                 checked={backedUpChecked}
                 onChange={(e) => setBackedUpChecked(e.target.checked)}
-                className="mt-0.5 rounded accent-[#9939FF]"
+                className="mt-0.5 rounded accent-white w-4 h-4"
               />
-              <span>I have safely backed up these 12 words in a secure place.</span>
+              <span className="leading-tight text-xs text-[#8892B0]">
+                I have saved these 12 secret words in a safe place.
+              </span>
             </label>
           </div>
-        )}
 
-        {/* Step: Import Words */}
-        {step === "import_words" && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-bold mb-1">Import Secret Phrase</h2>
-              <p className="text-[11px] text-[#8892B0]">
-                Enter your 12- or 24-word recovery phrase separated by single spaces.
-              </p>
-            </div>
-
-            <textarea
-              rows={4}
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder="e.g. quantum horizon energy matrix pulse velvet nebula crystal flame shadow drift solar"
-              className="w-full bg-[#141824] border border-[#20283E] rounded-xl p-3 text-xs font-mono focus:outline-none focus:border-[#9939FF] text-white resize-none"
-            />
-          </div>
-        )}
-
-        {/* Step: Set Password */}
-        {step === "set_password" && (
-          <form onSubmit={handleFinish} className="space-y-4">
-            <div>
-              <h2 className="text-lg font-bold mb-1">Set Unlock Password</h2>
-              <p className="text-[11px] text-[#8892B0]">
-                This password will unlock your Zeni wallet only on this device.
-              </p>
-            </div>
-
-            {error && (
-              <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-400">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs text-[#8892B0] block mb-1">New Password (min 8 chars)</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full bg-[#141824] border border-[#20283E] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#9939FF]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-[#8892B0]"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs text-[#8892B0] block mb-1">Confirm Password</label>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full bg-[#141824] border border-[#20283E] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#9939FF]"
-              />
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* Navigation Footer */}
-      <div className="pt-4 border-t border-[#20283E]/60">
-        {step === "create_backup" && (
           <button
             disabled={!backedUpChecked}
             onClick={() => setStep("set_password")}
-            className="w-full py-3 rounded-xl bg-[#9939FF] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#8324E6] text-white font-semibold text-sm transition-all"
+            className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-white/10 transition-all active:scale-[0.99] cursor-pointer"
           >
             Continue
           </button>
-        )}
+        </div>
+      )}
 
-        {step === "import_words" && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setStep("welcome")}
-              className="py-3 px-4 rounded-xl bg-[#141824] text-xs font-semibold text-[#8892B0]"
-            >
-              Back
-            </button>
-            <button
-              disabled={importText.trim().split(/\s+/).length < 12}
-              onClick={() => setStep("set_password")}
-              className="flex-1 py-3 rounded-xl bg-[#9939FF] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#8324E6] text-white font-semibold text-sm transition-all"
-            >
-              Continue
-            </button>
+      {/* Step: Import Words */}
+      {step === "import_words" && (
+        <div className="flex flex-col h-full justify-between p-5 z-10">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => setStep("welcome")}
+                className="w-8 h-8 rounded-full bg-[#141824] hover:bg-[#1E2638] flex items-center justify-center text-gray-300 transition-colors"
+                title="Go back"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <span className="text-[11px] font-mono text-[#8892B0]">Import Wallet</span>
+              <div className="w-8" />
+            </div>
+
+            <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Import Secret Phrase</h2>
+            <p className="text-xs text-[#8892B0] mb-4 leading-relaxed">
+              Enter your 12- or 24-word Secret Recovery Phrase separated by single spaces.
+            </p>
+
+            <textarea
+              rows={5}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="e.g. quantum horizon energy matrix pulse velvet nebula crystal flame shadow drift solar"
+              className="w-full bg-[#0A0D14] border border-[#27272A] rounded-2xl p-4 text-xs font-mono focus:outline-none focus:border-white text-white resize-none placeholder-[#71717A]"
+            />
           </div>
-        )}
 
-        {step === "set_password" && (
-          <div className="flex gap-2">
+          <button
+            disabled={importText.trim().split(/\s+/).length < 12}
+            onClick={() => setStep("set_password")}
+            className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-white/10 transition-all active:scale-[0.99] cursor-pointer"
+          >
+            Continue
+          </button>
+        </div>
+      )}
+
+      {/* Step: Set Password */}
+      {step === "set_password" && (
+        <div className="flex flex-col h-full justify-between p-5 z-10">
+          <form onSubmit={handleFinish} className="flex flex-col h-full justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  type="button"
+                  onClick={() => setStep(importText ? "import_words" : "create_backup")}
+                  className="w-8 h-8 rounded-full bg-[#141824] hover:bg-[#1E2638] flex items-center justify-center text-gray-300 transition-colors"
+                  title="Go back"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[11px] font-mono text-[#8892B0]">
+                  {importText ? "Step 2 of 2" : "Step 2 of 2"}
+                </span>
+                <div className="w-8" />
+              </div>
+
+              <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Set Unlock Password</h2>
+              <p className="text-xs text-[#8892B0] mb-4 leading-relaxed">
+                This password will unlock your Zeni wallet only on this device.
+              </p>
+
+              {error && (
+                <div className="p-3 mb-4 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-400 text-center animate-shake">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs text-[#8892B0] block mb-1.5">New Password (min 8 chars)</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="Enter new password"
+                      className="w-full bg-[#0A0D14] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-[#71717A]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3.5 text-[#8892B0] hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-[#8892B0] block mb-1.5">Confirm Password</label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="Confirm your password"
+                    className="w-full bg-[#0A0D14] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-[#71717A]"
+                  />
+                </div>
+              </div>
+            </div>
+
             <button
-              type="button"
-              onClick={() => setStep(importText ? "import_words" : "create_backup")}
-              className="py-3 px-4 rounded-xl bg-[#141824] text-xs font-semibold text-[#8892B0]"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={handleFinish}
-              disabled={isLoading || password.length < 8}
-              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#9939FF] to-[#00F0FF] text-white font-semibold text-sm shadow-lg shadow-[#00F0FF]/15 disabled:opacity-50"
+              type="submit"
+              disabled={isLoading || password.length < 8 || password !== confirmPassword}
+              className="w-full py-3.5 rounded-full bg-white text-black font-bold text-sm hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-white/10 transition-all active:scale-[0.99] cursor-pointer mt-4"
             >
               {isLoading ? "Encrypting Vault..." : "Complete Setup"}
             </button>
-          </div>
-        )}
-      </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
