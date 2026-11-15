@@ -1,7 +1,11 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @main
 public struct ZeniApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
     @State private var isPrivacyMaskActive: Bool = false
 
@@ -28,14 +32,9 @@ public struct ZeniApp: App {
                     .transition(.opacity)
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            .onChange(of: scenePhase) {
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    self.isPrivacyMaskActive = true
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    self.isPrivacyMaskActive = false
+                    self.isPrivacyMaskActive = (scenePhase != .active)
                 }
             }
         }
