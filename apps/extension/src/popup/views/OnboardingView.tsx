@@ -61,8 +61,8 @@ export const OnboardingView: React.FC = () => {
       {/* Top Branding */}
       <div>
         <div className="flex items-center gap-2.5 mb-6">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#9939FF] to-[#00F0FF] flex items-center justify-center font-bold text-lg shadow-lg shadow-[#9939FF]/30">
-            銭
+          <div className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center bg-black shadow-sm">
+            <div className="w-2.5 h-2.5 border-[1.5px] border-white" />
           </div>
           <div>
             <div className="font-extrabold text-base tracking-tight">Zeni Wallet</div>

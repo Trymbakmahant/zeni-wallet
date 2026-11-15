@@ -24,8 +24,8 @@ const MainLayout: React.FC = () => {
       {/* Extension Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-[#20283E] bg-[#141824]/50 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#9939FF] to-[#00F0FF] flex items-center justify-center font-bold text-sm shadow-lg shadow-[#9939FF]/20">
-            銭
+          <div className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center bg-black shadow-sm">
+            <div className="w-2 h-2 border-[1.5px] border-white" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">

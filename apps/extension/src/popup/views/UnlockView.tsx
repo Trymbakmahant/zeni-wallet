@@ -38,16 +38,24 @@ export const UnlockView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#000000] text-white justify-between relative overflow-hidden select-none">
-      {/* Top Brand Logo - Styled with bold stacked typography like MetaMask */}
-      <div className="flex flex-col items-center pt-16 pb-4 z-10">
+      {/* Top Brand Identity - Iconic Japanese Zeni Coin (Circle with Square Center) */}
+      <div className="flex flex-col items-center pt-10 pb-2 z-10 select-none">
+        {/* Zeni Coin Emblem */}
+        <div className="relative mb-3 flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full border-[3px] border-white flex items-center justify-center shadow-[0_0_24px_rgba(255,255,255,0.18)] transition-transform hover:scale-105">
+            <div className="w-4 h-4 border-[2.5px] border-white" />
+          </div>
+        </div>
+
+        {/* Clean, Bold Brand Typography */}
         <div className="text-center font-black tracking-[-0.04em] text-white leading-[0.92] font-sans">
-          <div className="text-[52px]">Zeni</div>
-          <div className="text-[46px] tracking-[-0.03em] -mt-1 text-white">Wallet</div>
+          <div className="text-[40px] tracking-tight">Zeni</div>
+          <div className="text-[34px] tracking-tight text-zinc-200">Wallet</div>
         </div>
       </div>
 
       {/* Main Form */}
-      <div className="px-6 w-full max-w-[340px] mx-auto z-10 flex flex-col items-center mb-auto pt-6">
+      <div className="px-6 w-full max-w-[340px] mx-auto z-10 flex flex-col items-center mb-auto pt-4">
         <form onSubmit={handleUnlock} className="w-full space-y-4">
           {error && (
             <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-400 text-center animate-shake">
@@ -63,7 +71,7 @@ export const UnlockView: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               autoFocus
               required
-              className="w-full bg-transparent border border-[#27272A] rounded-xl px-4 py-3.5 text-sm text-white placeholder-[#71717A] focus:outline-none focus:border-[#52525B] transition-colors"
+              className="w-full bg-[#0A0D14]/80 backdrop-blur-sm border border-[#27272A] rounded-xl px-4 py-3.5 text-sm text-white placeholder-[#71717A] focus:outline-none focus:border-white transition-colors"
             />
           </div>
 
@@ -72,18 +80,18 @@ export const UnlockView: React.FC = () => {
             disabled={isLoading || !password}
             className={`w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-200 flex items-center justify-center ${
               !password
-                ? "bg-[#6B7280] text-[#111827] cursor-not-allowed opacity-85"
-                : "bg-gradient-to-r from-[#9939FF] to-[#00F0FF] text-white hover:opacity-95 shadow-lg shadow-[#00F0FF]/25 cursor-pointer active:scale-[0.99]"
+                ? "bg-[#4B5162] text-[#141824] cursor-not-allowed opacity-80"
+                : "bg-white text-black hover:bg-zinc-200 shadow-lg shadow-white/10 cursor-pointer active:scale-[0.99]"
             }`}
           >
             {isLoading ? "Unlocking..." : "Unlock"}
           </button>
 
-          <div className="text-center pt-2">
+          <div className="text-center pt-1">
             <button
               type="button"
               onClick={() => setShowForgotModal(true)}
-              className="text-[#5B8DEF] hover:text-[#00F0FF] text-xs font-medium transition-colors cursor-pointer"
+              className="text-[#8892B0] hover:text-white text-xs font-medium transition-colors cursor-pointer"
             >
               Forgot password?
             </button>
@@ -91,29 +99,15 @@ export const UnlockView: React.FC = () => {
         </form>
       </div>
 
-      {/* Bottom Origami Geometric Artwork - Inspired by MetaMask's bottom polygonal planes */}
-      <div className="w-full relative pointer-events-none select-none mt-auto">
-        <svg
-          viewBox="0 0 360 140"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-auto block"
-          preserveAspectRatio="none"
-        >
-          {/* Left Ear/Cheek Geometry */}
-          <polygon points="0,140 32,20 105,140" fill="#2E0854" />
-          <polygon points="32,20 105,140 145,95" fill="#9939FF" />
-          <polygon points="105,140 145,95 145,140" fill="#6814B3" />
-
-          {/* Center Bridge/Snout Trapezoid in Zeni Electric Cyan */}
-          <polygon points="145,95 180,95 180,140 145,140" fill="#00E5FF" />
-          <polygon points="180,95 215,95 215,140 180,140" fill="#00C4D6" />
-
-          {/* Right Ear/Cheek Geometry */}
-          <polygon points="215,95 215,140 255,140" fill="#6814B3" />
-          <polygon points="215,95 255,140 328,20" fill="#9939FF" />
-          <polygon points="255,140 328,20 360,140" fill="#2E0854" />
-        </svg>
+      {/* Bottom Zen Sumi-e Landscape Artwork (Bonsai Pine, Japanese Pagoda, Mountain Mist) */}
+      <div className="w-full relative pointer-events-none select-none mt-auto overflow-hidden">
+        <img
+          src="/art/zen-landscape-blended.png"
+          alt="Zen Japanese Landscape"
+          className="w-full h-36 object-cover object-bottom block opacity-85"
+        />
+        {/* Subtle top fade to dissolve smoothly into pure black */}
+        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#000000]" />
       </div>
 
       {/* Forgot Password Reset Modal */}
