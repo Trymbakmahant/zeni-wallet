@@ -1,0 +1,299 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA0100012CE0000100000001 /* ZeniApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200012CE0000100000001 /* ZeniApp.swift */; };
+		AA0100022CE0000100000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200022CE0000100000001 /* AppState.swift */; };
+		AA0100032CE0000100000001 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200032CE0000100000001 /* KeychainManager.swift */; };
+		AA0100042CE0000100000001 /* SecureData.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200042CE0000100000001 /* SecureData.swift */; };
+		AA0100052CE0000100000001 /* KeyDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200052CE0000100000001 /* KeyDerivation.swift */; };
+		AA0100062CE0000100000001 /* HybridSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200062CE0000100000001 /* HybridSigner.swift */; };
+		AA0100072CE0000100000001 /* RPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200072CE0000100000001 /* RPCClient.swift */; };
+		AA0100082CE0000100000001 /* PortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200082CE0000100000001 /* PortfolioView.swift */; };
+		AA0100092CE0000100000001 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200092CE0000100000001 /* Colors.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA0000012CE0000100000001 /* Zeni.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zeni.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0200012CE0000100000001 /* ZeniApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniApp.swift; sourceTree = "<group>"; };
+		AA0200022CE0000100000001 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		AA0200032CE0000100000001 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
+		AA0200042CE0000100000001 /* SecureData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureData.swift; sourceTree = "<group>"; };
+		AA0200052CE0000100000001 /* KeyDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDerivation.swift; sourceTree = "<group>"; };
+		AA0200062CE0000100000001 /* HybridSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HybridSigner.swift; sourceTree = "<group>"; };
+		AA0200072CE0000100000001 /* RPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCClient.swift; sourceTree = "<group>"; };
+		AA0200082CE0000100000001 /* PortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
+		AA0200092CE0000100000001 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		AA0200102CE0000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA0300012CE0000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0400012CE0000100000001 = {
+			isa = PBXGroup;
+			children = (
+				AA0400022CE0000100000001 /* Sources */,
+				AA0400032CE0000100000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0400022CE0000100000001 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				AA0400042CE0000100000001 /* App */,
+				AA0400052CE0000100000001 /* Core */,
+				AA0400062CE0000100000001 /* Features */,
+				AA0400072CE0000100000001 /* DesignSystem */,
+				AA0200102CE0000100000001 /* Info.plist */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		AA0400032CE0000100000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000012CE0000100000001 /* Zeni.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0400042CE0000100000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AA0200012CE0000100000001 /* ZeniApp.swift */,
+				AA0200022CE0000100000001 /* AppState.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AA0400052CE0000100000001 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				AA0200032CE0000100000001 /* KeychainManager.swift */,
+				AA0200042CE0000100000001 /* SecureData.swift */,
+				AA0200052CE0000100000001 /* KeyDerivation.swift */,
+				AA0200062CE0000100000001 /* HybridSigner.swift */,
+				AA0200072CE0000100000001 /* RPCClient.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		AA0400062CE0000100000001 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				AA0200082CE0000100000001 /* PortfolioView.swift */,
+			);
+			path = Features/Portfolio/Views;
+			sourceTree = "<group>";
+		};
+		AA0400072CE0000100000001 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				AA0200092CE0000100000001 /* Colors.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0500012CE0000100000001 /* Zeni */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0600012CE0000100000001 /* Build configuration list for PBXNativeTarget "Zeni" */;
+			buildPhases = (
+				AA0700012CE0000100000001 /* Sources */,
+				AA0300012CE0000100000001 /* Frameworks */,
+				AA0800012CE0000100000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Zeni;
+			productName = Zeni;
+			productReference = AA0000012CE0000100000001 /* Zeni.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA0900012CE0000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1530;
+				TargetAttributes = {
+					AA0500012CE0000100000001 = {
+						CreatedOnToolsVersion = 15.3;
+					};
+				};
+			};
+			buildConfigurationList = AA0600022CE0000100000001 /* Build configuration list for PBXProject "Zeni" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0400012CE0000100000001;
+			productRefGroup = AA0400032CE0000100000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA0500012CE0000100000001 /* Zeni */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0800012CE0000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA0700012CE0000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0100012CE0000100000001 /* ZeniApp.swift in Sources */,
+				AA0100022CE0000100000001 /* AppState.swift in Sources */,
+				AA0100032CE0000100000001 /* KeychainManager.swift in Sources */,
+				AA0100042CE0000100000001 /* SecureData.swift in Sources */,
+				AA0100052CE0000100000001 /* KeyDerivation.swift in Sources */,
+				AA0100062CE0000100000001 /* HybridSigner.swift in Sources */,
+				AA0100072CE0000100000001 /* RPCClient.swift in Sources */,
+				AA0100082CE0000100000001 /* PortfolioView.swift in Sources */,
+				AA0100092CE0000100000001 /* Colors.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA0A00012CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = Sources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.qorechain.zeni;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA0A00022CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				INFOPLIST_FILE = Sources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = io.qorechain.zeni;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AA0A00032CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		AA0A00042CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA0600012CE0000100000001 /* Build configuration list for PBXNativeTarget "Zeni" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0A00012CE0000100000001 /* Debug */,
+				AA0A00022CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0600022CE0000100000001 /* Build configuration list for PBXProject "Zeni" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0A00032CE0000100000001 /* Debug */,
+				AA0A00042CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = AA0900012CE0000100000001 /* Project object */;
+}
