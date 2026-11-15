@@ -4,6 +4,7 @@ import { HDKey } from "@scure/bip32";
 import { shake256 } from "@noble/hashes/sha3.js";
 import { bech32 } from "@scure/base";
 import { ethers, getBytes, keccak256 } from "ethers";
+import { bytesToHex } from "./utils.js";
 
 export interface DerivedAccountKeys {
   classicalPrivateKey: string;
@@ -82,7 +83,7 @@ export function deriveAccountKeys(
     throw new Error("Failed to derive private key at path " + path);
   }
 
-  const classicalPrivateKey = "0x" + Buffer.from(child.privateKey).toString("hex");
+  const classicalPrivateKey = "0x" + bytesToHex(child.privateKey);
   const classicalWallet = new ethers.Wallet(classicalPrivateKey);
   const classicalAddress = classicalWallet.address;
   const cosmosAddress = evmToBech32Address(classicalAddress);
@@ -91,7 +92,7 @@ export function deriveAccountKeys(
   // Context string binds account address, Cosmos format, and credentials
   const pqcContext = `qorechain:pqc:v1|${cosmosAddress}|${cleanMnemonic}|${cleanPassphrase}`;
   const seedBytes = shake256(new TextEncoder().encode(pqcContext), { dkLen: 32 });
-  const pqcSeedHex = "0x" + Buffer.from(seedBytes).toString("hex");
+  const pqcSeedHex = "0x" + bytesToHex(seedBytes);
   const pqcPublicKeyHash = keccak256(seedBytes);
 
   return {

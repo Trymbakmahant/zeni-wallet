@@ -1,5 +1,6 @@
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { sha256 } from "@noble/hashes/sha256.js";
+import { bytesToHex, hexToBytes } from "./utils.js";
 
 export interface EncryptedVaultEnvelope {
   version: 1;
@@ -62,13 +63,13 @@ export async function encryptVault(payload: Record<string, unknown>, password: s
     kdf: {
       algorithm: "PBKDF2-SHA256",
       iterations: 600000,
-      salt: Buffer.from(salt).toString("hex"),
+      salt: bytesToHex(salt),
     },
     cipher: {
       algorithm: "AES-256-GCM",
-      iv: Buffer.from(iv).toString("hex"),
-      authTag: Buffer.from(tagBytes).toString("hex"),
-      ciphertext: Buffer.from(ciphertextBytes).toString("hex"),
+      iv: bytesToHex(iv),
+      authTag: bytesToHex(tagBytes),
+      ciphertext: bytesToHex(ciphertextBytes),
     },
   };
 }
@@ -77,10 +78,10 @@ export async function encryptVault(payload: Record<string, unknown>, password: s
  * Decrypts an encrypted vault envelope
  */
 export async function decryptVault(envelope: EncryptedVaultEnvelope, password: string): Promise<Record<string, unknown>> {
-  const salt = Buffer.from(envelope.kdf.salt, "hex");
-  const iv = Buffer.from(envelope.cipher.iv, "hex");
-  const ciphertext = Buffer.from(envelope.cipher.ciphertext, "hex");
-  const tag = Buffer.from(envelope.cipher.authTag, "hex");
+  const salt = hexToBytes(envelope.kdf.salt);
+  const iv = hexToBytes(envelope.cipher.iv);
+  const ciphertext = hexToBytes(envelope.cipher.ciphertext);
+  const tag = hexToBytes(envelope.cipher.authTag);
 
   const keyBytes = await deriveVaultKey(password, salt, envelope.kdf.iterations);
 
