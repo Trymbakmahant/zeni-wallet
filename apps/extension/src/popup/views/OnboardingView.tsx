@@ -107,7 +107,7 @@ export const OnboardingView: React.FC = () => {
             <img
               src="/art/zen-landscape-blended.png"
               alt="Zen Japanese Landscape"
-              className="w-full h-32 object-cover object-bottom block opacity-85"
+              className="w-full h-32 object-cover object-bottom translate-y-2 block opacity-90"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#000000]" />
           </div>
