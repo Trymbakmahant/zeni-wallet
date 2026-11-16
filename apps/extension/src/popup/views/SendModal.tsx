@@ -53,7 +53,7 @@ export const SendModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex flex-col justify-end">
-      <div className="relative bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto animate-slide-up">
+      <div className="relative bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto overflow-x-hidden animate-slide-up">
         {/* Custom Token Selection Drawer */}
         {showTokenSelect && (
           <div className="absolute inset-0 bg-[#0D0D10] z-30 flex flex-col p-5 rounded-t-3xl animate-fade-in">
@@ -162,11 +162,13 @@ export const SendModal: React.FC = () => {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSend} className="space-y-4 pt-4 flex-1 flex flex-col">
+          <form onSubmit={handleSend} className="space-y-4 pt-4 flex-1 flex flex-col min-w-0 max-w-full">
             {error && (
-              <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+              <div className="w-full max-w-full overflow-hidden p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0 break-words break-all leading-relaxed">
+                  {error}
+                </div>
               </div>
             )}
 

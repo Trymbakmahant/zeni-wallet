@@ -12,6 +12,7 @@ import {
   encodeHybridSignature,
 } from "@zeni/core";
 import { ethers, formatEther, parseEther } from "ethers";
+import * as qoreSdk from "@qorechain/sdk";
 
 interface PendingRequest {
   internalId: string;
@@ -486,6 +487,13 @@ class BackgroundController {
             }
 
             if (
+              errMsg.includes("has no usable registered post-quantum key") ||
+              errMsg.includes("no open EVM authorisation window") ||
+              errMsg.includes("authorisation window") ||
+              errMsg.includes("pqc")
+            ) {
+              errMsg = "QoreChain PQC Protection: This account requires an active Post-Quantum EVM Authorization Window to broadcast on the EVM lane. On Diana testnet, EVM transactions require a registered ML-DSA-87 key and active EVM window.";
+            } else if (
               errMsg.includes("sender balance < tx cost") ||
               errMsg.includes("insufficient balance") ||
               errMsg.includes("insufficient funds")
@@ -493,6 +501,8 @@ class BackgroundController {
               errMsg = "Insufficient QOR balance to cover transfer amount and network gas fee.";
             } else if (errMsg.includes("nonce")) {
               errMsg = "Transaction nonce conflict. Please try again.";
+            } else if (errMsg) {
+              errMsg = errMsg.replace(/\s*\[.*?:[0-9]+\]/g, "").trim();
             }
 
             throw new Error(errMsg || "Transaction failed to broadcast to QoreChain");

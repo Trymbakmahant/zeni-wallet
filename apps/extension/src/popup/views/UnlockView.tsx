@@ -58,7 +58,7 @@ export const UnlockView: React.FC = () => {
       <div className="px-6 w-full max-w-[340px] mx-auto z-10 flex flex-col items-center mb-auto pt-4">
         <form onSubmit={handleUnlock} className="w-full space-y-4">
           {error && (
-            <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-400 text-center animate-shake">
+            <div className="w-full max-w-full overflow-hidden p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 text-center animate-shake break-words break-all leading-relaxed">
               {error}
             </div>
           )}

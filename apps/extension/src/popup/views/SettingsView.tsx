@@ -136,7 +136,7 @@ export const SettingsView: React.FC = () => {
                 <p className="text-xs text-zinc-400">
                   Enter your password to decrypt and view your 12 recovery words.
                 </p>
-                {error && <div className="text-xs text-red-400">{error}</div>}
+                {error && <div className="text-xs text-red-400 break-words break-all">{error}</div>}
                 <input
                   type="password"
                   placeholder="Your wallet password"

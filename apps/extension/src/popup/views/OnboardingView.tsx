@@ -246,7 +246,7 @@ export const OnboardingView: React.FC = () => {
               </p>
 
               {error && (
-                <div className="p-3 mb-4 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-400 text-center animate-shake">
+                <div className="w-full max-w-full overflow-hidden p-3 mb-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 text-center animate-shake break-words break-all leading-relaxed">
                   {error}
                 </div>
               )}
