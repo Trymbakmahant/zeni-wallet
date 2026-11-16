@@ -5,3 +5,5 @@ export * from "./crypto/vault.js";
 export * from "./crypto/utils.js";
 export * from "./rpc/client.js";
 export * from "./rpc/qor-transfer.js";
+export * from "./rpc/native-transaction.js";
+export * from "./rpc/amm.js";

@@ -7,6 +7,13 @@ import {
   repairPqcPublicKeyHash,
   QorTransferClient,
   QorTransferQuote,
+  AmmSwapClient,
+  AmmQuote,
+  NativeTxError,
+  NativeTxUpdate,
+  swapReceivedAmount,
+  transactionExplorerUrl,
+  evmToBech32Address,
   bech32ToEvmAddress,
   encryptVault,
   decryptVault,
@@ -41,6 +48,8 @@ class BackgroundController {
   private dAppPorts = new Map<string, chrome.runtime.Port>();
   private transferQuotes = new Map<string, QorTransferQuote>();
   private transferInProgress = false;
+  private swapQuotes = new Map<string, AmmQuote>();
+  private activityWrites: Promise<void> = Promise.resolve();
   private unlockedVault: VaultData | null = null;
   private autoLockTimeout: any = null;
 
@@ -68,6 +77,7 @@ class BackgroundController {
   public lockVault() {
     this.unlockedVault = null;
     this.transferQuotes.clear();
+    this.swapQuotes.clear();
     chrome.storage.session?.remove?.(["unlockedSession"]);
   }
 
@@ -249,6 +259,56 @@ class BackgroundController {
     });
   }
 
+  private async writeActivity(change: (history: any[]) => any[]): Promise<void> {
+    const work = this.activityWrites.then(async () => {
+      const stored = await chrome.storage.local.get(["activityHistory"]);
+      await chrome.storage.local.set({ activityHistory: change(stored.activityHistory || []) });
+    });
+    this.activityWrites = work.catch(() => {});
+    return work;
+  }
+
+  private async saveNativeActivity(quote: AmmQuote, update: NativeTxUpdate, stage: "registration" | "swap") {
+    const item = {
+      hash: update.hash, type: stage === "swap" ? "SWAP" : "SETUP", nativeChain: true,
+      account: quote.from, tokenIn: quote.tokenIn, tokenOut: quote.tokenOut,
+      amountIn: quote.amountIn, minAmountOut: quote.minAmountOut,
+      amountOut: stage === "swap" ? swapReceivedAmount(update.receipt, quote.from, quote.tokenOut) : undefined,
+      poolId: quote.poolId, timestamp: Date.now(), status: update.status,
+      gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`,
+      explorerUrl: transactionExplorerUrl(update.hash), error: update.error,
+    };
+    await this.writeActivity((history) => {
+      const previous = history.find((entry) => entry.hash === item.hash);
+      return [{ ...item, timestamp: previous?.timestamp || item.timestamp }, ...history.filter((entry) => entry.hash !== item.hash)].slice(0, 100);
+    });
+  }
+
+  private async reconcileNativeActivity() {
+    const stored = await chrome.storage.local.get(["activityHistory"]);
+    const pending = (stored.activityHistory || []).filter((item: any) => item.nativeChain && item.status === "PENDING");
+    const client = new AmmSwapClient(this.client.provider);
+    for (const item of pending) {
+      try {
+        const receipt = await client.receipt(item.hash);
+        if (!receipt || receipt.code === undefined || BigInt(receipt.height || "0") <= 0n) continue;
+        await this.writeActivity((history) => history.map((entry) => entry.hash === item.hash ? {
+          ...entry, status: Number(receipt.code) === 0 ? "CONFIRMED" : "FAILED",
+          amountOut: item.type === "SWAP" ? swapReceivedAmount(receipt, item.account, item.tokenOut) : undefined,
+          error: Number(receipt.code) === 0 ? undefined : receipt.raw_log,
+        } : entry));
+      } catch { /* Keep uncertain transactions pending; never turn lookup errors into success. */ }
+    }
+  }
+
+  private async assertNoPendingNative(active: DerivedAccountKeys) {
+    await this.reconcileNativeActivity();
+    const stored = await chrome.storage.local.get(["activityHistory"]);
+    if ((stored.activityHistory || []).some((item: any) => item.nativeChain && item.account === active.cosmosAddress && item.status === "PENDING")) {
+      throw new Error("A previous transaction is still pending. Check its explorer link in Activity before sending another.");
+    }
+  }
+
   // --- Internal Message Handler for UI ---
 
   private setupInternalMessageListener() {
@@ -299,45 +359,13 @@ class BackgroundController {
           active?.cosmosAddress ||
           stored.cosmosAddress ||
           null;
-        let onChainBalance = "0.0000";
-
-        if (currentAddress) {
-          try {
-            const bal = await this.client.getNativeBalance(currentAddress);
-            onChainBalance = formatEther(bal);
-          } catch (e) {
-            console.warn("Could not query live RPC balance:", e);
-          }
-        }
-
-        // Secondary token balances start strictly at 0 until funded/swapped
-        const savedTokenBalances = stored.tokenBalances || {
-          fUSD: "0.00",
-          fETH: "0.0000",
-          fBTC: "0.0000",
-        };
-
-        // Query on-chain ERC20 contracts if deployed
-        if (currentAddress) {
-          try {
-            const fusdRaw = await this.client.getTokenBalance(QORECHAIN_CONFIG.contracts.fUSD, currentAddress);
-            if (fusdRaw > 0n) {
-              savedTokenBalances.fUSD = formatEther(fusdRaw);
-            }
-          } catch {}
-          try {
-            const fethRaw = await this.client.getTokenBalance(QORECHAIN_CONFIG.contracts.fETH, currentAddress);
-            if (fethRaw > 0n) {
-              savedTokenBalances.fETH = formatEther(fethRaw);
-            }
-          } catch {}
-          try {
-            const fbtcRaw = await this.client.getTokenBalance(QORECHAIN_CONFIG.contracts.fBTC, currentAddress);
-            if (fbtcRaw > 0n) {
-              savedTokenBalances.fBTC = (Number(fbtcRaw) / 1e8).toFixed(4);
-            }
-          } catch {}
-        }
+        const address = active?.cosmosAddress || stored.cosmosAddress
+          || (currentAddress ? evmToBech32Address(currentAddress) : null);
+        const balances = address
+          ? await new AmmSwapClient(this.client.provider).balances(address)
+          : { QOR: "0", fUSD: "0", fETH: "0", fBTC: "0" };
+        const onChainBalance = balances.QOR;
+        const savedTokenBalances = { fUSD: balances.fUSD, fETH: balances.fETH, fBTC: balances.fBTC };
 
         return {
           isInitialized: initialized,
@@ -490,6 +518,7 @@ class BackgroundController {
             this.transferInProgress = true;
             this.resetAutoLock();
             try {
+              await this.assertNoPendingNative(active);
               txHash = await new QorTransferClient(this.client.provider).send(active, quote, () => {
                 if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review the transfer again.");
               });
@@ -575,58 +604,52 @@ class BackgroundController {
       }
 
       case "CLEAR_ACTIVITY": {
-        await chrome.storage.local.set({ activityHistory: [] });
+        await this.writeActivity((history) => history.filter((item: any) => item.nativeChain && item.status === "PENDING"));
         return true;
       }
 
-      case "EXECUTE_SWAP": {
-        const { tokenIn, tokenOut, amountIn, amountOut } = message;
+      case "PREPARE_SWAP": {
         const active = this.getActiveAccount();
         if (!active) throw new Error("Wallet is locked");
+        if (this.transferInProgress) throw new Error("A transaction is already in progress.");
+        await this.assertNoPendingNative(active);
+        const quote = await new AmmSwapClient(this.client.provider).prepareSwap(active, message.tokenIn, message.tokenOut, message.amountIn, message.slippageBps);
+        if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed.");
+        for (const [id, old] of this.swapQuotes) if (old.expiresAt < Date.now()) this.swapQuotes.delete(id);
+        if (this.swapQuotes.size >= 20) this.swapQuotes.delete(this.swapQuotes.keys().next().value!);
+        this.swapQuotes.set(quote.id, quote);
+        return quote;
+      }
 
-        const txHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-
-        // Update stored token balances reflecting the swap
-        const stored = await chrome.storage.local.get(["tokenBalances"]);
-        const balances = stored.tokenBalances || {
-          fUSD: "0.00",
-          fETH: "0.0000",
-          fBTC: "0.0000",
-        };
-        const inVal = parseFloat(amountIn) || 0;
-        const outVal = parseFloat(amountOut) || 0;
-
-        if (tokenIn !== "QOR") {
-          const currentIn = parseFloat(balances[tokenIn] || "0");
-          const decIn = tokenIn === "fUSD" ? 2 : 4;
-          balances[tokenIn] = Math.max(0, currentIn - inVal).toFixed(decIn);
-        }
-        if (tokenOut !== "QOR") {
-          const currentOut = parseFloat(balances[tokenOut] || "0");
-          const decOut = tokenOut === "fUSD" ? 2 : 4;
-          balances[tokenOut] = (currentOut + outVal).toFixed(decOut);
-        }
-        await chrome.storage.local.set({ tokenBalances: balances });
-
-        const historyData = await chrome.storage.local.get(["activityHistory"]);
-        const history = historyData.activityHistory || [];
-        history.unshift({
-          hash: txHash,
-          type: "SWAP",
-          tokenIn,
-          tokenOut,
-          amountIn,
-          amountOut,
-          timestamp: Date.now(),
-          status: "CONFIRMED",
-          gasCost: "~0.0030 QOR",
-        });
-        await chrome.storage.local.set({ activityHistory: history.slice(0, 50) });
-
-        return { txHash, tokenBalances: balances };
+      case "EXECUTE_SWAP": {
+        const active = this.getActiveAccount();
+        if (!active) throw new Error("Wallet is locked");
+        if (this.transferInProgress) throw new Error("A transaction is already in progress.");
+        const quote = this.swapQuotes.get(message.quoteId);
+        if (!quote || quote.from !== active.cosmosAddress) throw new Error("Review a fresh swap quote before confirming.");
+        this.swapQuotes.delete(quote.id);
+        this.transferInProgress = true;
+        this.resetAutoLock();
+        let stage: "registration" | "swap" = "swap";
+        try {
+          await this.assertNoPendingNative(active);
+          return await new AmmSwapClient(this.client.provider).executeSwap(active, quote, () => {
+            if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed.");
+          }, async (update, currentStage) => {
+            stage = currentStage;
+            await this.saveNativeActivity(quote, update, currentStage);
+          });
+        } catch (error) {
+          if (error instanceof NativeTxError) return {
+            hash: error.update.hash, status: error.update.status, stage,
+            explorerUrl: transactionExplorerUrl(error.update.hash), error: error.message,
+          };
+          throw error;
+        } finally { this.transferInProgress = false; }
       }
 
       case "GET_ACTIVITY": {
+        await this.reconcileNativeActivity();
         const historyData = await chrome.storage.local.get(["activityHistory"]);
         return historyData.activityHistory || [];
       }

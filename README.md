@@ -66,5 +66,15 @@ Existing encrypted vaults retain their addresses and PQC seeds; unlocking correc
 
 The transfer regression tests use mocked network responses and real signing/transaction encoding. A funded Chrome testnet transfer is still needed to validate the full deployed-node path.
 
+### Native AMM swaps
+
+The extension swaps QOR, fUSD, fETH and fBTC through Diana's `x/amm` module using active direct pools. Quotes, swap fees and price impact come from the public REST API; the signed `MsgSwapExactIn` enforces the reviewed minimum output. Pairs without an active direct pool are unavailable. Faucet assets are read from spendable bank balances with their official, case-sensitive denominations and 6/18/8 token decimals. ERC-20 balances that have not been converted to bank coins are not available to this swap flow.
+
+Open **Swap**, enter an amount, choose **Review Swap**, then **Confirm & Swap**. First use can register the wallet's PQC key; the swap itself is hybrid-signed on the native lane and does not need an EVM authorization window. Actual network fees are simulated within the displayed allowance. Setup fees remain charged if a later step fails.
+
+The real native transaction hash is saved before broadcasting. A swap is shown as confirmed only after a successful chain receipt, with the received amount read from receipt events. **View on Explorer** is available on the result screen and in **Activity**. Select **Testnet** in the Dashboard explorer: its network is controlled by its header/cookie, not by the transaction URL. Pending or uncertain broadcasts remain in Activity across popup restarts and block another send from the account until their outcome is known; clearing history preserves those records. Old simulated swap entries are labelled as demos and have no explorer link.
+
+Run `pnpm --filter @zeni/core test` for signing, slippage, denomination, fee, confirmation and uncertain-broadcast regression coverage. Live pools, quotes, token metadata and an existing AMM receipt were read to verify the integration; these checks do not spend wallet funds.
+
 ## License
 MIT

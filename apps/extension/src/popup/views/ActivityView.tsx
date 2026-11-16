@@ -1,7 +1,7 @@
 import React from "react";
 import { Send, ArrowUpDown, ExternalLink, Clock, Trash2, Fuel } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
-import { QORECHAIN_CONFIG } from "@zeni/core";
+import { QORECHAIN_CONFIG, transactionExplorerUrl } from "@zeni/core";
 
 export const ActivityView: React.FC = () => {
   const { activity, clearActivity } = useWallet();
@@ -43,7 +43,7 @@ export const ActivityView: React.FC = () => {
               key={item.hash || idx}
               className="p-3 rounded-2xl bg-[#0D0D10] border border-[#222226] flex items-center justify-between"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-black border border-[#222226] flex items-center justify-center">
                   {item.type === "SEND" ? (
                     <Send className="w-4 h-4 text-[#E06341]" />
@@ -51,31 +51,34 @@ export const ActivityView: React.FC = () => {
                     <ArrowUpDown className="w-4 h-4 text-[#E06341]" />
                   )}
                 </div>
-                <div>
+                <div className="min-w-0 break-words">
                   <div className="font-semibold text-xs leading-tight text-white">
-                    {item.type === "SEND"
+                    {item.type === "SETUP" ? "PQC key registration" : item.type === "SEND"
                       ? `Sent ${item.amount} ${item.token}`
-                      : `Swapped ${item.amountIn} ${item.tokenIn} → ${item.amountOut} ${item.tokenOut}`}
+                      : `${!item.nativeChain ? "Demo swap" : item.status === "CONFIRMED" ? "Swapped" : "Swap"} ${item.amountIn} ${item.tokenIn} → ${item.status === "CONFIRMED" ? item.amountOut ?? (item.minAmountOut ? `≥ ${item.minAmountOut}` : "—") : ""} ${item.tokenOut}`}
+                  </div>
+                  <div className={`text-[10px] mt-1 ${item.status === "FAILED" ? "text-red-400" : item.status === "PENDING" ? "text-amber-400" : "text-emerald-400"}`}>
+                    {item.type === "SWAP" && !item.nativeChain ? "DEMO · Not on chain" : item.status}{item.nativeChain ? " · Testnet" : ""}
                   </div>
                   <div className="text-[10px] text-zinc-400 font-mono flex items-center gap-1.5 mt-0.5">
                     <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     <span>•</span>
                     <span className="text-zinc-500 font-mono flex items-center gap-1">
-                      <Fuel className="w-3 h-3 text-[#E06341]" /> {item.gasCost || "~0.0030 QOR"}
+                      <Fuel className="w-3 h-3 text-[#E06341]" /> {item.type === "SWAP" && !item.nativeChain ? "No network transaction" : item.gasCost || "~0.0030 QOR"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <a
-                href={`${explorerBase}/tx/${item.hash}`}
+              {(item.type !== "SWAP" || item.nativeChain) && <a
+                href={item.nativeChain ? transactionExplorerUrl(item.hash) : `${explorerBase}/tx/${item.hash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-zinc-400 hover:text-white p-1"
-                title="View on Explorer"
+                title="View on Explorer (select Testnet)"
               >
                 <ExternalLink className="w-4 h-4" />
-              </a>
+              </a>}
             </div>
           ))}
         </div>

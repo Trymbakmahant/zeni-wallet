@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { QORECHAIN_CONFIG, isValidMnemonic, generateNewMnemonic } from "@zeni/core";
+import { QORECHAIN_CONFIG, isValidMnemonic, generateNewMnemonic, type AmmQuote, type SwapResult } from "@zeni/core";
 
 export interface TokenItem {
   symbol: string;
@@ -11,7 +11,7 @@ export interface TokenItem {
 
 export interface ActivityItem {
   hash: string;
-  type: "SEND" | "SWAP";
+  type: "SEND" | "SWAP" | "SETUP";
   to?: string;
   token?: string;
   tokenIn?: string;
@@ -22,6 +22,10 @@ export interface ActivityItem {
   timestamp: number;
   status: "CONFIRMED" | "PENDING" | "FAILED";
   gasCost: string;
+  minAmountOut?: string;
+  nativeChain?: boolean;
+  explorerUrl?: string;
+  error?: string;
 }
 
 export interface PendingApproval {
@@ -51,7 +55,8 @@ interface WalletContextType {
   unlock: (password: string) => Promise<void>;
   lock: () => Promise<void>;
   sendTokens: (to: string, amount: string, token: string, quoteId?: string) => Promise<string>;
-  executeSwap: (tokenIn: string, tokenOut: string, amountIn: string, amountOut: string) => Promise<string>;
+  prepareSwap: (tokenIn: string, tokenOut: string, amountIn: string, slippageBps: number) => Promise<AmmQuote>;
+  executeSwap: (quoteId: string) => Promise<SwapResult>;
   resolveApproval: (internalId: string, approved: boolean) => Promise<void>;
   exportMnemonic: (password: string) => Promise<string>;
   refreshState: () => Promise<void>;
@@ -128,28 +133,28 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         {
           symbol: "QOR",
           name: "QoreChain Native",
-          balance: qorFormatted,
+          balance: status.onChainBalance || "0",
           usdValue: qorUsd,
           icon: "💎",
         },
         {
           symbol: "fUSD",
           name: "Faucet USD",
-          balance: fusdBal.toFixed(2),
+          balance: tb.fUSD || "0",
           usdValue: (fusdBal * 1.0).toLocaleString("en-US", { style: "currency", currency: "USD" }),
           icon: "💵",
         },
         {
           symbol: "fETH",
           name: "Faucet Ethereum",
-          balance: fethBal.toFixed(4),
+          balance: tb.fETH || "0",
           usdValue: (fethBal * 3100.0).toLocaleString("en-US", { style: "currency", currency: "USD" }),
           icon: "Ξ",
         },
         {
           symbol: "fBTC",
           name: "Faucet Bitcoin",
-          balance: fbtcBal.toFixed(4),
+          balance: tb.fBTC || "0",
           usdValue: (fbtcBal * 65000.0).toLocaleString("en-US", { style: "currency", currency: "USD" }),
           icon: "₿",
         },
@@ -201,6 +206,14 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!activity.some((item) => item.nativeChain && item.status === "PENDING")) return;
+    const interval = setInterval(() => {
+      sendMessage("GET_ACTIVITY").then((items) => setActivity(items || [])).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activity]);
+
   const createWallet = async (password: string, customMnemonic?: string): Promise<{ mnemonic: string }> => {
     const mnemonic = customMnemonic ? customMnemonic.trim() : generateNewMnemonic(128);
     if (!isValidMnemonic(mnemonic)) {
@@ -238,26 +251,15 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return res.txHash;
   };
 
-  const executeSwap = async (
-    tokenIn: string,
-    tokenOut: string,
-    amountIn: string,
-    amountOut: string
-  ): Promise<string> => {
-    const res = await sendMessage("EXECUTE_SWAP", { tokenIn, tokenOut, amountIn, amountOut });
-    setTokens((prev) =>
-      prev.map((t) => {
-        if (t.symbol === tokenIn) {
-          return { ...t, balance: Math.max(0, parseFloat(t.balance) - parseFloat(amountIn)).toFixed(2) };
-        }
-        if (t.symbol === tokenOut) {
-          return { ...t, balance: (parseFloat(t.balance) + parseFloat(amountOut)).toFixed(2) };
-        }
-        return t;
-      })
-    );
-    await refreshState();
-    return res.txHash;
+  const prepareSwap = (tokenIn: string, tokenOut: string, amountIn: string, slippageBps: number): Promise<AmmQuote> =>
+    sendMessage("PREPARE_SWAP", { tokenIn, tokenOut, amountIn, slippageBps });
+
+  const executeSwap = async (quoteId: string): Promise<SwapResult> => {
+    const result = await sendMessage("EXECUTE_SWAP", { quoteId });
+    // Real balances and receipts are authoritative; no optimistic token minting.
+    void refreshState();
+    sendMessage("GET_ACTIVITY").then((history) => setActivity(history || [])).catch(() => {});
+    return result;
   };
 
   const resolveApproval = async (internalId: string, approved: boolean) => {
@@ -276,7 +278,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const clearActivity = async () => {
     await sendMessage("CLEAR_ACTIVITY");
-    setActivity([]);
+    setActivity(await sendMessage("GET_ACTIVITY"));
   };
 
   return (
@@ -299,6 +301,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         unlock,
         lock,
         sendTokens,
+        prepareSwap,
         executeSwap,
         resolveApproval,
         exportMnemonic,
