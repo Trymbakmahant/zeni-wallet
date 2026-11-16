@@ -88,9 +88,11 @@ export function deriveAccountKeys(
   const classicalAddress = classicalWallet.address;
   const cosmosAddress = evmToBech32Address(classicalAddress);
 
-  // 3. Post-Quantum Seed Derivation using SHAKE-256
+  // 3. Post-Quantum Seed Derivation using SHAKE-256 (Canonical QoreChain specification)
   // Context string binds account address, Cosmos format, and credentials
-  const pqcContext = `qorechain:pqc:v1|${cosmosAddress}|${cleanMnemonic}|${cleanPassphrase}`;
+  const pqcContext = cleanPassphrase
+    ? `qorechain:pqc:v1|${cosmosAddress}|${cleanMnemonic}|${cleanPassphrase}`
+    : `qorechain:pqc:v1|${cosmosAddress}|${cleanMnemonic}`;
   const seedBytes = shake256(new TextEncoder().encode(pqcContext), { dkLen: 32 });
   const pqcSeedHex = "0x" + bytesToHex(seedBytes);
   const pqcPublicKeyHash = keccak256(seedBytes);

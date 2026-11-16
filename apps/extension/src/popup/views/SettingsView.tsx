@@ -1,15 +1,27 @@
 import React, { useState } from "react";
-import { ShieldCheck, KeyRound, Lock, ExternalLink, Copy, Check, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, KeyRound, Lock, ExternalLink, Copy, Check, Eye, EyeOff, Trash2, AlertTriangle, X } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { QORECHAIN_CONFIG } from "@zeni/core";
 
 export const SettingsView: React.FC = () => {
-  const { lock, pqcPublicKeyHash, activeAddress, exportMnemonic } = useWallet();
+  const { lock, pqcPublicKeyHash, activeAddress, exportMnemonic, resetWallet } = useWallet();
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [password, setPassword] = useState("");
   const [revealedMnemonic, setRevealedMnemonic] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleReset = async () => {
+    setIsResetting(true);
+    try {
+      await resetWallet();
+    } catch (err: any) {
+      setError(err?.message || "Failed to reset wallet");
+      setIsResetting(false);
+    }
+  };
 
   const handleExport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,13 +103,20 @@ export const SettingsView: React.FC = () => {
         </button>
       </div>
 
-      {/* Lock Wallet Button */}
-      <div className="pt-2">
+      {/* Action Buttons: Lock & Reset */}
+      <div className="pt-2 space-y-2">
         <button
           onClick={lock}
+          className="w-full py-3 rounded-xl bg-[#141416] hover:bg-[#1C1C20] border border-[#27272A] text-zinc-300 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          <Lock className="w-4 h-4 text-zinc-400" /> Lock Zeni Wallet
+        </button>
+
+        <button
+          onClick={() => setShowResetModal(true)}
           className="w-full py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
         >
-          <Lock className="w-4 h-4" /> Lock Zeni Wallet
+          <Trash2 className="w-4 h-4" /> Reset Wallet & Start Fresh
         </button>
       </div>
 
@@ -163,6 +182,55 @@ export const SettingsView: React.FC = () => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-5 animate-fade-in">
+          <div className="bg-[#0D0D10] border border-[#222226] rounded-3xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-base text-white">Reset Zeni Wallet?</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="w-7 h-7 rounded-full bg-[#18181C] hover:bg-[#27272A] flex items-center justify-center text-zinc-400 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              This will permanently remove your stored keys, credentials, and local data from this browser extension.
+            </p>
+
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-[11px] text-red-300 leading-relaxed">
+              Make sure you have backed up your 12-word recovery phrase if you ever want to access this address again.
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={isResetting}
+                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-red-600/20"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isResetting ? "Resetting Wallet..." : "Yes, Reset & Create Fresh"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="w-full py-2.5 rounded-xl bg-[#18181C] hover:bg-[#222226] border border-[#27272A] text-zinc-300 text-xs font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

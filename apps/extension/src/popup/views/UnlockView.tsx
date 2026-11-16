@@ -137,9 +137,9 @@ export const UnlockView: React.FC = () => {
               <button
                 onClick={handleReset}
                 disabled={isResetting}
-                className="w-full py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors flex items-center justify-center cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors flex items-center justify-center cursor-pointer shadow-lg shadow-red-600/20"
               >
-                {isResetting ? "Resetting..." : "Reset & Restore with Phrase"}
+                {isResetting ? "Resetting..." : "Reset Wallet & Start Fresh"}
               </button>
               <button
                 onClick={() => setShowForgotModal(false)}
