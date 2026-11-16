@@ -5,6 +5,7 @@ import { UnlockView } from "./views/UnlockView";
 import { PortfolioView } from "./views/PortfolioView";
 import { ActivityView } from "./views/ActivityView";
 import { SettingsView } from "./views/SettingsView";
+import { StartupScreen } from "./components/StartupScreen";
 import { Home, Clock, Settings, ShieldCheck, Lock, ChevronDown, Copy, Check } from "lucide-react";
 
 const MainLayout: React.FC = () => {
@@ -112,7 +113,9 @@ const MainLayout: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <WalletProvider>
-      <MainLayout />
+      <StartupScreen>
+        <MainLayout />
+      </StartupScreen>
     </WalletProvider>
   );
 };

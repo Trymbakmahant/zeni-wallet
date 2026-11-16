@@ -26,7 +26,11 @@
     }
   ],
   "permissions": ["storage"],
+  "host_permissions": [
+    "https://api-testnet.qore.host/*",
+    "https://evm-testnet.qore.host/*"
+  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://evm-testnet.qore.host https://rpc-testnet.qore.host"
+    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://evm-testnet.qore.host https://rpc-testnet.qore.host https://api-testnet.qore.host"
   }
 }

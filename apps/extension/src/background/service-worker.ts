@@ -4,6 +4,9 @@ import {
   DerivedAccountKeys,
   EncryptedVaultEnvelope,
   deriveAccountKeys,
+  repairPqcPublicKeyHash,
+  QorTransferClient,
+  QorTransferQuote,
   bech32ToEvmAddress,
   encryptVault,
   decryptVault,
@@ -12,7 +15,6 @@ import {
   encodeHybridSignature,
 } from "@zeni/core";
 import { ethers, formatEther, parseEther } from "ethers";
-import * as qoreSdk from "@qorechain/sdk";
 
 interface PendingRequest {
   internalId: string;
@@ -37,6 +39,8 @@ class BackgroundController {
   private client: QoreChainClient;
   private pendingRequests = new Map<string, PendingRequest>();
   private dAppPorts = new Map<string, chrome.runtime.Port>();
+  private transferQuotes = new Map<string, QorTransferQuote>();
+  private transferInProgress = false;
   private unlockedVault: VaultData | null = null;
   private autoLockTimeout: any = null;
 
@@ -63,6 +67,7 @@ class BackgroundController {
 
   public lockVault() {
     this.unlockedVault = null;
+    this.transferQuotes.clear();
     chrome.storage.session?.remove?.(["unlockedSession"]);
   }
 
@@ -106,6 +111,11 @@ class BackgroundController {
     if (!envelope) throw new Error("No vault found");
 
     const decrypted = (await decryptVault(envelope, password)) as unknown as VaultData;
+    const accounts = decrypted.accounts.map(repairPqcPublicKeyHash);
+    if (accounts.some((account, index) => account.pqcPublicKeyHash !== decrypted.accounts[index].pqcPublicKeyHash)) {
+      decrypted.accounts = accounts;
+      await chrome.storage.local.set({ encryptedVault: await encryptVault(decrypted as any, password) });
+    }
     this.unlockedVault = decrypted;
     this.resetAutoLock();
 
@@ -242,7 +252,12 @@ class BackgroundController {
   // --- Internal Message Handler for UI ---
 
   private setupInternalMessageListener() {
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      // Only extension pages may invoke private vault/transfer messages.
+      if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(""))) {
+        sendResponse({ success: false, error: "Unauthorized wallet request" });
+        return false;
+      }
       this.handleInternalMessage(message)
         .then((res) => sendResponse({ success: true, data: res }))
         .catch((err) => sendResponse({ success: false, error: err?.message || String(err) }));
@@ -252,6 +267,21 @@ class BackgroundController {
 
   private async handleInternalMessage(message: any): Promise<any> {
     switch (message.type) {
+      case "GET_SESSION_STATUS": {
+        // Route the popup from local vault state without waiting for network balances.
+        const stored = await chrome.storage.local.get([
+          "encryptedVault", "activeAddress", "cosmosAddress", "pqcPublicKeyHash",
+        ]);
+        const active = this.getActiveAccount();
+        return {
+          isInitialized: !!stored.encryptedVault,
+          isUnlocked: this.isUnlocked(),
+          activeAddress: active?.classicalAddress || stored.activeAddress || null,
+          cosmosAddress: active?.cosmosAddress || stored.cosmosAddress || null,
+          pqcPublicKeyHash: active?.pqcPublicKeyHash || stored.pqcPublicKeyHash || null,
+        };
+      }
+
       case "GET_STATUS": {
         const initialized = await this.isInitialized();
         const unlocked = this.isUnlocked();
@@ -418,6 +448,17 @@ class BackgroundController {
         return { resolved: true };
       }
 
+      case "PREPARE_QOR_TRANSFER": {
+        const active = this.getActiveAccount();
+        if (!active) throw new Error("Wallet is locked");
+        if (this.transferInProgress) throw new Error("A transfer is already in progress.");
+        const quote = await new QorTransferClient(this.client.provider).prepare(active, message.to, message.amount);
+        if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review again.");
+        this.transferQuotes.clear();
+        this.transferQuotes.set(quote.id, quote);
+        return quote;
+      }
+
       case "EXECUTE_TRANSFER": {
         // Broadcasts token transfer to QoreChain Testnet
         const { to, amount, token } = message;
@@ -440,29 +481,22 @@ class BackgroundController {
 
         if (token === "QOR") {
           try {
-            const sendVal = parseEther(amount.toString());
-            const userBal = await this.client.getNativeBalance(active.classicalAddress);
-            const feeData = await this.client.provider.getFeeData();
-            const gasPrice = feeData.gasPrice || 112500000000n;
-            const estFee = 21000n * gasPrice;
-
-            if (userBal < sendVal + estFee) {
-              const safeMax = userBal > estFee ? formatEther(userBal - estFee) : "0";
-              throw new Error(
-                `Insufficient balance for transfer + gas fee. Balance: ${formatEther(userBal)} QOR. Gas fee: ~${formatEther(estFee).slice(0, 6)} QOR. Max send: ~${parseFloat(safeMax).toFixed(4)} QOR.`
-              );
+            const quote = this.transferQuotes.get(message.quoteId);
+            if (!quote || quote.to !== target || quote.value !== parseEther(amount.toString()).toString()) {
+              throw new Error("Review the QOR transfer and its authorization limits before confirming.");
             }
-
-            const wallet = new ethers.Wallet(active.classicalPrivateKey, this.client.provider);
-            const tx = await wallet.sendTransaction({
-              to: target,
-              value: sendVal,
-              gasLimit: 21000n,
-              gasPrice: gasPrice,
-              type: 0,
-            });
-            txHash = tx.hash;
-            gasCostDisplay = `${formatEther(estFee).slice(0, 6)} QOR`;
+            if (this.transferInProgress) throw new Error("A transfer is already in progress.");
+            this.transferQuotes.delete(quote.id);
+            this.transferInProgress = true;
+            this.resetAutoLock();
+            try {
+              txHash = await new QorTransferClient(this.client.provider).send(active, quote, () => {
+                if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review the transfer again.");
+              });
+              gasCostDisplay = `Up to ${quote.maxNetworkFee} QOR (including setup)`;
+            } finally {
+              this.transferInProgress = false;
+            }
           } catch (err: any) {
             console.error("Live on-chain QOR transfer failed:", err);
             // Robust extraction of RPC errors to prevent generic "could not coalesce error"
@@ -489,10 +523,9 @@ class BackgroundController {
             if (
               errMsg.includes("has no usable registered post-quantum key") ||
               errMsg.includes("no open EVM authorisation window") ||
-              errMsg.includes("authorisation window") ||
-              errMsg.includes("pqc")
+              errMsg.includes("no open EVM authorization window")
             ) {
-              errMsg = "QoreChain PQC Protection: This account requires an active Post-Quantum EVM Authorization Window to broadcast on the EVM lane. On Diana testnet, EVM transactions require a registered ML-DSA-87 key and active EVM window.";
+              errMsg = "QoreChain rejected the transfer authorization. Review the transfer again to open a fresh window. Completed setup transactions may have charged fees.";
             } else if (
               errMsg.includes("sender balance < tx cost") ||
               errMsg.includes("insufficient balance") ||

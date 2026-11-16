@@ -5,6 +5,7 @@ import { shake256 } from "@noble/hashes/sha3.js";
 import { bech32 } from "@scure/base";
 import { ethers, getBytes, keccak256 } from "ethers";
 import { bytesToHex } from "./utils.js";
+import { generatePqcKeypair } from "@qorechain/sdk";
 
 export interface DerivedAccountKeys {
   classicalPrivateKey: string;
@@ -95,7 +96,7 @@ export function deriveAccountKeys(
     : `qorechain:pqc:v1|${cosmosAddress}|${cleanMnemonic}`;
   const seedBytes = shake256(new TextEncoder().encode(pqcContext), { dkLen: 32 });
   const pqcSeedHex = "0x" + bytesToHex(seedBytes);
-  const pqcPublicKeyHash = keccak256(seedBytes);
+  const pqcPublicKeyHash = keccak256(generatePqcKeypair(seedBytes).publicKey);
 
   return {
     classicalPrivateKey,
@@ -105,6 +106,16 @@ export function deriveAccountKeys(
     pqcContext,
     pqcPublicKeyHash,
   };
+}
+
+/** Recover the actual ML-DSA-87 key from the seed already held in the encrypted vault. */
+export function derivePqcKeypair(account: Pick<DerivedAccountKeys, "pqcSeedHex">) {
+  return generatePqcKeypair(getBytes(account.pqcSeedHex));
+}
+
+/** Repair the old seed-hash placeholder without changing the account or its recoverable seed. */
+export function repairPqcPublicKeyHash(account: DerivedAccountKeys): DerivedAccountKeys {
+  return { ...account, pqcPublicKeyHash: keccak256(derivePqcKeypair(account).publicKey) };
 }
 
 /**

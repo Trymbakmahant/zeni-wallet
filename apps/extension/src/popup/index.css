@@ -24,3 +24,149 @@ body {
   background: #26262B;
   border-radius: 4px;
 }
+
+.wallet-startup-root,
+.wallet-startup-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.wallet-startup {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #fff;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+.wallet-startup--leaving { opacity: 0; }
+.wallet-startup-content { animation: wallet-content-arrive 220ms ease-out both; }
+
+.wallet-startup-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0 32px;
+  transform: translateY(-18px);
+}
+
+.wallet-startup-logo {
+  width: 154px;
+  height: 154px;
+  overflow: visible;
+  animation: wallet-logo-arrive 850ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.wallet-startup-ring,
+.wallet-startup-square {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: wallet-logo-draw 800ms cubic-bezier(.65, 0, .35, 1) forwards;
+}
+
+.wallet-startup-square {
+  animation-duration: 420ms;
+  animation-delay: 460ms;
+}
+
+.wallet-startup-wordmark {
+  margin-top: 24px;
+  font-size: 29px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .16em;
+  padding-left: .16em;
+  animation: wallet-copy-arrive 450ms 420ms both;
+}
+
+.wallet-startup-status {
+  margin-top: 17px;
+  color: #8b8b91;
+  font-size: 11px;
+  letter-spacing: .025em;
+  animation: wallet-copy-arrive 450ms 580ms both;
+}
+
+.wallet-startup-progress {
+  margin-top: 18px;
+  width: 40px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #222226;
+  animation: wallet-copy-arrive 450ms 650ms both;
+}
+
+.wallet-startup-progress span {
+  display: block;
+  height: 100%;
+  width: 50%;
+  border-radius: inherit;
+  background: #e06341;
+  animation: wallet-progress 1300ms ease-in-out infinite;
+}
+
+.wallet-startup-caption {
+  position: absolute;
+  bottom: 30px;
+  width: 100%;
+  text-align: center;
+  color: #56565d;
+  font-size: 8px;
+  letter-spacing: .16em;
+  animation: wallet-copy-arrive 600ms 600ms both;
+}
+
+.wallet-startup-error {
+  max-width: 260px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #8b8b91;
+}
+
+.wallet-startup-error p { margin: 10px 0 16px; }
+.wallet-startup-error button {
+  padding: 9px 22px;
+  border: 1px solid #343439;
+  border-radius: 10px;
+  background: #141416;
+  color: #fff;
+  cursor: pointer;
+}
+.wallet-startup-error button:hover { background: #222226; }
+.wallet-startup-error button:focus-visible { outline: 2px solid #e06341; outline-offset: 3px; }
+
+@keyframes wallet-logo-draw { to { stroke-dashoffset: 0; } }
+@keyframes wallet-content-arrive { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wallet-logo-arrive {
+  from { opacity: 0; transform: scale(.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes wallet-copy-arrive {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes wallet-progress {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(310%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-startup,
+  .wallet-startup-content,
+  .wallet-startup * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .wallet-startup-ring,
+  .wallet-startup-square { stroke-dashoffset: 0; }
+}

@@ -4,3 +4,4 @@ export * from "./crypto/derivation.js";
 export * from "./crypto/vault.js";
 export * from "./crypto/utils.js";
 export * from "./rpc/client.js";
+export * from "./rpc/qor-transfer.js";

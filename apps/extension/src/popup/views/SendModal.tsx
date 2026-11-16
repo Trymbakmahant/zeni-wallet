@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { X, Send, Fuel, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check, ExternalLink } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
-import { QORECHAIN_CONFIG } from "@zeni/core";
+import { QORECHAIN_CONFIG, type QorTransferQuote } from "@zeni/core";
+import { formatUnits } from "ethers";
 
 export const SendModal: React.FC = () => {
   const { openModal, tokens, sendTokens } = useWallet();
@@ -12,6 +13,7 @@ export const SendModal: React.FC = () => {
   const [showTokenSelect, setShowTokenSelect] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [quote, setQuote] = useState<QorTransferQuote | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const activeToken = tokens.find((t) => t.symbol === selectedToken) || tokens[0];
@@ -20,20 +22,16 @@ export const SendModal: React.FC = () => {
     e.preventDefault();
     if (!recipient || !amount) return;
 
-    if (!recipient.startsWith("0x") && !recipient.startsWith("qor1")) {
+    if (!recipient.trim().startsWith("0x") && !recipient.trim().startsWith("qor1")) {
       setError("Recipient must be a valid 0x or qor1 address");
       return;
     }
 
-    if (selectedToken === "QOR") {
-      const balNum = parseFloat(activeToken.balance) || 0;
-      const amtNum = parseFloat(amount) || 0;
-      if (amtNum + 0.003 > balNum) {
-        const safeMax = Math.max(0, balNum - 0.003).toFixed(4);
-        setError(`Insufficient QOR. Transaction requires ~0.003 QOR network fee. Max send: ${safeMax} QOR.`);
-        return;
-      }
-    } else if (parseFloat(amount) > parseFloat(activeToken.balance)) {
+    if (!(Number(amount) > 0)) {
+      setError("Enter an amount greater than zero.");
+      return;
+    }
+    if (selectedToken !== "QOR" && parseFloat(amount) > parseFloat(activeToken.balance)) {
       setError("Insufficient balance");
       return;
     }
@@ -42,9 +40,21 @@ export const SendModal: React.FC = () => {
     setError(null);
 
     try {
-      const hash = await sendTokens(recipient, amount, selectedToken);
+      if (selectedToken === "QOR" && !quote) {
+        const reviewed = await new Promise<QorTransferQuote>((resolve, reject) => {
+          chrome.runtime.sendMessage({ type: "PREPARE_QOR_TRANSFER", to: recipient.trim(), amount }, (response) => {
+            if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+            if (!response?.success) return reject(new Error(response?.error || "Could not prepare transfer"));
+            resolve(response.data);
+          });
+        });
+        setQuote(reviewed);
+        return;
+      }
+      const hash = await sendTokens(recipient.trim(), amount, selectedToken, quote?.id);
       setTxHash(hash);
     } catch (err: any) {
+      setQuote(null);
       setError(err?.message || "Transfer failed");
     } finally {
       setIsSubmitting(false);
@@ -138,7 +148,7 @@ export const SendModal: React.FC = () => {
               </p>
             </div>
             <div className="text-[11px] text-[#E06341] bg-[#E06341]/10 px-3 py-1 rounded-full border border-[#E06341]/25 font-mono">
-              Hybrid Signed: secp256k1 + ML-DSA-87
+              {selectedToken === "QOR" ? "Transfer authorized with ML-DSA-87" : "Demo transfer"}
             </div>
 
             <div className="pt-2 w-full flex flex-col gap-2">
@@ -177,6 +187,7 @@ export const SendModal: React.FC = () => {
               <label className="text-xs text-zinc-400 block mb-1">Asset</label>
               <button
                 type="button"
+                disabled={isSubmitting || !!quote}
                 onClick={() => setShowTokenSelect(true)}
                 className="w-full flex items-center justify-between bg-black hover:bg-[#141416] border border-[#222226] hover:border-[#2E2E34] rounded-2xl px-3.5 py-2.5 transition-colors cursor-pointer group"
               >
@@ -203,7 +214,8 @@ export const SendModal: React.FC = () => {
                 type="text"
                 placeholder="0x... or qor1..."
                 value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
+                disabled={isSubmitting || !!quote}
+                onChange={(e) => { setRecipient(e.target.value); setQuote(null); }}
                 required
                 className="w-full bg-black border border-[#222226] rounded-xl px-3 py-2.5 text-xs font-mono focus:outline-none focus:border-[#E06341] text-white"
               />
@@ -217,12 +229,26 @@ export const SendModal: React.FC = () => {
                   <span className="text-zinc-400">Available: {activeToken.balance}</span>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (selectedToken === "QOR") {
-                        const safe = Math.max(0, parseFloat(activeToken.balance) - 0.003);
-                        setAmount(safe.toFixed(4));
-                      } else {
-                        setAmount(activeToken.balance);
+                    disabled={isSubmitting || !!quote}
+                    onClick={async () => {
+                      if (selectedToken !== "QOR") { setAmount(activeToken.balance); return; }
+                      if (!recipient.trim()) { setError("Enter the recipient before calculating the maximum."); return; }
+                      setIsSubmitting(true);
+                      setError(null);
+                      try {
+                        const reviewed = await new Promise<QorTransferQuote>((resolve, reject) => {
+                          chrome.runtime.sendMessage({ type: "PREPARE_QOR_TRANSFER", to: recipient.trim(), amount: "MAX" }, (response) => {
+                            if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+                            if (!response?.success) return reject(new Error(response?.error || "Could not calculate maximum"));
+                            resolve(response.data);
+                          });
+                        });
+                        setAmount(reviewed.amount);
+                        setQuote(reviewed);
+                      } catch (err: any) {
+                        setError(err.message);
+                      } finally {
+                        setIsSubmitting(false);
                       }
                     }}
                     className="text-[#E06341] font-semibold hover:underline"
@@ -237,7 +263,8 @@ export const SendModal: React.FC = () => {
                   step="any"
                   placeholder="0.0"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  disabled={isSubmitting || !!quote}
+                  onChange={(e) => { setAmount(e.target.value); setQuote(null); }}
                   required
                   className="w-full bg-black border border-[#222226] rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#E06341] text-white"
                 />
@@ -251,13 +278,22 @@ export const SendModal: React.FC = () => {
             <div className="p-3 rounded-xl bg-[#141418] border border-[#222226] flex items-center justify-between text-xs text-zinc-300">
               <div className="flex items-center gap-2 text-zinc-400">
                 <Fuel className="w-4 h-4 text-[#E06341]" />
-                <span>Network Gas Fee</span>
+                <span>{quote ? "Maximum Network Fees" : "Network Gas Fee"}</span>
               </div>
               <div className="text-right font-mono">
-                <span className="font-semibold text-white">~0.0030 QOR</span>
-                <span className="text-[10px] text-zinc-500 ml-1.5">(~$0.01)</span>
+                <span className="font-semibold text-white">{quote ? `${quote.maxNetworkFee} QOR` : selectedToken === "QOR" ? "Calculated on review" : "~0.0030 QOR"}</span>
               </div>
             </div>
+
+            {quote && (
+              <div className="p-3 rounded-xl bg-[#141418] border border-[#E06341]/40 text-xs text-zinc-300 space-y-2">
+                <p className="font-semibold text-white">Authorize {quote.amount} QOR to {quote.to.slice(0, 8)}…{quote.to.slice(-6)}</p>
+                <p>Allow one QOR transfer to this recipient for {quote.windowBlocks} blocks, capped at {formatUnits(quote.windowMaxValue, 6)} QOR including transfer gas.</p>
+                {quote.registrationRequired && <p>This first send also registers your wallet’s post-quantum public key.</p>}
+                <p>Setup fees are included above and remain charged if a later step fails. Actual fees are calculated before each setup transaction.</p>
+                <button type="button" disabled={isSubmitting} onClick={() => setQuote(null)} className="text-[#E06341]">Edit transfer</button>
+              </div>
+            )}
 
             {/* Sign & Submit */}
             <div className="pt-2 mt-auto">
@@ -267,11 +303,11 @@ export const SendModal: React.FC = () => {
                 className="w-full py-3.5 rounded-xl bg-[#E06341] hover:bg-[#EB6841] text-white font-semibold text-sm shadow-xl shadow-[#E06341]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <span>Generating Hybrid Signature...</span>
+                  <span>{quote ? "Authorizing & sending…" : "Preparing transfer…"}</span>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Confirm & Post-Quantum Sign</span>
+                    <span>{selectedToken === "QOR" ? quote ? "Authorize & Send" : "Review Transfer" : "Confirm Send"}</span>
                   </>
                 )}
               </button>

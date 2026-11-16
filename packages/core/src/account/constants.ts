@@ -1,6 +1,8 @@
 export const QORECHAIN_CONFIG = {
   chainId: 9800,
   chainName: "QoreChain Testnet",
+  cosmosChainId: "qorechain-diana",
+  restUrl: "https://api-testnet.qore.host",
   nativeCurrency: {
     name: "QOR",
     symbol: "QOR",

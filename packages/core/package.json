@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "pnpm build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@noble/curves": "^1.4.0",
