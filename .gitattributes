@@ -1,0 +1,2 @@
+# Treat compiled iOS WebKit crypto engine as a generated artifact to exclude from language statistics
+apps/ios/Sources/Core/Network/WalletEngine.html linguist-generated=true

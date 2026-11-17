@@ -20,12 +20,14 @@ function fixture(options = {}) {
     state.requests.push(path);
     if (path.endsWith('/node_info')) return reply({ default_node_info: { network: 'qorechain-diana' } });
     if (path.includes('/pqc/v1/account/')) return reply(state.registered ? { found: true, account: { public_key: ethers.encodeBase64(keypair.publicKey), possession_proven: true } } : { found: false });
-    if (path.includes('/spendable_balances/')) return reply({ balances: [
-      { denom: 'uqor', amount: options.qor ?? '10000000' },
-      { denom: AMM_ASSETS.fUSD.denom, amount: '1000000000' },
-      { denom: AMM_ASSETS.fETH.denom, amount: '500000000000000000' },
-      { denom: AMM_ASSETS.fBTC.denom, amount: '2000000' },
-    ], pagination: {} });
+    if (path.includes('/spendable_balances/')) return reply({
+      balances: [
+        { denom: 'uqor', amount: options.qor ?? '10000000' },
+        { denom: AMM_ASSETS.fUSD.denom, amount: '1000000000' },
+        { denom: AMM_ASSETS.fETH.denom, amount: '500000000000000000' },
+        { denom: AMM_ASSETS.fBTC.denom, amount: '2000000' },
+      ], pagination: {}
+    });
     if (path.endsWith('/amm/v1/pools')) return reply({ pools: options.noPool ? [] : [{ id: '2', status: options.paused ? 'paused' : 'active', token_a: AMM_ASSETS.fUSD.denom, token_b: 'uqor', reserve_a: '600000000', reserve_b: '7000000000' }] });
     if (path.endsWith('/amm/v1/params')) return reply({ params: { enabled: !options.disabled, max_swap_impact_bps: 500 } });
     if (path.endsWith('/feemarket/v1/params')) return reply({ params: { min_gas_price: '100000000000' } });
@@ -65,9 +67,15 @@ function fixture(options = {}) {
       state.sequence++;
       const last = state.submitted.at(-1);
       if (last?.registration) state.registered = true;
-      return reply({ tx_response: { code: options.deliverCode ?? 0, height: '10201510', txhash: last?.hash, raw_log: 'Execution refused', events: [{ type: 'coin_received', attributes: [
-        { key: 'receiver', value: account.cosmosAddress }, { key: 'amount', value: `81070${AMM_ASSETS.fUSD.denom}` },
-      ] }] } });
+      return reply({
+        tx_response: {
+          code: options.deliverCode ?? 0, height: '10201510', txhash: last?.hash, raw_log: 'Execution refused', events: [{
+            type: 'coin_received', attributes: [
+              { key: 'receiver', value: account.cosmosAddress }, { key: 'amount', value: `81070${AMM_ASSETS.fUSD.denom}` },
+            ]
+          }]
+        }
+      });
     }
     throw new Error(`Unexpected request: ${path}`);
   };
@@ -95,7 +103,7 @@ test('quote uses live amount-out and enforces integer slippage', async () => {
 test('confirmed swap uses real signed hash, hybrid signature, minOut, and actual receipt amount', async () => {
   const { client, state, observe } = fixture();
   const quote = await client.prepareSwap(account, 'QOR', 'fUSD', '1', 50);
-  const result = await client.executeSwap(account, quote, () => {}, observe);
+  const result = await client.executeSwap(account, quote, () => { }, observe);
   assert.equal(result.status, 'CONFIRMED');
   assert.equal(result.hash, state.submitted[0].hash);
   assert.equal(result.amountOut, '0.08107', 'actual receipt output can differ from the estimate');
@@ -108,7 +116,7 @@ test('first swap registers PQC then signs the swap with the new sequence', async
   const quote = await client.prepareSwap(account, 'QOR', 'fUSD', '1', 50);
   assert.equal(quote.registrationRequired, true);
   assert.equal(quote.maxNetworkFee, '0.18');
-  await client.executeSwap(account, quote, () => {}, observe);
+  await client.executeSwap(account, quote, () => { }, observe);
   assert.deepEqual(state.submitted.map(t => t.registration), [true, false]);
   assert.deepEqual(state.updates.map(u => u.stage), ['registration', 'registration', 'swap', 'swap']);
 });
@@ -138,14 +146,14 @@ test('price moving below minOut stops before signing/broadcast', async () => {
   const { client, state, observe } = fixture();
   const quote = await client.prepareSwap(account, 'QOR', 'fUSD', '1', 50);
   state.output = '80000';
-  await assert.rejects(client.executeSwap(account, quote, () => {}, observe), /price moved/);
+  await assert.rejects(client.executeSwap(account, quote, () => { }, observe), /price moved/);
   assert.equal(state.submitted.length, 0);
 });
 
 test('expired quote and locked wallet cannot swap', async () => {
   const { client, state, observe } = fixture();
   const quote = await client.prepareSwap(account, 'QOR', 'fUSD', '1', 50);
-  await assert.rejects(client.executeSwap(account, { ...quote, expiresAt: 0 }, () => {}, observe), /expired/);
+  await assert.rejects(client.executeSwap(account, { ...quote, expiresAt: 0 }, () => { }, observe), /expired/);
   await assert.rejects(client.executeSwap(account, quote, () => { throw new Error('locked'); }, observe), /locked/);
   assert.equal(state.submitted.length, 0);
 });
@@ -153,14 +161,14 @@ test('expired quote and locked wallet cannot swap', async () => {
 for (const options of [{ checkCode: 5 }, { deliverCode: 5 }]) test(`chain refusal ${JSON.stringify(options)} is failed, never confirmed`, async () => {
   const { client, state, observe } = fixture(options);
   const quote = await client.prepareSwap(account, 'QOR', 'fUSD', '1', 50);
-  await assert.rejects(client.executeSwap(account, quote, () => {}, observe), e => e instanceof NativeTxError && e.update.status === 'FAILED');
+  await assert.rejects(client.executeSwap(account, quote, () => { }, observe), e => e instanceof NativeTxError && e.update.status === 'FAILED');
   assert.deepEqual(state.updates.map(u => u.status), ['PENDING', 'FAILED']);
 });
 
 for (const options of [{ networkFailure: true }, { lookupFailure: true }]) test(`uncertain broadcast ${JSON.stringify(options)} retains actual hash as pending`, async () => {
   const { client, state, observe } = fixture(options);
   const quote = await client.prepareSwap(account, 'QOR', 'fUSD', '1', 50);
-  await assert.rejects(client.executeSwap(account, quote, () => {}, observe), e => e instanceof NativeTxError && e.update.status === 'PENDING' && e.update.hash === state.submitted[0].hash);
+  await assert.rejects(client.executeSwap(account, quote, () => { }, observe), e => e instanceof NativeTxError && e.update.status === 'PENDING' && e.update.hash === state.submitted[0].hash);
   assert.deepEqual(state.updates.map(u => u.status), ['PENDING']);
 });
 
