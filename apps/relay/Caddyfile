@@ -1,0 +1,7 @@
+{$RELAY_DOMAIN} {
+  # Do not log pairing credentials, Authorization headers, or request bodies.
+  request_body {
+    max_size 32KB
+  }
+  reverse_proxy relay:8787
+}
