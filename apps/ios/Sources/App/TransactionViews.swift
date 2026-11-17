@@ -254,7 +254,7 @@ private struct TransferForm: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let result {
-                TransactionResultView(result: result)
+                TransactionResultView(state: state, result: result)
             } else {
                 Text("QoreChain Diana Testnet").font(.caption).foregroundStyle(Color.zeniMuted)
                 TransactionAssetPicker(title: "Asset", tokens: state.tokens, symbol: $symbol)
@@ -363,7 +363,7 @@ private struct SwapForm: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let result {
-                TransactionResultView(result: result)
+                TransactionResultView(state: state, result: result)
             } else {
                 VStack(spacing: 0) {
                     SwapAssetCard(title: "You Pay", tokens: state.tokens, symbol: $tokenIn,
@@ -510,7 +510,37 @@ private struct QuoteConfirmButton: View {
     }
 }
 
+private struct TransactionExplorerLink: View {
+    let state: AppState
+    let hash: String
+    @State private var url: URL?
+    @State private var loading = true
+    @State private var failed = false
+    @State private var attempt = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let url { Link("View on Explorer (Testnet)", destination: url) }
+            else if loading { ProgressView("Finding explorer link…").font(.caption) }
+            else {
+                Text(failed ? "Explorer lookup unavailable." : "Waiting for explorer indexing.").font(.caption)
+                Button("Retry explorer lookup") { attempt += 1 }
+            }
+        }
+        .task(id: "\(hash)-\(attempt)") {
+            loading = true; failed = false; url = nil
+            do {
+                let resolved = try await state.explorerURL(for: hash)
+                guard !Task.isCancelled else { return }
+                url = resolved
+            } catch { if !Task.isCancelled { failed = true } }
+            if !Task.isCancelled { loading = false }
+        }
+    }
+}
+
 private struct TransactionResultView: View {
+    let state: AppState
     let result: TransactionResult
 
     var body: some View {
@@ -523,9 +553,8 @@ private struct TransactionResultView: View {
             if let amount = result.amountOut { Text("Received: \(amount)") }
             if let error = result.error { TransactionErrorView(message: error) }
             Text(result.hash).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-            if let url = URL(string: result.explorerUrl), url.scheme == "https", url.host == "explore.qore.network" {
-                Link("View on Explorer", destination: url).buttonStyle(ZeniPrimaryButtonStyle())
-            }
+            TransactionExplorerLink(state: state, hash: result.hash)
+
             Text("Select Testnet in the explorer. Activity keeps the transaction status, including any setup transactions.")
                 .font(.caption).foregroundStyle(Color.zeniMuted)
         }
@@ -560,7 +589,7 @@ struct TransactionActivityView: View {
                     if let fee = item.gasCost { Text("Network fees: \(fee)").font(.caption) }
                     if let error = item.error { TransactionErrorView(message: error) }
                     Text(item.hash).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
-                    if let url = item.explorerURL { Link("View on Explorer", destination: url) }
+                    TransactionExplorerLink(state: state, hash: item.hash)
                 }.padding(16).transactionCard()
             }
         }

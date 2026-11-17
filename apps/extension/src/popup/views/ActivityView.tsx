@@ -1,12 +1,11 @@
 import React from "react";
 import { Send, ArrowUpDown, ExternalLink, Clock, Trash2, Fuel } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
-import { QORECHAIN_CONFIG, transactionExplorerUrl } from "@zeni/core";
+import { TransactionExplorerLink } from "../components/TransactionExplorerLink";
 
 export const ActivityView: React.FC = () => {
   const { activity, clearActivity } = useWallet();
 
-  const explorerBase = QORECHAIN_CONFIG.blockExplorerUrls[0];
 
   return (
     <div className="flex flex-col h-full space-y-3">
@@ -70,15 +69,7 @@ export const ActivityView: React.FC = () => {
                 </div>
               </div>
 
-              {(item.type !== "SWAP" || item.nativeChain) && <a
-                href={item.nativeChain ? transactionExplorerUrl(item.hash) : `${explorerBase}/tx/${item.hash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-zinc-400 hover:text-white p-1"
-                title="View on Explorer (select Testnet)"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>}
+              {(item.type !== "SWAP" || item.nativeChain) && <TransactionExplorerLink hash={item.hash} className="text-zinc-400 hover:text-white p-1 text-[10px] flex items-center gap-1" />}
             </div>
           ))}
         </div>

@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./explorer": {
+      "types": "./dist/rpc/explorer.d.ts",
+      "import": "./dist/rpc/explorer.js",
+      "default": "./dist/rpc/explorer.js"
     }
   },
   "scripts": {

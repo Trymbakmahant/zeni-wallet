@@ -1,3 +1,4 @@
+import { resolveTransactionExplorerUrl } from '../../../packages/core/src/rpc/explorer';
 import { validateDappRequest } from '../../../packages/core/src/account/dapp';
 import { ethers } from 'ethers';
 import { clearPqcStatusCache, fetchPqcStatus, isRegisteredPqcKey } from '@qorechain/sdk';
@@ -132,6 +133,7 @@ function remember(kind: string, quote: any) {
 }
 async function invoke(method: string, payload: any) {
   try {
+    if (method === 'explorerUrl') return resolveTransactionExplorerUrl(payload.hash);
     if (method === 'generateMnemonic') return generateNewMnemonic(128);
     if (method === 'validateMnemonic') return typeof payload.mnemonic === 'string' && isValidMnemonic(normalizeMnemonic(payload.mnemonic));
     if (method === 'restoreActivity') { history = payload; return true; }
@@ -241,7 +243,7 @@ async function invoke(method: string, payload: any) {
       transferContext = { account: active.cosmosAddress, tokenIn: 'QOR', amountIn: quote.amount, recipient: quote.to, gasCost: `Up to ${quote.maxNetworkFee} QOR` };
       try {
         const hash = await transfers.send(unlocked(), quote, reviewed);
-        return { hash, stage: 'transfer', status: 'PENDING', explorerUrl: transactionExplorerUrl(hash) };
+        return { hash, stage: 'transfer', status: 'PENDING', explorerUrl: '' };
       } catch (error) {
         if (error instanceof NativeTxError) return { hash: error.update.hash, stage: 'setup', status: error.update.status, explorerUrl: transactionExplorerUrl(error.update.hash), error: error.message };
         throw error;

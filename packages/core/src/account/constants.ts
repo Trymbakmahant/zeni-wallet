@@ -35,7 +35,7 @@ export const AMM_ASSETS = {
 export type AmmAsset = keyof typeof AMM_ASSETS;
 
 export function transactionExplorerUrl(hash: string): string {
-  if (!/^(0x)?[a-fA-F0-9]{64}$/.test(hash)) throw new Error("Invalid transaction hash.");
+  if (!/^[a-fA-F0-9]{64}$/.test(hash)) throw new Error("Invalid transaction hash.");
   return `${QORECHAIN_CONFIG.blockExplorerUrls[0]}/tx/${hash}`;
 }
 

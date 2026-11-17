@@ -56,6 +56,20 @@ try {
     await until(`document.querySelector(${JSON.stringify(selector)}) && !document.querySelector(${JSON.stringify(selector)}).disabled`);
     await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
   };
+  const explorerHash = 'CD'.repeat(32);
+  await call('Page.enable');
+  await call('Page.addScriptToEvaluateOnNewDocument', { source: `
+    const fetchOriginal = window.fetch;
+    window.explorerLookups = 0;
+    window.fetch = (...args) => {
+      if (String(args[0]).startsWith('https://api-testnet.qore.host/cosmos/tx/v1beta1/txs?')) {
+        window.explorerLookups++;
+        const hash = new URL(args[0]).searchParams.get('query').split("'")[1];
+        return Promise.resolve(new Response(JSON.stringify({ tx_responses: window.explorerLookups === 1 ? [] : [{ txhash: '${explorerHash}', events: [{ type: 'ethereum_tx', attributes: [{ key: 'ethereumTxHash', value: hash }] }] }] }), { status: 200 }));
+      }
+      return fetchOriginal(...args);
+    };
+  ` });
   await call('Runtime.enable');
   await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1150, deviceScaleFactor: 1, mobile: false });
   await call('Page.navigate', { url });
@@ -109,7 +123,10 @@ try {
   await until(`document.querySelector('output')?.textContent.includes('Transaction submitted.')`);
   assert.equal(requestCount, 2);
   assert.ok(await evaluate(`document.querySelector('output').textContent.includes('not yet confirmed')`));
-  assert.ok(await evaluate(`document.querySelector('output a[href^="https://explore.qore.network/tx/"]').href.endsWith('${testHash}')`));
+  await until(`document.querySelector('output')?.textContent.includes('Waiting for explorer indexing')`);
+  assert.equal(await evaluate(`!!document.querySelector('output a[href^="https://explore.qore.network/tx/"]')`), false);
+  await click('output .switch-mobile');
+  await until(`document.querySelector('output a[href^="https://explore.qore.network/tx/"]')?.href.endsWith('${explorerHash}')`);
   await screenshot('transfer');
   await call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await evaluate('window.scrollTo(0, 0)'); await delay(200); await screenshot('mobile');

@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { X, Send, Fuel, ShieldCheck, CheckCircle2, AlertCircle, ChevronDown, Check, ExternalLink } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
-import { QORECHAIN_CONFIG, type QorTransferQuote } from "@zeni/core";
+import { type QorTransferQuote } from "@zeni/core";
+import { TransactionExplorerLink } from "../components/TransactionExplorerLink";
 import { formatUnits } from "ethers";
 
 export const SendModal: React.FC = () => {
@@ -152,15 +153,7 @@ export const SendModal: React.FC = () => {
             </div>
 
             <div className="pt-2 w-full flex flex-col gap-2">
-              <a
-                href={`${QORECHAIN_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-2.5 rounded-xl bg-[#18181C] hover:bg-[#222226] border border-[#2E2E34] text-xs font-medium text-white flex items-center justify-center gap-1.5 transition-colors"
-              >
-                <span>View on QoreChain Explorer</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#E06341]" />
-              </a>
+              <TransactionExplorerLink hash={txHash} className="w-full py-2.5 rounded-xl bg-[#18181C] border border-[#2E2E34] text-xs font-medium flex items-center justify-center gap-1.5" />
 
               <button
                 type="button"

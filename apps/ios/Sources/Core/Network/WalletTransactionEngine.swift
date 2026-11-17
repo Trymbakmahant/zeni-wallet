@@ -59,11 +59,7 @@ struct WalletActivityItem: Codable, Identifiable, Equatable {
     let gasCost: String?
     let error: String?
     var id: String { hash }
-    var explorerURL: URL? {
-        let clean = hash.hasPrefix("0x") ? String(hash.dropFirst(2)) : hash
-        guard clean.count == 64, clean.allSatisfy({ $0.isHexDigit }) else { return nil }
-        return URL(string: "https://explore.qore.network/tx/" + hash)
-    }
+
 }
 
 struct WalletBalances: Decodable {

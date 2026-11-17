@@ -56,6 +56,12 @@ public final class AppState {
     private(set) var isRefreshing = false
     private(set) var evmQorBalance = "0"
     private(set) var hasLoadedBalances = false
+    func explorerURL(for hash: String) async throws -> URL? {
+        let runtime = try await transactionEngine()
+        let raw: String? = try await runtime.call("explorerUrl", payload: ["hash": hash])
+        guard let raw, let url = URL(string: raw), url.scheme == "https", url.host == "explore.qore.network" else { return nil }
+        return url
+    }
     var estimatedTotalUSD: String? {
         guard hasLoadedBalances, let total = TestnetValuation.total(tokens: tokens) else { return nil }
         return TestnetValuation.formatted(total)
