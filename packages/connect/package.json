@@ -1,0 +1,31 @@
+{
+  "name": "@zeni/connect",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Zeni Connect encrypted mobile-wallet provider for JavaScript and TypeScript",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@zeni/connect-protocol": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "ethers": "^6.13.0",
+    "@zeni/core": "workspace:*"
+  }
+}
