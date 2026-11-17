@@ -8,7 +8,8 @@
     "dev": "vite build --watch",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "test:security": "node --test test/*.test.mjs"
+    "test:security": "node --test test/*.test.mjs",
+    "test:browser": "node scripts/browser-approval.mjs"
   },
   "dependencies": {
     "@zeni/core": "workspace:*",

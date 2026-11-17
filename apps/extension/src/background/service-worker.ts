@@ -1,5 +1,7 @@
 import {
   QORECHAIN_CONFIG,
+  validateDappRequest,
+  DappIntent,
   QoreChainClient,
   DerivedAccountKeys,
   EncryptedVaultEnvelope,
@@ -28,6 +30,10 @@ interface PendingRequest {
   title?: string;
   favIconUrl?: string;
   payload: { method: string; params?: any[] };
+  account?: string;
+  intent?: DappIntent;
+  quote?: QorTransferQuote;
+  quoteVersion?: number;
   state: "PENDING" | "APPROVED" | "SIGNING" | "SUBMITTED" | "CONFIRMED" | "FAILED";
   createdAt: number;
   expiresAt: number;
@@ -191,7 +197,7 @@ class BackgroundController {
         } catch (err: any) {
           try { port.postMessage({
             clientReqId: msg?.clientReqId,
-            error: { code: -32603, message: err?.message || "Internal RPC Error" },
+            error: { code: err?.code || -32603, message: err?.message || "Internal RPC Error" },
           }); } catch { /* Page disconnected. */ }
         }
       });
@@ -241,10 +247,25 @@ class BackgroundController {
       }
 
       case "eth_sendTransaction":
-      case "personal_sign":
-      case "eth_signTypedData_v4":
-        port.postMessage({ clientReqId, error: { code: 4200, message: "dApp signing and transactions are not supported in this release." } });
+      case "personal_sign": {
+        const active = this.getActiveAccount();
+        const stored = await chrome.storage.local.get(["connectedOrigins"]);
+        if (!active || !(stored.connectedOrigins || []).includes(origin)) {
+          port.postMessage({ clientReqId, error: { code: 4100, message: "Unlock Zeni and connect this website before signing." } });
+          return;
+        }
+        let intent: DappIntent;
+        try {
+          if (JSON.stringify(payload.params)?.length > 12000) throw new Error("Request parameters are too large.");
+          intent = validateDappRequest(payload.method, payload.params, active.classicalAddress);
+        } catch (error: any) {
+          port.postMessage({ clientReqId, error: { code: -32602, message: error.message } });
+          return;
+        }
+        if (this.getActiveAccount() !== active) throw new Error("Wallet changed. Connect again.");
+        this.queueApproval(port, clientReqId, origin, payload, active.classicalAddress, intent);
         break;
+      }
 
       default:
         port.postMessage({
@@ -258,7 +279,8 @@ class BackgroundController {
     port: chrome.runtime.Port,
     clientReqId: number,
     origin: string,
-    payload: { method: string; params?: any[] }
+    payload: { method: string; params?: any[] },
+    account?: string, intent?: DappIntent
   ) {
     this.expireApprovals();
     if (this.approvalInProgress || this.pendingRequests.size >= 5 || Array.from(this.pendingRequests.values()).some((r) => r.origin === origin)) {
@@ -273,6 +295,7 @@ class BackgroundController {
       title: port.sender?.tab?.title,
       favIconUrl: port.sender?.tab?.favIconUrl,
       payload: { method: payload.method },
+      account, intent,
       state: "PENDING",
       createdAt: Date.now(),
       expiresAt: Date.now() + 5 * 60 * 1000,
@@ -376,7 +399,7 @@ class BackgroundController {
     });
   }
 
-  private async handleInternalMessage(message: any): Promise<any> {
+  private async handleInternalMessage(message: any, assertApproval: () => void = () => {}): Promise<any> {
     if (!message || typeof message.type !== "string") throw new Error("Invalid wallet request");
     switch (message.type) {
       case "GET_SESSION_STATUS": {
@@ -493,8 +516,24 @@ class BackgroundController {
           title: r.title,
           favIconUrl: r.favIconUrl,
           payload: r.payload,
+          account: r.account, intent: r.intent,
           createdAt: r.createdAt,
         }));
+      }
+
+      case "PREPARE_DAPP_APPROVAL": {
+        this.expireApprovals();
+        const pending = this.pendingRequests.get(message.internalId);
+        const active = this.getActiveAccount();
+        if (!pending || pending.intent?.kind !== "transfer" || !active || active.classicalAddress !== pending.account) throw new Error("Request expired or account changed.");
+        if (this.transferInProgress || this.approvalInProgress) throw new Error("Wait for the current wallet operation.");
+        const version = pending.quoteVersion = (pending.quoteVersion || 0) + 1;
+        pending.quote = undefined;
+        const quote = await new QorTransferClient(this.client.provider).prepare(active, pending.intent.to, pending.intent.amount);
+        if (pending.quoteVersion !== version) throw new Error("A newer fee review replaced this request.");
+        if (this.getActiveAccount() !== active || this.pendingRequests.get(pending.internalId) !== pending || pending.expiresAt <= Date.now()) throw new Error("Request expired or wallet changed.");
+        pending.quote = quote;
+        return quote;
       }
 
       case "RESOLVE_APPROVAL": {
@@ -507,6 +546,10 @@ class BackgroundController {
         const active = this.getActiveAccount();
         if (approved && !active) throw new Error("Unlock the wallet before approving");
 
+        if (approved && pending.intent) {
+          if (active!.classicalAddress !== pending.account) throw new Error("Account changed. Reject this request and reconnect.");
+          if (pending.intent.kind === "transfer" && (!pending.quote || pending.quote.id !== message.quoteId || pending.quote.expiresAt <= Date.now())) throw new Error("Review a fresh fee quote before approving.");
+        }
         this.pendingRequests.delete(internalId);
         chrome.action.setBadgeText({
           text: this.pendingRequests.size > 0 ? String(this.pendingRequests.size) : "",
@@ -520,7 +563,34 @@ class BackgroundController {
           return { resolved: true };
         }
 
-        // Handle approved request
+        if (pending.intent) {
+          this.approvalInProgress = true;
+          const generation = this.vaultGeneration;
+          const assertCurrent = () => {
+            if (generation !== this.vaultGeneration || this.getActiveAccount() !== active || pending.expiresAt <= Date.now()
+              || !Array.from(this.dAppPorts.values()).includes(pending.port!)) throw new Error("Wallet locked, page disconnected, or request expired. Check Activity before retrying.");
+          };
+          try {
+            assertCurrent();
+            this.resetAutoLock();
+            let result: string;
+            if (pending.intent.kind === "message") {
+              result = await new ethers.Wallet(active!.classicalPrivateKey).signMessage(ethers.getBytes(pending.intent.hex));
+              assertCurrent();
+            } else {
+              const quote = pending.quote!;
+              this.transferQuotes.set(quote.id, quote);
+              result = (await this.handleInternalMessage({ type: "EXECUTE_TRANSFER", token: "QOR", to: pending.intent.to, amount: pending.intent.amount, quoteId: quote.id }, assertCurrent)).txHash;
+            }
+            try { pending.port?.postMessage({ clientReqId: pending.clientReqId, result }); } catch { /* Broadcast may have completed after navigation; Activity keeps the hash. */ }
+            return { resolved: true };
+          } catch (error: any) {
+            try { pending.port?.postMessage({ clientReqId: pending.clientReqId, error: { code: -32603, message: error.message } }); } catch { /* Disconnected. */ }
+            throw error;
+          } finally { this.approvalInProgress = false; }
+        }
+
+        // Handle approved connection request
         if (pending.payload.method === "eth_requestAccounts") {
           this.approvalInProgress = true;
           try {
@@ -555,6 +625,7 @@ class BackgroundController {
       }
 
       case "EXECUTE_TRANSFER": {
+        assertApproval();
         // Broadcasts token transfer to QoreChain Testnet
         const { to, amount, token } = message;
         if (token !== "QOR") throw new Error("Only QOR transfers are supported in this release.");
@@ -587,6 +658,7 @@ class BackgroundController {
             try {
               await this.assertNoPendingNative(active);
               txHash = await new QorTransferClient(this.client.provider).send(active, quote, () => {
+                assertApproval();
                 if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review the transfer again.");
               }, async (update) => {
                 await this.writeActivity((history) => [{

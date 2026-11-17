@@ -9,15 +9,21 @@
     "test:browser": "node scripts/browser-smoke.mjs"
   },
   "dependencies": {
+    "@scure/base": "^2.4.0",
+    "@ui-sdk/core": "0.1.0-beta.6",
+    "@ui-sdk/react": "0.1.0-beta.6",
     "@zeni/react": "workspace:*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "ethers": "^6.13.0"
+    "ethers": "^6.13.0",
+    "lucide-react": "^1.73.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "vite": "^6.4.6",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "typescript": "^5.4.5",
-    "@types/react": "^18.3.2",
-    "@types/react-dom": "^18.3.0"
+    "vite": "^6.4.6"
   }
 }

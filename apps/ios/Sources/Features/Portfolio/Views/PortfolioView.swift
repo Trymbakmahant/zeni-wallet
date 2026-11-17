@@ -17,7 +17,6 @@ public struct PortfolioView: View {
     let state: AppState
     @State private var destination: TransactionDestination?
     @State private var tab: WalletTab = .home
-    @State private var scanOnOpen = false
 
     public init(state: AppState) { self.state = state }
 
@@ -25,27 +24,8 @@ public struct PortfolioView: View {
         @Bindable var connection = state.connect
         VStack(spacing: 0) {
             WalletHeader(state: state, openWallet: { destination = .wallet }) {
-                scanOnOpen = true
-                connection.selectedID = nil
-                connection.isPresented = true
+                connection.openApps()
             }
-            Button { scanOnOpen = false; connection.openApps() } label: {
-                HStack(spacing: 12) {
-                    if let site = connection.connectedApps.first?.connected {
-                        ConnectAppIdentity(site: site, compact: true)
-                    } else {
-                        Label("Connected apps", systemImage: "app.connected.to.app.below.fill")
-                            .font(.subheadline.weight(.medium))
-                        Spacer()
-                    }
-                    if connection.pendingCount > 0 {
-                        Text("\(connection.pendingCount) pending").font(.caption.bold()).foregroundStyle(Color.zeniAccent)
-                    } else if connection.connectedApps.count > 1 {
-                        Text("\(connection.connectedApps.count) apps").font(.caption).foregroundStyle(Color.zeniMuted)
-                    }
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(Color.zeniMuted)
-                }.padding(12).zeniSurface(radius: 14)
-            }.buttonStyle(.plain).padding(.horizontal, 20).padding(.bottom, 12)
             Rectangle().fill(Color.zeniBorder).frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -77,8 +57,8 @@ public struct PortfolioView: View {
         }) { selection in
             WalletTransactionSheet(state: state, destination: selection)
         }
-        .sheet(isPresented: $connection.isPresented, onDismiss: { scanOnOpen = false }) {
-            ZeniConnectView(state: state, controller: connection, startScanning: scanOnOpen)
+        .sheet(isPresented: $connection.isPresented) {
+            ZeniConnectView(state: state, controller: connection)
         }
         .task { await state.refresh() }
         .onChange(of: destination) { connection.presentationBlocked = destination != nil }
@@ -91,7 +71,7 @@ public struct PortfolioView: View {
 private struct WalletHeader: View {
     let state: AppState
     let openWallet: () -> Void
-    let openScanner: () -> Void
+    let openApps: () -> Void
     @State private var copied = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -137,7 +117,7 @@ private struct WalletHeader: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button(action: openScanner) {
+            Button(action: openApps) {
                 Image(systemName: "qrcode.viewfinder")
                     .font(.system(size: 22, weight: .medium))
                     .frame(width: 48, height: 48)
@@ -149,7 +129,8 @@ private struct WalletHeader: View {
                     }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Scan QR to connect a web app")
+            .accessibilityLabel("Connected apps")
+            .accessibilityHint("View connected apps or connect another app")
             .accessibilityValue(state.connect.connectedApps.isEmpty ? "Not connected" : "\(state.connect.connectedApps.count) apps connected")
 
         }
@@ -164,7 +145,7 @@ private struct WalletHome: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            WalletBalanceHero(balance: state.tokens.first(where: { $0.symbol == "QOR" })?.balance ?? "0",
+            WalletBalanceHero(balance: state.estimatedTotalUSD ?? "—",
                               hasLoadedBalances: state.hasLoadedBalances, isRefreshing: state.isRefreshing)
             let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
             layout {
@@ -189,11 +170,13 @@ struct WalletBalanceHero: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("QOR Balance").font(.caption).foregroundStyle(Color.zeniMuted)
+            Text("Estimated balance (USD)").font(.caption).foregroundStyle(Color.zeniMuted)
             Text(hasLoadedBalances ? balance : "—")
                 .font(.system(size: balanceSize, weight: .bold)).tracking(-1.5)
                 .minimumScaleFactor(0.5).lineLimit(1)
-                .accessibilityLabel(hasLoadedBalances ? "QOR balance " + balance : "QOR balance not loaded")
+                .accessibilityLabel(hasLoadedBalances ? "Estimated total balance " + balance : "Estimated total balance not loaded")
+            Text("All tokens · Testnet reference prices")
+                .font(.caption2).foregroundStyle(Color.zeniMuted)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
                     Text(isRefreshing ? "Refreshing balances…" : "Diana Testnet").foregroundStyle(Color.zeniGreen)

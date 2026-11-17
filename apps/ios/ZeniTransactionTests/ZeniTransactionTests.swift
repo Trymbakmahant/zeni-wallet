@@ -8,6 +8,31 @@ struct ZeniTransactionTests {
     // Public Hardhat fixture; never saved to Keychain and never funded or broadcast.
     private let referencePhrase = "test test test test test test test test test test test junk"
 
+    @Test func portfolioValuesAllAssetsInUSD() throws {
+        let tokens = [("QOR", "212.683027"), ("fUSD", "990.523913"), ("fETH", "0.5"), ("fBTC", "0.02")].map {
+            TokenItem(symbol: $0.0, name: $0.0, balance: $0.1, usdValue: "—", icon: "")
+        }
+        let total = try #require(TestnetValuation.total(tokens: tokens))
+        #expect(total == Decimal(string: "4265.889967"))
+        #expect(TestnetValuation.formatted(total) == "$4,265.89")
+    }
+
+    @Test func portfolioRoundsOnlyAfterSummingAndFormatsLargeTotals() throws {
+        let tokens = [("QOR", "0.002"), ("fUSD", "0.004")].map {
+            TokenItem(symbol: $0.0, name: $0.0, balance: $0.1, usdValue: "—", icon: "")
+        }
+        #expect(TestnetValuation.formatted(try #require(TestnetValuation.total(tokens: tokens))) == "$0.01")
+        #expect(TestnetValuation.formatted(1234567) == "$1,234,567.00")
+        #expect(TestnetValuation.formatted(0) == "$0.00")
+    }
+
+    @Test func portfolioDoesNotTreatUnpricedOrInvalidAssetsAsZero() {
+        #expect(TestnetValuation.value(symbol: "OTHER", balance: "10") == nil)
+        #expect(TestnetValuation.value(symbol: "QOR", balance: "12broken") == nil)
+        #expect(TestnetValuation.value(symbol: "QOR", balance: "-1") == nil)
+        #expect(TestnetValuation.total(tokens: [TokenItem(symbol: "OTHER", name: "Other", balance: "10", usdValue: "—", icon: "")]) == nil)
+    }
+
     @Test func onboardingGeneratesValidFreshPhrasesWithoutUnlocking() async throws {
         let engine = WalletTransactionEngine()
         defer { engine.lock() }

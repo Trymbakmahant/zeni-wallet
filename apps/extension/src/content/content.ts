@@ -56,7 +56,16 @@ window.addEventListener("message", (event: MessageEvent) => {
 
   const { clientReqId, payload } = event.data;
   if (!Number.isSafeInteger(clientReqId) || !payload || typeof payload.method !== "string" || payload.method.length > 100) return;
+  const signing = payload.method === "personal_sign" || payload.method === "eth_sendTransaction";
+  if (signing) {
+    try {
+      if (!Array.isArray(payload.params) || JSON.stringify(payload.params).length > 12000) throw new Error("Invalid parameters");
+    } catch {
+      window.postMessage({ target: "zeni-inpage-response", clientReqId, error: { code: -32602, message: "Invalid or oversized signing parameters." } }, window.location.origin);
+      return;
+    }
+  }
   const port = getBackgroundPort();
-  // Supported read/connection methods need no params. Do not relay arbitrary page data.
-  port.postMessage({ clientReqId, payload: { method: payload.method } });
+  // Only supported signing methods forward bounded parameters; the worker validates every field.
+  port.postMessage({ clientReqId, payload: { method: payload.method, ...(signing ? { params: payload.params } : {}) } });
 });

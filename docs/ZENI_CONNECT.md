@@ -11,9 +11,17 @@ This implementation connects an integrated web app to the native Zeni iOS wallet
 - `apps/connect-demo`: working React app that requests a message signature, verifies it locally, and requests a QOR transfer.
 - iOS: Connect entry on the home screen, camera scanning, pasted/deep-link pairing, site approval, message/transfer review, local signing, result delivery, and disconnect.
 
-Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `eth_sendTransaction` for QOR transfers to ordinary wallet addresses on Diana (9800). QOR recipients may use a checksummed `qor1…` address or an EVM `0x…` address; the wallet shows the EVM equivalent before signing. Every signing request needs explicit approval on the phone. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration/authorization and fee limits apply to transfers.
+Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `eth_sendTransaction` for QOR transfers to ordinary wallet addresses on Diana (9800). QOR recipients may use a checksummed `qor1…` address or an EVM `0x…` address; the wallet shows the EVM equivalent before signing. Every signing request needs explicit approval in the selected wallet. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration/authorization and fee limits apply to transfers.
 
-This work does not add a gas-sponsoring transaction relayer, chain history indexer, Android app, push service, contract-call signing, WalletConnect interoperability, or extension signing support.
+This work does not add a gas-sponsoring transaction relayer, chain history indexer, Android app, push service, contract-call signing, or WalletConnect interoperability.
+
+## Browser extension
+
+The demo’s **Browser extension** option discovers Zeni through EIP-6963 or `window.zeni`. It calls the injected provider directly; it does not use the relay or create a QR session. The React/JS mobile SDK remains the QR transport.
+
+The extension supports reviewed `personal_sign` messages and `eth_sendTransaction` QOR transfers on Diana, with the same validation limits described above. Open Zeni from the Chrome toolbar to review the website origin, signing account, message or transfer details, and the maximum network/setup fees before approving. Typed-data signing and contract calls remain unsupported.
+
+After updating the source, build with `pnpm --filter @zeni/core build` and `pnpm --filter @zeni/extension build`. Reload the unpacked extension at `chrome://extensions`, refresh the web app, and reconnect. An older installed extension will still reject signing with error 4200. Local demo disconnect does not revoke the extension’s stored site permission.
 
 ## Hosted endpoints
 

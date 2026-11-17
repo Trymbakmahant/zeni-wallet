@@ -4,7 +4,6 @@ import VisionKit
 struct ZeniConnectView: View {
     let state: AppState
     @Bindable var controller: ZeniConnectController
-    var startScanning = false
     @State private var uri = ""
     @State private var scanning = false
     @State private var addingApp = false
@@ -42,11 +41,6 @@ struct ZeniConnectView: View {
                     } onError: { message in controller.error = message; scanning = false }
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { scanning = false } } }
                 }
-            }
-        }
-        .task {
-            if startScanning, !controller.busy, DataScannerViewController.isSupported {
-                scanning = true
             }
         }
         .onChange(of: controller.selectedID) { scanning = false }
@@ -87,7 +81,7 @@ struct ZeniConnectView: View {
                 Button { addingApp.toggle() } label: {
                     Label("Connect another app", systemImage: "plus").frame(maxWidth: .infinity)
                 }.buttonStyle(ZeniPrimaryButtonStyle()).disabled(controller.busy)
-                if addingApp || controller.sessions.isEmpty {
+                if addingApp {
                     VStack(alignment: .leading, spacing: 14) {
                         if DataScannerViewController.isSupported {
                             Button { scanning = true } label: { Label("Scan QR code", systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity, minHeight: 48) }

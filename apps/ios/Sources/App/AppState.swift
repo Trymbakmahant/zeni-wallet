@@ -1,6 +1,32 @@
 import Foundation
 import Observation
 
+/// Reference prices used by the extension for Diana testnet, not live market prices.
+enum TestnetValuation {
+    private static let prices: [String: Decimal] = ["QOR": 2, "fUSD": 1, "fETH": 3100, "fBTC": 65000]
+
+    static func value(symbol: String, balance: String) -> Decimal? {
+        guard let price = prices[symbol],
+              balance.range(of: #"^[0-9]+(\.[0-9]+)?$"#, options: .regularExpression) != nil,
+              let amount = Decimal(string: balance, locale: Locale(identifier: "en_US_POSIX")) else { return nil }
+        let value = amount * price
+        return value.isNaN ? nil : value
+    }
+
+    static func total(tokens: [TokenItem]) -> Decimal? {
+        var total: Decimal = 0
+        for token in tokens {
+            guard let value = value(symbol: token.symbol, balance: token.balance) else { return nil }
+            total += value
+        }
+        return total.isNaN ? nil : total
+    }
+
+    static func formatted(_ value: Decimal) -> String {
+        value.formatted(.currency(code: "USD").locale(Locale(identifier: "en_US")))
+    }
+}
+
 public struct TokenItem: Identifiable, Equatable {
     public var id: String { symbol }
     public let symbol: String
@@ -30,6 +56,10 @@ public final class AppState {
     private(set) var isRefreshing = false
     private(set) var evmQorBalance = "0"
     private(set) var hasLoadedBalances = false
+    var estimatedTotalUSD: String? {
+        guard hasLoadedBalances, let total = TestnetValuation.total(tokens: tokens) else { return nil }
+        return TestnetValuation.formatted(total)
+    }
     private(set) var activity: [WalletActivityItem] = []
     var walletError: String?
 
@@ -194,7 +224,10 @@ public final class AppState {
             let balances: WalletBalances = try await runtime.call("balances")
             guard activeAccount == account else { return }
             tokens = Self.emptyTokens.map { token in
-                TokenItem(symbol: token.symbol, name: token.name, balance: balances.bank[token.symbol] ?? "0", usdValue: "—", icon: token.icon)
+                let balance = balances.bank[token.symbol] ?? "0"
+                let value = TestnetValuation.value(symbol: token.symbol, balance: balance)
+                return TokenItem(symbol: token.symbol, name: token.name, balance: balance,
+                                 usdValue: value.map { TestnetValuation.formatted($0) } ?? "—", icon: token.icon)
             }
             evmQorBalance = balances.evmQor
             hasLoadedBalances = true

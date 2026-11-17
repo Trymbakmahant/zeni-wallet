@@ -4,6 +4,12 @@ Date: 2026-11-17
 
 **Verdict: not cleared for a real-funds production release.** The code is configured exclusively for QoreChain Diana Testnet (EVM 9800 / `qorechain-diana`). The changes below make a testnet beta safer, but a fresh-profile Chrome acceptance pass and the Web Store privacy/listing review remain release gates. No extension was uploaded or published.
 
+## Signing follow-up (2026-11-17)
+
+The extension now accepts readable `personal_sign` messages and ordinary QOR `eth_sendTransaction` requests after explicit wallet review. The bridge forwards bounded signing parameters; the worker validates the origin, account, chain, and intent. Transfers require the exact reviewed fee quote and reuse the existing QOR authorization, broadcast, and Activity path. Lock, expiry, and page-disconnect guards apply before signing/broadcast. Typed data and contract calls still fail closed. The original review below predates this addition; its account-only provider description is historical.
+
+Follow-up checks: 17 extension security tests and 50 core tests; extension typecheck and extension/demo builds; browser checks of the built approval UI with a fake wallet transport; demo provider tests with mocked extension requests and relay access blocked. No live transfer was broadcast during these checks, and installed-extension/network acceptance remains outstanding.
+
 ## Scope and evidence
 
 Reviewed the extension service worker, content/inpage bridge, popup security flows, manifest/CSP, shared vault/derivation and transaction code, dependency advisories, and generated extension files. Existing unrelated iOS/web/portfolio edits were preserved. This was a source and automated regression review, not an independent cryptographic audit of QoreChain, its SDK, or deployed contracts.

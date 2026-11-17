@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { QORECHAIN_CONFIG, isValidMnemonic, generateNewMnemonic, type AmmQuote, type SwapResult } from "@zeni/core";
+import { QORECHAIN_CONFIG, isValidMnemonic, generateNewMnemonic, type AmmQuote, type SwapResult, type DappIntent } from "@zeni/core";
 
 export interface TokenItem {
   symbol: string;
@@ -35,6 +35,8 @@ export interface PendingApproval {
   title?: string;
   favIconUrl?: string;
   payload: { method: string; params?: any[] };
+  account?: string;
+  intent?: DappIntent;
   createdAt: number;
 }
 
@@ -58,7 +60,7 @@ interface WalletContextType {
   sendTokens: (to: string, amount: string, token: string, quoteId?: string) => Promise<string>;
   prepareSwap: (tokenIn: string, tokenOut: string, amountIn: string, slippageBps: number) => Promise<AmmQuote>;
   executeSwap: (quoteId: string) => Promise<SwapResult>;
-  resolveApproval: (internalId: string, approved: boolean) => Promise<void>;
+  resolveApproval: (internalId: string, approved: boolean, quoteId?: string) => Promise<void>;
   exportMnemonic: (password: string) => Promise<string>;
   refreshState: () => Promise<void>;
   resetWallet: () => Promise<void>;
@@ -254,9 +256,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return result;
   };
 
-  const resolveApproval = async (internalId: string, approved: boolean) => {
-    await sendMessage("RESOLVE_APPROVAL", { internalId, approved });
-    await refreshState();
+  const resolveApproval = async (internalId: string, approved: boolean, quoteId?: string) => {
+    try { await sendMessage("RESOLVE_APPROVAL", { internalId, approved, quoteId }); }
+    finally { setPendingApprovals(await sendMessage("GET_PENDING_APPROVALS")); }
+    void refreshState();
   };
 
   const exportMnemonic = async (password: string): Promise<string> => {

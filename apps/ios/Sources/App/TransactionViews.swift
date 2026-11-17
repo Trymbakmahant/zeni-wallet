@@ -745,8 +745,8 @@ private extension View {
     .preferredColorScheme(.dark)
 }
 
-#Preview("Public QOR balance") {
-    WalletBalanceHero(balance: "123.456789", hasLoadedBalances: true, isRefreshing: false)
+#Preview("Estimated USD balance") {
+    WalletBalanceHero(balance: "$123,456.79", hasLoadedBalances: true, isRefreshing: false)
         .padding(20)
         .background(Color.zeniBackground)
         .foregroundStyle(.white)
