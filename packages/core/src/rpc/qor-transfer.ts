@@ -5,7 +5,7 @@ import {
 import { QORECHAIN_CONFIG } from "../account/constants.js";
 import { bech32ToEvmAddress, derivePqcKeypair, type DerivedAccountKeys } from "../crypto/derivation.js";
 
-import { NativeTransactionClient } from "./native-transaction.js";
+import { NativeTransactionClient, type NativeTxObserver } from "./native-transaction.js";
 export { parseAccountSequence } from "./native-transaction.js";
 
 const WEI_PER_UQOR = 10n ** 12n;
@@ -70,7 +70,8 @@ export class QorTransferClient extends NativeTransactionClient {
     };
   }
 
-  async send(account: DerivedAccountKeys, quote: QorTransferQuote, assertUnlocked: () => void = () => {}): Promise<string> {
+  async send(account: DerivedAccountKeys, quote: QorTransferQuote, assertUnlocked: () => void = () => {},
+    observeNative?: NativeTxObserver, observeEvm?: (hash: string) => Promise<void>): Promise<string> {
     if (quote.from !== account.classicalAddress || quote.expiresAt < Date.now()) {
       throw new Error("The transfer review expired or the account changed. Review the transfer again.");
     }
@@ -91,7 +92,7 @@ export class QorTransferClient extends NativeTransactionClient {
           proofOfPossession: signProofOfPossession({ chainId: QORECHAIN_CONFIG.cosmosChainId, account: account.cosmosAddress, keypair }),
         });
         assertUnlocked();
-        await this.broadcastNative(account, message, true, quote, assertUnlocked);
+        await this.broadcastNative(account, message, true, quote, assertUnlocked, observeNative);
       } finally {
         keypair.secretKey.fill(0);
       }
@@ -101,7 +102,7 @@ export class QorTransferClient extends NativeTransactionClient {
     const authorization = await this.broadcastNative(account, openEvmWindowMsg({
       sender: account.cosmosAddress, blocks: quote.windowBlocks, maxTxs: 1,
       maxValue: quote.windowMaxValue, nativeOnly: true, allowedTargets: [quote.to],
-    }), false, quote, assertUnlocked);
+    }), false, quote, assertUnlocked, observeNative);
     assertUnlocked();
     // Bypass ethers' short-lived request cache: native setup advances the shared nonce.
     let observedNonce = 0n;
@@ -120,7 +121,15 @@ export class QorTransferClient extends NativeTransactionClient {
       gasLimit: BigInt(quote.gasLimit), nonce, chainId: QORECHAIN_CONFIG.chainId, type: 0,
     });
     assertUnlocked();
-    const tx = await this.provider.broadcastTransaction(signed);
-    return tx.hash;
+    const hash = ethers.keccak256(signed);
+    await observeEvm?.(hash);
+    assertUnlocked();
+    try {
+      const tx = await this.provider.broadcastTransaction(signed);
+      if (tx.hash.toLowerCase() !== hash.toLowerCase()) throw new Error("RPC hash mismatch");
+      return hash;
+    } catch {
+      throw new Error(`Transfer status is unknown. Check transaction ${hash} in Activity before retrying.`);
+    }
   }
 }

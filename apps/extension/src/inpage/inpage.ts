@@ -21,7 +21,7 @@ class ZeniInpageProvider {
   }
 
   private handleMessage(event: MessageEvent) {
-    if (event.source !== window || !event.data || event.data.target !== "zeni-inpage-response") {
+    if (event.source !== window || event.origin !== window.location.origin || !event.data || event.data.target !== "zeni-inpage-response") {
       return;
     }
 
@@ -31,17 +31,31 @@ class ZeniInpageProvider {
 
     this.pendingCallbacks.delete(clientReqId);
     if (error) {
-      pending.reject(new Error(error.message || "RPC request rejected"));
+      pending.reject(Object.assign(new Error(error.message || "RPC request rejected"), { code: error.code }));
     } else {
       pending.resolve(result);
     }
   }
 
   public async request(args: RequestArguments): Promise<unknown> {
+    if (!args || typeof args.method !== "string" || args.method.length > 100) {
+      throw Object.assign(new Error("Invalid wallet request"), { code: -32600 });
+    }
     const clientReqId = ++this.requestId;
 
     return new Promise((resolve, reject) => {
-      this.pendingCallbacks.set(clientReqId, { resolve, reject });
+      if (this.pendingCallbacks.size >= 100) {
+        reject(Object.assign(new Error("Too many pending wallet requests"), { code: -32002 }));
+        return;
+      }
+      const timeout = setTimeout(() => {
+        this.pendingCallbacks.delete(clientReqId);
+        reject(Object.assign(new Error("Wallet request timed out. Open Zeni and try again."), { code: 4001 }));
+      }, 5 * 60 * 1000);
+      this.pendingCallbacks.set(clientReqId, {
+        resolve: (value) => { clearTimeout(timeout); resolve(value); },
+        reject: (error) => { clearTimeout(timeout); reject(error); },
+      });
 
       window.postMessage(
         {
@@ -56,7 +70,7 @@ class ZeniInpageProvider {
 
   private announceEIP6963() {
     const info = {
-      uuid: "47b9f899-7928-4efc-8b83-zeni-wallet-001",
+      uuid: "47b9f899-7928-4efc-8b83-6d125f5de001",
       name: "Zeni Wallet",
       icon: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%239939FF'/><text x='50' y='65' font-size='45' text-anchor='middle' fill='white'>銭</text></svg>",
       rdns: "io.qorechain.zeni",

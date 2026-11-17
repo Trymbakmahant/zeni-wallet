@@ -17,14 +17,10 @@ export const ApprovalModal: React.FC = () => {
         {/* Origin Header */}
         <div className="flex flex-col items-center pt-2 pb-4 text-center border-b border-[#222226]">
           <div className="w-12 h-12 rounded-2xl bg-[#141416] border border-[#222226] flex items-center justify-center mb-2 shadow-lg">
-            {current.favIconUrl ? (
-              <img src={current.favIconUrl} alt="favicon" className="w-6 h-6 rounded" />
-            ) : (
-              <Globe className="w-6 h-6 text-[#E06341]" />
-            )}
+            <Globe className="w-6 h-6 text-[#E06341]" />
           </div>
           <h2 className="font-bold text-base text-white">{current.title || "External Application"}</h2>
-          <span className="text-xs font-mono text-[#E06341]">{current.origin}</span>
+          <span className="text-xs font-mono text-[#E06341] break-all">{current.origin}</span>
         </div>
 
         {/* Content Details */}
@@ -42,7 +38,7 @@ export const ApprovalModal: React.FC = () => {
               </div>
               <ul className="text-[11px] text-zinc-400 space-y-1 pt-1 list-disc list-inside">
                 <li>View your account address & balances</li>
-                <li>Request transaction signatures for approvals</li>
+                <li>Signing and dApp transactions are unavailable in this release</li>
               </ul>
             </div>
           )}

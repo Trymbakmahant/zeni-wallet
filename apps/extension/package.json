@@ -6,7 +6,9 @@
   "description": "Zeni Chrome Extension (Manifest V3)",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build"
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test:security": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@zeni/core": "workspace:*",
@@ -26,6 +28,6 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11"
+    "vite": "^6.4.6"
   }
 }

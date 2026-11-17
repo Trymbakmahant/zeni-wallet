@@ -24,6 +24,7 @@ export interface ActivityItem {
   gasCost: string;
   minAmountOut?: string;
   nativeChain?: boolean;
+  evmChain?: boolean;
   explorerUrl?: string;
   error?: string;
 }
@@ -199,6 +200,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     // Poll pending approvals periodically
     const interval = setInterval(() => {
+      sendMessage("GET_SESSION_STATUS").then(applySession).catch(() => setIsLocked(true));
       sendMessage("GET_PENDING_APPROVALS")
         .then((res) => setPendingApprovals(res || []))
         .catch(() => {});
@@ -207,7 +209,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   useEffect(() => {
-    if (!activity.some((item) => item.nativeChain && item.status === "PENDING")) return;
+    if (!activity.some((item) => (item.nativeChain || item.evmChain) && item.status === "PENDING")) return;
     const interval = setInterval(() => {
       sendMessage("GET_ACTIVITY").then((items) => setActivity(items || [])).catch(() => {});
     }, 5000);
@@ -237,16 +239,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const sendTokens = async (to: string, amount: string, token: string, quoteId?: string): Promise<string> => {
     const res = await sendMessage("EXECUTE_TRANSFER", { to, amount, token, quoteId });
-    // Update local balances optimistically
-    setTokens((prev) =>
-      prev.map((t) => {
-        if (t.symbol === token) {
-          const newBal = Math.max(0, parseFloat(t.balance) - parseFloat(amount)).toFixed(2);
-          return { ...t, balance: newBal };
-        }
-        return t;
-      })
-    );
     await refreshState();
     return res.txHash;
   };

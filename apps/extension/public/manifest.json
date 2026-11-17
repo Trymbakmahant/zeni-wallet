@@ -1,11 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "Zeni — Quantum-Proof Smart Wallet",
+  "name": "Zeni Wallet \u2014 QoreChain Testnet",
   "version": "0.1.0",
-  "description": "Post-quantum smart account wallet with hybrid signatures & gasless swaps on QoreChain",
+  "description": "QoreChain testnet wallet with local encrypted key storage, QOR transfers, and in-wallet swaps.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "action": {
     "default_popup": "index.html",
-    "default_title": "Zeni Wallet"
+    "default_title": "Zeni Wallet",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
   "background": {
     "service_worker": "background.js",
@@ -13,24 +23,37 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_start",
       "all_frames": false
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inpage.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "inpage.js"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
     }
   ],
-  "permissions": ["storage"],
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://api-testnet.qore.host/*",
     "https://evm-testnet.qore.host/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://evm-testnet.qore.host https://rpc-testnet.qore.host https://api-testnet.qore.host"
-  }
+    "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://evm-testnet.qore.host https://api-testnet.qore.host"
+  },
+  "minimum_chrome_version": "124"
 }

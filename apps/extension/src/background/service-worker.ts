@@ -4,6 +4,7 @@ import {
   DerivedAccountKeys,
   EncryptedVaultEnvelope,
   deriveAccountKeys,
+  isValidMnemonic,
   repairPqcPublicKeyHash,
   QorTransferClient,
   QorTransferQuote,
@@ -17,9 +18,6 @@ import {
   bech32ToEvmAddress,
   encryptVault,
   decryptVault,
-  encodeAccountExecute,
-  getUserOperationHash,
-  encodeHybridSignature,
 } from "@zeni/core";
 import { ethers, formatEther, parseEther } from "ethers";
 
@@ -52,8 +50,14 @@ class BackgroundController {
   private activityWrites: Promise<void> = Promise.resolve();
   private unlockedVault: VaultData | null = null;
   private autoLockTimeout: any = null;
+  private unlockDeadline = 0;
+  private vaultGeneration = 0;
+  private vaultMutationInProgress = false;
+  private approvalInProgress = false;
+  private storageReady: Promise<void>;
 
   constructor() {
+    this.storageReady = chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
     this.client = new QoreChainClient(QORECHAIN_CONFIG.rpcUrls[0]);
     this.setupPortListener();
     this.setupInternalMessageListener();
@@ -69,15 +73,20 @@ class BackgroundController {
   private resetAutoLock() {
     if (this.autoLockTimeout) clearTimeout(this.autoLockTimeout);
     // Auto-lock after 15 minutes of inactivity
+    this.unlockDeadline = Date.now() + 15 * 60 * 1000;
     this.autoLockTimeout = setTimeout(() => {
       this.lockVault();
     }, 15 * 60 * 1000);
   }
 
   public lockVault() {
+    this.vaultGeneration++;
+    this.unlockDeadline = 0;
+    clearTimeout(this.autoLockTimeout);
     this.unlockedVault = null;
     this.transferQuotes.clear();
     this.swapQuotes.clear();
+    for (const id of this.pendingRequests.keys()) this.rejectApproval(id, "Wallet locked");
     chrome.storage.session?.remove?.(["unlockedSession"]);
   }
 
@@ -87,15 +96,20 @@ class BackgroundController {
   }
 
   public isUnlocked(): boolean {
+    if (this.unlockedVault && Date.now() >= this.unlockDeadline) this.lockVault();
     return this.unlockedVault !== null;
   }
 
   public getActiveAccount(): DerivedAccountKeys | null {
-    if (!this.unlockedVault) return null;
+    if (!this.isUnlocked() || !this.unlockedVault) return null;
     return this.unlockedVault.accounts[this.unlockedVault.activeAccountIndex] || null;
   }
 
   public async createVault(mnemonic: string, password: string): Promise<DerivedAccountKeys> {
+    if (await this.isInitialized()) throw new Error("A wallet already exists. Reset it explicitly before creating another.");
+    if (typeof mnemonic !== "string" || !isValidMnemonic(mnemonic)) throw new Error("Invalid recovery phrase");
+    if (typeof password !== "string" || password.length < 12 || password.length > 1024) throw new Error("Password must be between 12 and 1024 characters");
+    const generation = this.vaultGeneration;
     const keys = deriveAccountKeys(mnemonic);
     const vaultData: VaultData = {
       mnemonic,
@@ -104,6 +118,7 @@ class BackgroundController {
     };
 
     const envelope = await encryptVault(vaultData as any, password);
+    if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
     await chrome.storage.local.set({
       encryptedVault: envelope,
       activeAddress: keys.classicalAddress,
@@ -111,12 +126,14 @@ class BackgroundController {
       pqcPublicKeyHash: keys.pqcPublicKeyHash,
     });
 
+    if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
     this.unlockedVault = vaultData;
     this.resetAutoLock();
     return keys;
   }
 
   public async unlockVault(password: string): Promise<DerivedAccountKeys> {
+    const generation = this.vaultGeneration;
     const envelope = await this.getEncryptedVault();
     if (!envelope) throw new Error("No vault found");
 
@@ -126,6 +143,7 @@ class BackgroundController {
       decrypted.accounts = accounts;
       await chrome.storage.local.set({ encryptedVault: await encryptVault(decrypted as any, password) });
     }
+    if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
     this.unlockedVault = decrypted;
     this.resetAutoLock();
 
@@ -143,26 +161,38 @@ class BackgroundController {
   private setupPortListener() {
     chrome.runtime.onConnect.addListener((port) => {
       if (port.name !== "zeni-dapp-bridge") return;
-
-      const origin = port.sender?.origin || "unknown";
-      const tabId = port.sender?.tab?.id;
-      const portKey = `${origin}-${tabId || "popup"}-${Date.now()}`;
+      const sender = port.sender;
+      let origin: string;
+      try {
+        const url = new URL(sender?.url || "");
+        if (sender?.id !== chrome.runtime.id || sender.tab?.id === undefined || sender.frameId !== 0
+          || !["https:", "http:"].includes(url.protocol) || sender.origin !== url.origin) throw new Error("Invalid sender");
+        origin = url.origin;
+      } catch { port.disconnect(); return; }
+      const portKey = crypto.randomUUID();
       this.dAppPorts.set(portKey, port);
 
       port.onDisconnect.addListener(() => {
         this.dAppPorts.delete(portKey);
+        for (const [id, request] of this.pendingRequests) {
+          if (request.port === port) this.rejectApproval(id, "Page disconnected");
+        }
       });
 
       port.onMessage.addListener(async (msg: { clientReqId: number; payload: { method: string; params?: any[] } }) => {
-        const { clientReqId, payload } = msg;
-
         try {
-          await this.handleDappRequest(port, clientReqId, origin, payload);
+          await this.storageReady;
+          if (!msg || !Number.isSafeInteger(msg.clientReqId) || !msg.payload
+            || typeof msg.payload.method !== "string" || msg.payload.method.length > 100) {
+            port.postMessage({ clientReqId: msg?.clientReqId, error: { code: -32600, message: "Invalid RPC request" } });
+            return;
+          }
+          await this.handleDappRequest(port, msg.clientReqId, origin, msg.payload);
         } catch (err: any) {
-          port.postMessage({
-            clientReqId,
+          try { port.postMessage({
+            clientReqId: msg?.clientReqId,
             error: { code: -32603, message: err?.message || "Internal RPC Error" },
-          });
+          }); } catch { /* Page disconnected. */ }
         }
       });
     });
@@ -188,7 +218,7 @@ class BackgroundController {
         const stored = await chrome.storage.local.get(["connectedOrigins", "activeAddress"]);
         const connectedOrigins = stored.connectedOrigins || [];
 
-        if (connectedOrigins.includes(origin) && stored.activeAddress) {
+        if (active && connectedOrigins.includes(origin) && stored.activeAddress) {
           port.postMessage({ clientReqId, result: [stored.activeAddress] });
         } else {
           port.postMessage({ clientReqId, result: [] });
@@ -200,7 +230,7 @@ class BackgroundController {
         const stored = await chrome.storage.local.get(["connectedOrigins", "activeAddress"]);
         const connectedOrigins = stored.connectedOrigins || [];
 
-        if (connectedOrigins.includes(origin) && stored.activeAddress) {
+        if (this.isUnlocked() && connectedOrigins.includes(origin) && stored.activeAddress) {
           port.postMessage({ clientReqId, result: [stored.activeAddress] });
           return;
         }
@@ -213,7 +243,7 @@ class BackgroundController {
       case "eth_sendTransaction":
       case "personal_sign":
       case "eth_signTypedData_v4":
-        this.queueApproval(port, clientReqId, origin, payload);
+        port.postMessage({ clientReqId, error: { code: 4200, message: "dApp signing and transactions are not supported in this release." } });
         break;
 
       default:
@@ -230,6 +260,11 @@ class BackgroundController {
     origin: string,
     payload: { method: string; params?: any[] }
   ) {
+    this.expireApprovals();
+    if (this.approvalInProgress || this.pendingRequests.size >= 5 || Array.from(this.pendingRequests.values()).some((r) => r.origin === origin)) {
+      port.postMessage({ clientReqId, error: { code: -32002, message: "An approval is already pending. Open Zeni to review it." } });
+      return;
+    }
     const internalId = crypto.randomUUID();
     const req: PendingRequest = {
       internalId,
@@ -237,7 +272,7 @@ class BackgroundController {
       origin,
       title: port.sender?.tab?.title,
       favIconUrl: port.sender?.tab?.favIconUrl,
-      payload,
+      payload: { method: payload.method },
       state: "PENDING",
       createdAt: Date.now(),
       expiresAt: Date.now() + 5 * 60 * 1000,
@@ -250,13 +285,20 @@ class BackgroundController {
     chrome.action.setBadgeText({ text: String(this.pendingRequests.size) });
     chrome.action.setBadgeBackgroundColor({ color: "#9939FF" });
 
-    chrome.windows.create({
-      url: `index.html?approvalId=${internalId}`,
-      type: "popup",
-      width: 360,
-      height: 600,
-      focused: true,
-    });
+    // Review requests from the wallet toolbar; a page cannot spawn unlimited windows.
+  }
+
+  private rejectApproval(id: string, message: string) {
+    const request = this.pendingRequests.get(id);
+    this.pendingRequests.delete(id);
+    try { request?.port?.postMessage({ clientReqId: request.clientReqId, error: { code: 4001, message } }); } catch { /* Disconnected. */ }
+    chrome.action.setBadgeText({ text: this.pendingRequests.size ? String(this.pendingRequests.size) : "" });
+  }
+
+  private expireApprovals() {
+    for (const [id, request] of this.pendingRequests) {
+      if (request.expiresAt <= Date.now()) this.rejectApproval(id, "Request expired");
+    }
   }
 
   private async writeActivity(change: (history: any[]) => any[]): Promise<void> {
@@ -286,10 +328,19 @@ class BackgroundController {
 
   private async reconcileNativeActivity() {
     const stored = await chrome.storage.local.get(["activityHistory"]);
-    const pending = (stored.activityHistory || []).filter((item: any) => item.nativeChain && item.status === "PENDING");
+    const pending = (stored.activityHistory || []).filter((item: any) => (item.nativeChain || item.evmChain) && item.status === "PENDING");
     const client = new AmmSwapClient(this.client.provider);
     for (const item of pending) {
       try {
+        if (item.evmChain) {
+          const receipt = await this.client.provider.getTransactionReceipt(item.hash);
+          if (!receipt || receipt.status === null) continue;
+          await this.writeActivity((history) => history.map((entry) => entry.hash === item.hash ? {
+            ...entry, status: receipt.status === 1 ? "CONFIRMED" : "FAILED",
+            gasCost: `${formatEther(receipt.fee)} QOR`,
+          } : entry));
+          continue;
+        }
         const receipt = await client.receipt(item.hash);
         if (!receipt || receipt.code === undefined || BigInt(receipt.height || "0") <= 0n) continue;
         await this.writeActivity((history) => history.map((entry) => entry.hash === item.hash ? {
@@ -304,7 +355,7 @@ class BackgroundController {
   private async assertNoPendingNative(active: DerivedAccountKeys) {
     await this.reconcileNativeActivity();
     const stored = await chrome.storage.local.get(["activityHistory"]);
-    if ((stored.activityHistory || []).some((item: any) => item.nativeChain && item.account === active.cosmosAddress && item.status === "PENDING")) {
+    if ((stored.activityHistory || []).some((item: any) => (item.nativeChain || item.evmChain) && item.account === active.cosmosAddress && item.status === "PENDING")) {
       throw new Error("A previous transaction is still pending. Check its explorer link in Activity before sending another.");
     }
   }
@@ -318,7 +369,7 @@ class BackgroundController {
         sendResponse({ success: false, error: "Unauthorized wallet request" });
         return false;
       }
-      this.handleInternalMessage(message)
+      this.storageReady.then(() => this.handleInternalMessage(message))
         .then((res) => sendResponse({ success: true, data: res }))
         .catch((err) => sendResponse({ success: false, error: err?.message || String(err) }));
       return true; // Keep message channel open for async response
@@ -326,6 +377,7 @@ class BackgroundController {
   }
 
   private async handleInternalMessage(message: any): Promise<any> {
+    if (!message || typeof message.type !== "string") throw new Error("Invalid wallet request");
     switch (message.type) {
       case "GET_SESSION_STATUS": {
         // Route the popup from local vault state without waiting for network balances.
@@ -397,11 +449,17 @@ class BackgroundController {
       }
 
       case "CREATE_VAULT": {
-        return this.createVault(message.mnemonic, message.password);
+        if (this.vaultMutationInProgress) throw new Error("Wallet update already in progress");
+        this.vaultMutationInProgress = true;
+        try { await this.createVault(message.mnemonic, message.password); return true; }
+        finally { this.vaultMutationInProgress = false; }
       }
 
       case "UNLOCK_VAULT": {
-        return this.unlockVault(message.password);
+        if (this.vaultMutationInProgress) throw new Error("Wallet update already in progress");
+        this.vaultMutationInProgress = true;
+        try { await this.unlockVault(message.password); return true; }
+        finally { this.vaultMutationInProgress = false; }
       }
 
       case "LOCK_VAULT": {
@@ -410,21 +468,25 @@ class BackgroundController {
       }
 
       case "RESET_WALLET": {
+        if (this.vaultMutationInProgress || this.transferInProgress || this.approvalInProgress) throw new Error("Wait for the current wallet operation before resetting");
         this.lockVault();
         await chrome.storage.local.clear();
         return true;
       }
 
       case "EXPORT_MNEMONIC": {
-        if (!this.unlockedVault) throw new Error("Wallet is locked");
+        if (!this.isUnlocked()) throw new Error("Wallet is locked");
+        const generation = this.vaultGeneration;
         const envelope = await this.getEncryptedVault();
         if (!envelope) throw new Error("No vault found");
         // Verify password
         const decrypted = (await decryptVault(envelope, message.password)) as unknown as VaultData;
+        if (generation !== this.vaultGeneration || !this.isUnlocked()) throw new Error("Wallet is locked");
         return decrypted.mnemonic;
       }
 
       case "GET_PENDING_APPROVALS": {
+        this.expireApprovals();
         return Array.from(this.pendingRequests.values()).map((r) => ({
           internalId: r.internalId,
           origin: r.origin,
@@ -436,9 +498,14 @@ class BackgroundController {
       }
 
       case "RESOLVE_APPROVAL": {
+        if (this.approvalInProgress) throw new Error("An approval is already being resolved");
+        this.expireApprovals();
         const { internalId, approved } = message;
         const pending = this.pendingRequests.get(internalId);
         if (!pending) throw new Error("Request not found or expired");
+        if (typeof approved !== "boolean") throw new Error("Invalid approval decision");
+        const active = this.getActiveAccount();
+        if (approved && !active) throw new Error("Unlock the wallet before approving");
 
         this.pendingRequests.delete(internalId);
         chrome.action.setBadgeText({
@@ -455,22 +522,22 @@ class BackgroundController {
 
         // Handle approved request
         if (pending.payload.method === "eth_requestAccounts") {
-          const stored = await chrome.storage.local.get(["connectedOrigins", "activeAddress"]);
-          const origins = new Set(stored.connectedOrigins || []);
-          origins.add(pending.origin);
-          await chrome.storage.local.set({ connectedOrigins: Array.from(origins) });
+          this.approvalInProgress = true;
+          try {
+            const stored = await chrome.storage.local.get(["connectedOrigins", "activeAddress"]);
+            if (this.getActiveAccount() !== active || !Array.from(this.dAppPorts.values()).includes(pending.port!)) {
+              pending.port?.postMessage({ clientReqId: pending.clientReqId, error: { code: 4001, message: "Wallet or page changed. Request a new connection." } });
+              throw new Error("Wallet or page changed");
+            }
+            const origins = new Set(stored.connectedOrigins || []);
+            origins.add(pending.origin);
+            await chrome.storage.local.set({ connectedOrigins: Array.from(origins) });
 
-          pending.port?.postMessage({
-            clientReqId: pending.clientReqId,
-            result: [stored.activeAddress],
-          });
-        } else if (pending.payload.method === "eth_sendTransaction") {
-          // Return simulated transaction hash
-          const mockTx = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-          pending.port?.postMessage({
-            clientReqId: pending.clientReqId,
-            result: mockTx,
-          });
+            pending.port?.postMessage({
+              clientReqId: pending.clientReqId,
+              result: [active!.classicalAddress],
+            });
+          } finally { this.approvalInProgress = false; }
         }
 
         return { resolved: true };
@@ -490,6 +557,7 @@ class BackgroundController {
       case "EXECUTE_TRANSFER": {
         // Broadcasts token transfer to QoreChain Testnet
         const { to, amount, token } = message;
+        if (token !== "QOR") throw new Error("Only QOR transfers are supported in this release.");
         const active = this.getActiveAccount();
         if (!active) throw new Error("Wallet is locked");
 
@@ -505,9 +573,8 @@ class BackgroundController {
         }
 
         let txHash: string;
-        let gasCostDisplay = "~0.0030 QOR";
 
-        if (token === "QOR") {
+        {
           try {
             const quote = this.transferQuotes.get(message.quoteId);
             if (!quote || quote.to !== target || quote.value !== parseEther(amount.toString()).toString()) {
@@ -521,13 +588,23 @@ class BackgroundController {
               await this.assertNoPendingNative(active);
               txHash = await new QorTransferClient(this.client.provider).send(active, quote, () => {
                 if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review the transfer again.");
+              }, async (update) => {
+                await this.writeActivity((history) => [{
+                  hash: update.hash, type: "SETUP", nativeChain: true, account: active.cosmosAddress,
+                  timestamp: history.find((item) => item.hash === update.hash)?.timestamp || Date.now(),
+                  status: update.status, gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error,
+                }, ...history.filter((item) => item.hash !== update.hash)]);
+              }, async (hash) => {
+                await this.writeActivity((history) => [{
+                  hash, type: "SEND", evmChain: true, account: active.cosmosAddress, to: quote.to,
+                  amount: quote.amount, token: "QOR", timestamp: Date.now(), status: "PENDING",
+                  gasCost: `Up to ${quote.maxNetworkFee} QOR (including setup)`,
+                }, ...history]);
               });
-              gasCostDisplay = `Up to ${quote.maxNetworkFee} QOR (including setup)`;
             } finally {
               this.transferInProgress = false;
             }
           } catch (err: any) {
-            console.error("Live on-chain QOR transfer failed:", err);
             // Robust extraction of RPC errors to prevent generic "could not coalesce error"
             let errMsg = err?.error?.message || err?.info?.error?.message || "";
             if (!errMsg && typeof err?.message === "string") {
@@ -569,42 +646,13 @@ class BackgroundController {
 
             throw new Error(errMsg || "Transaction failed to broadcast to QoreChain");
           }
-        } else {
-          // Fallback simulation for offline/unfunded testnet demo tokens
-          txHash = "0x" + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-          const stored = await chrome.storage.local.get(["tokenBalances"]);
-          const balances = stored.tokenBalances || {
-            fUSD: "0.00",
-            fETH: "0.0000",
-            fBTC: "0.0000",
-          };
-          const current = parseFloat(balances[token] || "0");
-          const dec = token === "fUSD" ? 2 : 4;
-          balances[token] = Math.max(0, current - (parseFloat(amount) || 0)).toFixed(dec);
-          await chrome.storage.local.set({ tokenBalances: balances });
-          gasCostDisplay = "~0.0030 QOR";
         }
-
-        // Store in activity history
-        const historyData = await chrome.storage.local.get(["activityHistory"]);
-        const history = historyData.activityHistory || [];
-        history.unshift({
-          hash: txHash,
-          type: "SEND",
-          to,
-          amount,
-          token,
-          timestamp: Date.now(),
-          status: "CONFIRMED",
-          gasCost: gasCostDisplay,
-        });
-        await chrome.storage.local.set({ activityHistory: history.slice(0, 50) });
 
         return { txHash };
       }
 
       case "CLEAR_ACTIVITY": {
-        await this.writeActivity((history) => history.filter((item: any) => item.nativeChain && item.status === "PENDING"));
+        await this.writeActivity((history) => history.filter((item: any) => (item.nativeChain || item.evmChain) && item.status === "PENDING"));
         return true;
       }
 

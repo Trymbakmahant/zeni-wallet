@@ -53,8 +53,8 @@ export const ActivityView: React.FC = () => {
                 </div>
                 <div className="min-w-0 break-words">
                   <div className="font-semibold text-xs leading-tight text-white">
-                    {item.type === "SETUP" ? "PQC key registration" : item.type === "SEND"
-                      ? `Sent ${item.amount} ${item.token}`
+                    {item.type === "SETUP" ? "PQC setup" : item.type === "SEND"
+                      ? `${item.status === "CONFIRMED" ? "Sent" : "Send"} ${item.amount} ${item.token}`
                       : `${!item.nativeChain ? "Demo swap" : item.status === "CONFIRMED" ? "Swapped" : "Swap"} ${item.amountIn} ${item.tokenIn} → ${item.status === "CONFIRMED" ? item.amountOut ?? (item.minAmountOut ? `≥ ${item.minAmountOut}` : "—") : ""} ${item.tokenOut}`}
                   </div>
                   <div className={`text-[10px] mt-1 ${item.status === "FAILED" ? "text-red-400" : item.status === "PENDING" ? "text-amber-400" : "text-emerald-400"}`}>

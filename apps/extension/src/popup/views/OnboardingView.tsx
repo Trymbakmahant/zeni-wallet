@@ -34,8 +34,8 @@ export const OnboardingView: React.FC = () => {
 
   const handleFinish = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    if (password.length < 12) {
+      setError("Password must be at least 12 characters");
       return;
     }
     if (password !== confirmPassword) {
@@ -259,7 +259,7 @@ export const OnboardingView: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1.5">New Password (min 8 chars)</label>
+                  <label className="text-xs text-zinc-400 block mb-1.5">New Password (min 12 chars)</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
@@ -295,7 +295,7 @@ export const OnboardingView: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isLoading || password.length < 8 || password !== confirmPassword}
+              disabled={isLoading || password.length < 12 || password !== confirmPassword}
               className="w-full py-3.5 rounded-full bg-[#E06341] hover:bg-[#EB6841] text-white font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#E06341]/20 transition-all active:scale-[0.99] cursor-pointer mt-4"
             >
               {isLoading ? "Encrypting Vault..." : "Complete Setup"}

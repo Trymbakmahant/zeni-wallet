@@ -110,6 +110,7 @@ export class NativeTransactionClient {
       assertUnlocked();
       // Persist the real hash before making an irreversible broadcast request.
       await observer?.(pending);
+      assertUnlocked();
       try {
         submitted = await this.rest("/cosmos/tx/v1beta1/txs", { tx_bytes: ethers.encodeBase64(bytes), mode: "BROADCAST_MODE_SYNC" });
       } catch {

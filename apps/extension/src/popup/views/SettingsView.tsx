@@ -29,6 +29,7 @@ export const SettingsView: React.FC = () => {
     try {
       const phrase = await exportMnemonic(password);
       setRevealedMnemonic(phrase);
+      setPassword("");
     } catch (err: any) {
       setError(err?.message || "Incorrect password");
     }
@@ -144,7 +145,7 @@ export const SettingsView: React.FC = () => {
                   <span>{copied ? "Copied" : "Copy to Clipboard"}</span>
                 </button>
                 <button
-                  onClick={() => setShowExportModal(false)}
+                  onClick={() => { setShowExportModal(false); setRevealedMnemonic(null); setPassword(""); }}
                   className="w-full py-2.5 bg-[#E06341] hover:bg-[#EB6841] text-xs font-semibold rounded-xl text-white transition-colors cursor-pointer"
                 >
                   Close
@@ -168,7 +169,7 @@ export const SettingsView: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowExportModal(false)}
+                    onClick={() => { setShowExportModal(false); setRevealedMnemonic(null); setPassword(""); }}
                     className="flex-1 py-2 rounded-xl bg-[#18181C] text-xs text-zinc-400 border border-[#222226]"
                   >
                     Cancel

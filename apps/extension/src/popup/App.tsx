@@ -52,7 +52,7 @@ const MainLayout: React.FC = () => {
         {/* Right Header Actions */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-[#D45D3E]/15 text-[#E06341] border border-[#D45D3E]/30 px-2 py-0.5 rounded-full font-mono flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3 text-[#E06341]" /> PQC Active
+            <ShieldCheck className="w-3 h-3 text-[#E06341]" /> Testnet
           </span>
           <button
             onClick={lock}

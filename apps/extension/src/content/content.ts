@@ -55,6 +55,8 @@ window.addEventListener("message", (event: MessageEvent) => {
   }
 
   const { clientReqId, payload } = event.data;
+  if (!Number.isSafeInteger(clientReqId) || !payload || typeof payload.method !== "string" || payload.method.length > 100) return;
   const port = getBackgroundPort();
-  port.postMessage({ clientReqId, payload });
+  // Supported read/connection methods need no params. Do not relay arbitrary page data.
+  port.postMessage({ clientReqId, payload: { method: payload.method } });
 });

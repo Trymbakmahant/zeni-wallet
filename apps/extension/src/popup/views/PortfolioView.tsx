@@ -99,7 +99,7 @@ export const PortfolioView: React.FC = () => {
           </div>
         </div>
         <a
-          href="https://build.qorechain.io"
+          href="https://dashboard.qorechain.io/faucet"
           target="_blank"
           rel="noreferrer"
           className="py-1.5 px-4 rounded-full bg-white hover:bg-zinc-200 text-black text-xs font-bold transition-colors cursor-pointer"

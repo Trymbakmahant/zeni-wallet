@@ -82,7 +82,7 @@ export const SendModal: React.FC = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto py-3 space-y-1.5 pr-0.5">
-              {tokens.map((token) => {
+              {tokens.filter((token) => token.symbol === "QOR").map((token) => {
                 const isSelected = selectedToken === token.symbol;
 
                 return (

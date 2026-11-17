@@ -30,6 +30,7 @@ function fixture(options = {}) {
       }
     }
     async broadcastTransaction(raw) {
+      if (options.evmFailure) throw new Error('Network timeout');
       const tx = ethers.Transaction.from(raw);
       assert.equal(tx.from, account.classicalAddress);
       assert.equal(tx.nonce, Number(state.sequence));
@@ -186,4 +187,30 @@ test('MAX reserves registration and authorization fees using the current network
   const quote = await client.prepare(account, recipient, 'MAX');
   assert.equal(ethers.parseEther(quote.amount) + ethers.parseEther(quote.maxNetworkFee), ethers.parseEther('10'));
   assert.equal(state.native.length, 0);
+});
+
+
+test('real EVM hash is persisted before a broadcast with an uncertain response', async () => {
+  const { client, state } = fixture({ registered: true, evmFailure: true });
+  const quote = await client.prepare(account, recipient, '1');
+  const updates = [];
+  let recordedHash;
+  await assert.rejects(client.send(account, quote, () => {}, async (update) => updates.push(update), async (hash) => {
+    assert.equal(state.evm.length, 0);
+    assert.match(hash, /^0x[a-f0-9]{64}$/);
+    recordedHash = hash;
+  }), (error) => error.message.includes(recordedHash) && /status is unknown/.test(error.message));
+  assert.ok(recordedHash);
+  assert.deepEqual(updates.map((update) => update.status), ['PENDING', 'CONFIRMED']);
+});
+
+test('locking while saving activity prevents a later broadcast', async () => {
+  const { client, state } = fixture({ registered: true });
+  const quote = await client.prepare(account, recipient, '1');
+  let locked = false;
+  await assert.rejects(client.send(account, quote, () => {
+    if (locked) throw new Error('Wallet locked');
+  }, async () => { locked = true; }), /Wallet locked/);
+  assert.equal(state.native.length, 0);
+  assert.equal(state.evm.length, 0);
 });
