@@ -7,3 +7,4 @@ export * from "./rpc/client.js";
 export * from "./rpc/qor-transfer.js";
 export * from "./rpc/native-transaction.js";
 export * from "./rpc/amm.js";
+export * from "./account/dapp.js";
