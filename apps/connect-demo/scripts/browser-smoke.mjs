@@ -109,7 +109,7 @@ try {
   await until(`document.querySelector('output')?.textContent.includes('Transaction submitted.')`);
   assert.equal(requestCount, 2);
   assert.ok(await evaluate(`document.querySelector('output').textContent.includes('not yet confirmed')`));
-  assert.ok(await evaluate(`document.querySelector('output a[href*="/explorer/tx/"]').href.endsWith('${testHash}')`));
+  assert.ok(await evaluate(`document.querySelector('output a[href^="https://explore.qore.network/tx/"]').href.endsWith('${testHash}')`));
   await screenshot('transfer');
   await call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await evaluate('window.scrollTo(0, 0)'); await delay(200); await screenshot('mobile');

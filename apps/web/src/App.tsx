@@ -128,7 +128,7 @@ function DemoFlow() {
     </div>
     <Reveal id="receipts" className="mt-6 rounded-3xl bg-framer-dark1 text-white p-6 sm:p-8 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
       <div className="flex items-start gap-4"><span className="rounded-2xl bg-emerald-500/10 text-emerald-400 p-3"><FileCheck2 size={23} /></span><div><h3 className="text-xl font-semibold">The transaction doesn’t end at Confirm.</h3><p className="mt-2 text-sm text-white/60 leading-relaxed max-w-xl">Follow its status in Activity, then open the transaction in the explorer. Select Testnet to see your QoreChain receipt.</p></div></div>
-      <a href="https://dashboard.qorechain.io/explorer" target="_blank" rel="noreferrer" className="framer-btn-dark shrink-0 px-5 py-3 inline-flex justify-center items-center gap-2 text-sm font-semibold">Open explorer <ExternalLink size={15} /></a>
+      <a href="https://explore.qore.network" target="_blank" rel="noreferrer" className="framer-btn-dark shrink-0 px-5 py-3 inline-flex justify-center items-center gap-2 text-sm font-semibold">Open explorer <ExternalLink size={15} /></a>
     </Reveal>
   </section>;
 }
@@ -212,7 +212,7 @@ export const App: React.FC = () => {
       <section id="ecosystem" className="section-space bg-[#f7f3ee] border-t border-framer-dark1/10"><div className="max-w-5xl mx-auto"><SectionHeading eyebrow="The QoreChain ecosystem" title="Built for a Connected Web3">Explore the network, get testnet tokens, and follow the open-source tools and standards behind the wallet.</SectionHeading><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">{[
         { mark: "AMM", name: "Native swaps", detail: "QoreChain DEX", href: "https://docs.qorechain.io", color: "bg-purple-50 text-purple-600" },
         { mark: "QOR", name: "Diana Faucet", detail: "Testnet tokens", href: FAUCET, color: "bg-amber-50 text-amber-600" },
-        { mark: "TX", name: "Explorer", detail: "On-chain receipts", href: "https://dashboard.qorechain.io/explorer", color: "bg-blue-50 text-blue-600" },
+        { mark: "TX", name: "Explorer", detail: "On-chain receipts", href: "https://explore.qore.network", color: "bg-blue-50 text-blue-600" },
         { mark: "SRC", name: "Chrome wallet", detail: "Extension source", href: `${REPO}/tree/main/apps/extension`, color: "bg-emerald-50 text-emerald-600" },
         { mark: "PQC", name: "ML-DSA", detail: "NIST FIPS 204", href: "https://csrc.nist.gov/pubs/fips/204/final", color: "bg-rose-50 text-rose-600" },
         { mark: "EIP", name: "EIP-6963", detail: "Wallet discovery", href: "https://eips.ethereum.org/EIPS/eip-6963", color: "bg-indigo-50 text-indigo-600" },

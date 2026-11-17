@@ -99,7 +99,7 @@ test('confirmed swap uses real signed hash, hybrid signature, minOut, and actual
   assert.equal(result.status, 'CONFIRMED');
   assert.equal(result.hash, state.submitted[0].hash);
   assert.equal(result.amountOut, '0.08107', 'actual receipt output can differ from the estimate');
-  assert.equal(result.explorerUrl, `https://dashboard.qorechain.io/explorer/tx/${result.hash}`);
+  assert.equal(result.explorerUrl, `https://explore.qore.network/tx/${result.hash}`);
   assert.deepEqual(state.updates.map(u => u.status), ['PENDING', 'CONFIRMED']);
 });
 

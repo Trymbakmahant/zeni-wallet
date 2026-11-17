@@ -523,7 +523,7 @@ private struct TransactionResultView: View {
             if let amount = result.amountOut { Text("Received: \(amount)") }
             if let error = result.error { TransactionErrorView(message: error) }
             Text(result.hash).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
-            if let url = URL(string: result.explorerUrl), url.host == "dashboard.qorechain.io" {
+            if let url = URL(string: result.explorerUrl), url.scheme == "https", url.host == "explore.qore.network" {
                 Link("View on Explorer", destination: url).buttonStyle(ZeniPrimaryButtonStyle())
             }
             Text("Select Testnet in the explorer. Activity keeps the transaction status, including any setup transactions.")

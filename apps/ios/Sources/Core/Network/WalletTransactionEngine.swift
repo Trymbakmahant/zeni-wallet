@@ -62,7 +62,7 @@ struct WalletActivityItem: Codable, Identifiable, Equatable {
     var explorerURL: URL? {
         let clean = hash.hasPrefix("0x") ? String(hash.dropFirst(2)) : hash
         guard clean.count == 64, clean.allSatisfy({ $0.isHexDigit }) else { return nil }
-        return URL(string: "https://dashboard.qorechain.io/explorer/tx/" + hash)
+        return URL(string: "https://explore.qore.network/tx/" + hash)
     }
 }
 

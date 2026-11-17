@@ -378,7 +378,7 @@ private struct WalletSettings: View {
             }.buttonStyle(ZeniPrimaryButtonStyle())
             Label("Authenticate when signing", systemImage: "faceid")
                 .font(.subheadline).foregroundStyle(Color.zeniMuted)
-            if let url = URL(string: "https://dashboard.qorechain.io/explorer") {
+            if let url = URL(string: "https://explore.qore.network") {
                 Link(destination: url) {
                     Label("Open QoreChain Explorer", systemImage: "arrow.up.right.square").font(.subheadline)
                 }.padding(.vertical, 8)
