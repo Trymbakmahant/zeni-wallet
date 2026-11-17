@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Globe, Check, X, LoaderCircle } from "lucide-react";
-import { formatUnits } from "ethers";
 import type { QorTransferQuote } from "@zeni/core";
 import { useWallet, type PendingApproval } from "../context/WalletContext";
 
@@ -67,7 +66,7 @@ function ApprovalReview({ current }: { current: PendingApproval }) {
       {intent?.kind === "message" && <div className="mt-3 space-y-3"><p className="text-xs text-zinc-400">Sign only if you understand and trust the complete message below. Signing a message costs no network fee.</p><pre dir="auto" className={`${detailClass} whitespace-pre-wrap break-words font-mono`}>{intent.text}</pre></div>}
       {intent?.kind === "transfer" && <div className="mt-3 space-y-3">
         <div className={detailClass}><span className="text-zinc-400">Recipient</span><p className="font-mono break-all">{intent.to}</p><span className="text-zinc-400 block pt-2">Amount</span><p className="font-semibold">{intent.amount} QOR</p></div>
-        {quote && <div className={detailClass}><p>Maximum network and setup fees: <strong>{quote.maxNetworkFee} QOR</strong></p><p className="text-zinc-400">Authorize one QOR transfer to this recipient for {quote.windowBlocks} blocks, capped at {formatUnits(quote.windowMaxValue, 6)} QOR including transfer gas.</p>{quote.registrationRequired && <p className="text-zinc-400">This first send also registers your post-quantum public key.</p>}<p className="text-zinc-400">Setup fees may be charged even if the transfer fails. Check Activity before retrying.</p></div>}
+        {quote && <div className={detailClass}><p>Maximum network and setup fees: <strong>{quote.maxNetworkFee} QOR</strong></p><p className="text-zinc-400">This native transfer is signed with both your classical and post-quantum keys.</p><p className="font-mono break-all">{quote.nativeTo}</p>{quote.registrationRequired && <p className="text-zinc-400">First-time key registration uses your classical key and proof of possession before the hybrid-signed transfer.</p>}<p className="text-zinc-400">Setup fees may be charged even if the transfer fails. Check Activity before retrying.</p></div>}
       </div>}
     </div>
     <div className="shrink-0 pt-3 border-t border-[#222226]">

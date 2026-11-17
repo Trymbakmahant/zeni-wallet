@@ -25,14 +25,12 @@ struct TransferQuote: Codable, Identifiable, Equatable {
     let amount: String
     let registrationRequired: Bool
     let maxNetworkFee: String
-    let windowMaxValue: String
-    let windowBlocks: Int
+    let kind: String
+    let nativeTo: String
+    let amountUqor: String
     let expiresAt: Double
     var expiration: Date { Date(timeIntervalSince1970: expiresAt / 1000) }
-    var authorizationLimit: String {
-        guard let units = Decimal(string: windowMaxValue) else { return windowMaxValue + " uqor" }
-        return (units / 1_000_000).formatted() + " QOR"
-    }
+
 }
 
 struct TransactionResult: Codable, Equatable {
@@ -206,7 +204,7 @@ final class WalletTransactionEngine: NSObject, WKScriptMessageHandlerWithReply, 
                 let readMethods = ["eth_chainId", "eth_gasPrice", "eth_getCode", "eth_getBalance",
                                    "eth_getTransactionCount", "eth_getTransactionReceipt", "eth_getTransactionByHash",
                                    "eth_blockNumber", "eth_getBlockByNumber", "eth_estimateGas", "eth_call"]
-                guard readMethods.contains(rpcMethod) || (rpcMethod == "eth_sendRawTransaction" && permitsBroadcast) else {
+                guard readMethods.contains(rpcMethod) else {
                     throw WalletEngineError.message("Wallet request is not authorized.")
                 }
             }

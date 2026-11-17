@@ -6,7 +6,7 @@ export const sections = [
   { id: 'quickstart', title: 'Quickstart', group: 'Start here', description: 'Installation, source, packages, tarballs, npm, pnpm, local development' },
   { id: 'react', title: 'React integration', group: 'Build with Zeni', description: 'ZeniConnectProvider, useZeni, ZeniConnectButton, hook, QR code' },
   { id: 'javascript', title: 'JavaScript / TypeScript', group: 'Build with Zeni', description: 'ZeniProvider, connect, display_uri, request, disconnect, provider events' },
-  { id: 'requests', title: 'Signing & transactions', group: 'Build with Zeni', description: 'personal_sign, eth_sendTransaction, QOR, EIP-191, message, signature, fees' },
+  { id: 'requests', title: 'Signing & transactions', group: 'Build with Zeni', description: 'personal_sign, zeni_sendQor, QOR, EIP-191, message, signature, fees' },
   { id: 'mobile', title: 'Mobile wallet', group: 'Build with Zeni', description: 'iOS, Xcode, QR scanner, deep link, Face ID, device, phone' },
   { id: 'relay', title: 'Host a relay', group: 'Reference', description: 'Docker, Caddy, HTTPS, domain, ALLOWED_ORIGINS, server, deployment' },
   { id: 'api', title: 'API reference', group: 'Reference', description: 'methods, events, errors, 4001, 4100, 4200, 4900, -32002, account, chain' },
@@ -82,7 +82,7 @@ async function signMessage() {
 }`;
 export const transferExample = `// provider: ZeniProvider, account: connected address
 const hash = await provider.request({
-  method: 'eth_sendTransaction',
+  method: 'zeni_sendQor',
   params: [{
     from: account,
     to: '0xRECIPIENT_ADDRESS', // Replace with a real address.
@@ -91,8 +91,8 @@ const hash = await provider.request({
   }],
 });
 
-// Submission is not confirmation. Check the receipt.
-console.log('Transaction submitted:', hash);`;
+// Native Cosmos transaction ID: 64 hex characters, without 0x.
+console.log('Native transfer confirmed:', hash);`;
 export const buildExample = `git clone https://github.com/Trymbakmahant/zeni-wallet.git
 cd zeni-wallet
 pnpm install

@@ -178,7 +178,7 @@ final class ZeniConnectSession: Identifiable {
         guard handled.count < 1000 else { throw ConnectError.invalid("Session limit reached. Reconnect.") }
         handled.insert(id)
         let now = Date.now.timeIntervalSince1970 * 1000
-        let failure: (Int, String)? = !["personal_sign", "eth_sendTransaction"].contains(method) ? (4200, "Unsupported signing method")
+        let failure: (Int, String)? = !["personal_sign", "zeni_sendQor"].contains(method) ? (4200, "Unsupported signing method")
             : expiry <= now || expiry > now + 305000 ? (4001, "Request expired")
             : pending != nil || busy ? (-32002, "Another wallet request is pending") : nil
         if let failure { try await client.send(["type": "response", "id": id, "error": ["code": failure.0, "message": failure.1]]); return }
@@ -214,7 +214,7 @@ final class ZeniConnectSession: Identifiable {
                 guard version == self.generation else { throw CancellationError() }
             }
             guard version == generation else { return }
-            updateHistory(pending.id, status: pending.method == "eth_sendTransaction" ? "Submitted" : "Signed", result: pending.method == "eth_sendTransaction" ? result : nil)
+            updateHistory(pending.id, status: pending.method == "zeni_sendQor" ? "Confirmed" : "Signed", result: pending.method == "zeni_sendQor" ? result : nil)
             // Preserve the submission hash even if delivering the result to the website fails.
             try await client.send(["type": "response", "id": pending.id, "result": result])
             self.pending = nil; self.review = nil

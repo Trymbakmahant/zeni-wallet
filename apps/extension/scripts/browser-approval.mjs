@@ -56,7 +56,7 @@ try {
     window.rejectReviewOnce = true;
     const realTimeout = window.setTimeout;
     window.setTimeout = (callback, milliseconds, ...args) => realTimeout(callback, milliseconds === 30000 ? 100 : milliseconds, ...args);
-    window.pending = [{ internalId: 'transfer-1', origin: 'https://demo.example', title: 'Zeni Connect Demo', account: '0x2222222222222222222222222222222222222222', payload: { method: 'eth_sendTransaction' }, intent: { kind: 'transfer', to: '0x3333333333333333333333333333333333333333', amount: '1.0' } }];
+    window.pending = [{ internalId: 'transfer-1', origin: 'https://demo.example', title: 'Zeni Connect Demo', account: '0x2222222222222222222222222222222222222222', payload: { method: 'zeni_sendQor' }, intent: { kind: 'transfer', to: '0x3333333333333333333333333333333333333333', amount: '1.0' } }];
     const status = { isInitialized: true, isUnlocked: true, activeAddress: '0x2222222222222222222222222222222222222222', onChainBalance: '10' };
     window.chrome.runtime = { sendMessage(message, callback) {
       if (message.type === 'GET_SESSION_STATUS' || message.type === 'GET_STATUS') return callback({ success: true, data: status });
@@ -66,7 +66,7 @@ try {
         window.prepareCount++;
         if (window.prepareCount === 1) return; // A stalled fee RPC must not disable approval forever.
         if (window.prepareCount === 2) return setTimeout(() => callback({ success: false, error: 'Fee endpoint unavailable' }), 30);
-        return setTimeout(() => callback({ success: true, data: { id: 'reviewed-quote', maxNetworkFee: '0.015', windowMaxValue: '1015000', windowBlocks: 60, registrationRequired: true, expiresAt: Date.now() + 120000 } }), 30);
+        return setTimeout(() => callback({ success: true, data: { id: 'reviewed-quote', maxNetworkFee: '0.015', kind: 'native-qor', nativeTo: 'qor1recipient', amountUqor: '1000000', registrationRequired: true, expiresAt: Date.now() + 120000 } }), 30);
       }
       if (message.type === 'RESOLVE_APPROVAL') { if (message.approved && window.rejectReviewOnce) { window.rejectReviewOnce = false; return callback({ success: false, error: 'Review a fresh fee quote before approving.' }); } window.decisions.push(message); window.pending = []; return callback({ success: true, data: { resolved: true } }); }
       callback({ success: false, error: 'Unexpected wallet message' });
@@ -101,7 +101,7 @@ try {
   assert.deepEqual(await evaluate('window.decisions'), []);
   await clickText('Retry fee review');
   await until(`document.body.textContent.includes('0.015 QOR')`);
-  assert.ok(await evaluate(`document.body.textContent.includes('https://demo.example') && document.body.textContent.includes('1.0 QOR') && document.body.textContent.includes('1.015 QOR')`));
+  assert.ok(await evaluate(`document.body.textContent.includes('https://demo.example') && document.body.textContent.includes('1.0 QOR') && document.body.textContent.includes('both your classical and post-quantum keys')`));
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'));
   await screenshot('transfer-review');
   await clickText('Approve & send');

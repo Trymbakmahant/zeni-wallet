@@ -4,7 +4,6 @@ import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
 import { type QorTransferQuote } from "@zeni/core";
 import { TransactionExplorerLink } from "../components/TransactionExplorerLink";
-import { formatUnits } from "ethers";
 
 export const SendModal: React.FC = () => {
   const { openModal, tokens, sendTokens } = useWallet();
@@ -143,13 +142,13 @@ export const SendModal: React.FC = () => {
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Transaction Broadcasted!</h3>
+              <h3 className="text-lg font-bold text-white">Transfer confirmed!</h3>
               <p className="text-xs text-zinc-400 max-w-xs font-mono break-all mt-1">
                 {txHash.slice(0, 18)}...{txHash.slice(-10)}
               </p>
             </div>
             <div className="text-[11px] text-[#E06341] bg-[#E06341]/10 px-3 py-1 rounded-full border border-[#E06341]/25 font-mono">
-              {selectedToken === "QOR" ? "Transfer authorized with ML-DSA-87" : "Demo transfer"}
+              {selectedToken === "QOR" ? "Transfer signed with hybrid PQC" : "Demo transfer"}
             </div>
 
             <div className="pt-2 w-full flex flex-col gap-2">
@@ -281,9 +280,9 @@ export const SendModal: React.FC = () => {
             {quote && (
               <div className="p-3 rounded-xl bg-[#141418] border border-[#E06341]/40 text-xs text-zinc-300 space-y-2">
                 <p className="font-semibold text-white">Authorize {quote.amount} QOR to {quote.to.slice(0, 8)}…{quote.to.slice(-6)}</p>
-                <p>Allow one QOR transfer to this recipient for {quote.windowBlocks} blocks, capped at {formatUnits(quote.windowMaxValue, 6)} QOR including transfer gas.</p>
-                {quote.registrationRequired && <p>This first send also registers your wallet’s post-quantum public key.</p>}
-                <p>Setup fees are included above and remain charged if a later step fails. Actual fees are calculated before each setup transaction.</p>
+                <p>The transfer itself is signed with your classical and post-quantum keys. Native recipient: <span className="break-all">{quote.nativeTo}</span></p>
+                {quote.registrationRequired && <p>First-time setup registers your post-quantum key using your classical key and proof of possession; the transfer is hybrid signed.</p>}
+                <p>Setup fees are included above and remain charged if a later step fails. Actual fees are calculated before signing.</p>
                 <button type="button" disabled={isSubmitting} onClick={() => setQuote(null)} className="text-[#E06341]">Edit transfer</button>
               </div>
             )}

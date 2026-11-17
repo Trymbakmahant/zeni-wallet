@@ -1,5 +1,5 @@
 export const CHAIN_ID = '0x2648';
-export const METHODS = ['eth_sendTransaction', 'personal_sign'] as const;
+export const METHODS = ['zeni_sendQor', 'personal_sign'] as const;
 export const MAX_FRAME_BYTES = 32768;
 export type Role = 'dapp' | 'wallet';
 export type RpcRequest = { id: string; method: string; params?: unknown[] };

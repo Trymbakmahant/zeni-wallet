@@ -15,7 +15,8 @@ export function validateDappRequest(method: string, params: unknown, activeAddre
     if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(text)) throw new Error('Messages containing hidden control characters cannot be signed.');
     return { kind: 'message', text, hex };
   }
-  if (method !== 'eth_sendTransaction') throw new Error('Unsupported signing method.');
+  if (method === 'eth_sendTransaction') throw new Error('Use zeni_sendQor for a hybrid-signed native QOR transfer. EVM sends are disabled.');
+  if (method !== 'zeni_sendQor') throw new Error('Unsupported signing method.');
   if (params.length !== 1 || !params[0] || typeof params[0] !== 'object' || Array.isArray(params[0])) throw new Error('Provide exactly one transaction.');
   const tx = params[0] as Record<string, unknown>;
   if (Object.keys(tx).some(key => !['from', 'to', 'value', 'chainId', 'data'].includes(key))) throw new Error('Custom gas, nonce, and transaction fields are not supported.');
@@ -23,6 +24,7 @@ export function validateDappRequest(method: string, params: unknown, activeAddre
   if (tx.chainId !== undefined && (typeof tx.chainId !== 'string' || !/^0x[0-9a-fA-F]+$/.test(tx.chainId) || BigInt(tx.chainId) !== BigInt(QORECHAIN_CONFIG.chainId))) throw new Error('Only QoreChain Diana Testnet is supported.');
   if (tx.data !== undefined && tx.data !== '0x') throw new Error('Contract calls are not supported by Zeni Connect v1.');
   if (typeof tx.to !== 'string' || typeof tx.value !== 'string' || !/^0x[0-9a-fA-F]{1,64}$/.test(tx.value) || BigInt(tx.value) <= 0n) throw new Error('Enter a recipient and a positive hexadecimal QOR value.');
+  if (BigInt(tx.value) % (10n ** 12n) !== 0n) throw new Error('Native QOR transfers support up to 6 decimal places.');
   const recipient = tx.to.trim();
   let to: string;
   try {

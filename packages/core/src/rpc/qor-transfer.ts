@@ -1,135 +1,84 @@
-import { ethers, formatEther, getBytes, parseEther } from "ethers";
-import {
-  buildRegisterPqcKeyMsg, openEvmWindowMsg, recommendedGasPriceUqor, signProofOfPossession,
-} from "@qorechain/sdk";
+import { ethers, parseEther } from "ethers";
 import { QORECHAIN_CONFIG } from "../account/constants.js";
-import { bech32ToEvmAddress, derivePqcKeypair, type DerivedAccountKeys } from "../crypto/derivation.js";
-
-import { NativeTransactionClient, type NativeTxObserver } from "./native-transaction.js";
+import { bank, recommendedGasPriceUqor } from "@qorechain/sdk";
+import { bech32ToEvmAddress, evmToBech32Address, type DerivedAccountKeys } from "../crypto/derivation.js";
+import { NativeTransactionClient, NATIVE_GAS_CAP, type NativeTxObserver } from "./native-transaction.js";
 export { parseAccountSequence } from "./native-transaction.js";
-
-const WEI_PER_UQOR = 10n ** 12n;
-const SETUP_GAS_CAP = 600_000n;
-export const QOR_WINDOW_BLOCKS = 60;
 
 export interface QorTransferQuote {
   id: string;
+  kind: "native-qor";
   from: string;
   to: string;
+  nativeTo: string;
   amount: string;
+  amountUqor: string;
   value: string;
-  gasPrice: string;
-  gasLimit: string;
   registrationRequired: boolean;
   setupGasPrice: string;
   setupFeeCap: string;
   maxNetworkFee: string;
-  windowMaxValue: string;
-  windowBlocks: number;
   expiresAt: number;
 }
 
-/** Round up: the chain budgets value PLUS the EVM maximum gas fee in uqor. */
-export function windowValueUqor(value: bigint, gasLimit: bigint, gasPrice: bigint): bigint {
-  return (value + gasLimit * gasPrice + WEI_PER_UQOR - 1n) / WEI_PER_UQOR;
-}
-
-/** Native-lane setup followed by an EVM send. Quotes contain no private material. */
+/** Registration is a one-time bootstrap; the bank transfer itself is always hybrid signed. */
 export class QorTransferClient extends NativeTransactionClient {
+  private async balance(account: DerivedAccountKeys): Promise<bigint> {
+    const response = await this.rest(`/cosmos/bank/v1beta1/spendable_balances/${account.cosmosAddress}/by_denom?denom=uqor`);
+    if (response.balance?.denom !== 'uqor' || !/^\d+$/.test(response.balance?.amount ?? '')) throw new Error('Could not read spendable QOR balance.');
+    return BigInt(response.balance.amount);
+  }
+
   async prepare(account: DerivedAccountKeys, recipient: string, amount: string): Promise<QorTransferQuote> {
-    let value = amount === "MAX" ? 0n : parseEther(amount);
-    if (amount !== "MAX" && value <= 0n) throw new Error("Enter a QOR amount greater than zero.");
-    const to = ethers.getAddress(recipient.startsWith("qor1") || recipient.startsWith("cosmos1")
-      ? bech32ToEvmAddress(recipient) : recipient);
+    if (amount !== 'MAX' && !/^\d+(?:\.\d{1,6})?$/.test(amount)) throw new Error('Native QOR transfers support up to 6 decimal places.');
+    let units = amount === 'MAX' ? 0n : ethers.parseUnits(amount, 6);
+    if (amount !== 'MAX' && units <= 0n) throw new Error('Enter a QOR amount greater than zero.');
+    const target = recipient.trim();
+    const to = ethers.getAddress(target.toLowerCase().startsWith('qor1') ? bech32ToEvmAddress(target) : target);
+    if (to === ethers.ZeroAddress) throw new Error('The zero address cannot receive this transfer.');
     await this.checkNetwork();
-    const [status, gasPriceHex, code, setupGasPrice] = await Promise.all([
-      this.status(account), this.provider.send("eth_gasPrice", []),
-      this.provider.getCode(to),
-      recommendedGasPriceUqor({ rest: QORECHAIN_CONFIG.restUrl, fetch: this.fetchImpl }),
+    const [status, code, setupGasPrice, balance] = await Promise.all([
+      this.status(account), this.provider.getCode(to),
+      recommendedGasPriceUqor({ rest: QORECHAIN_CONFIG.restUrl, fetch: this.fetchImpl }), this.balance(account),
     ]);
-    if (code !== "0x") throw new Error("This QOR send supports ordinary wallet recipients. Contract recipients need a contract-call authorization.");
-    const gasPrice = BigInt(gasPriceHex);
-    if (gasPrice <= 0n) throw new Error("QoreChain returned an invalid gas price.");
-    const gasLimit = 21_000n;
-    // Reserve a cap before registration; window simulation requires registration to be committed.
-    const setupPriceWei = ethers.parseUnits(setupGasPrice, 12);
-    const setupFeeCap = (SETUP_GAS_CAP * setupPriceWei + WEI_PER_UQOR - 1n) / WEI_PER_UQOR;
-    const maxFee = gasLimit * gasPrice + setupFeeCap * WEI_PER_UQOR * (status.registered ? 1n : 2n);
-    const balance = BigInt(await this.provider.send("eth_getBalance", [account.classicalAddress, "pending"]));
-    if (amount === "MAX") value = balance > maxFee ? balance - maxFee : 0n;
-    if (value <= 0n) throw new Error("Insufficient QOR to cover transfer and setup fees.");
-    if (balance < value + maxFee) {
-      throw new Error(`Insufficient QOR for the amount and up to ${formatEther(maxFee)} QOR in transfer/setup fees. Max send: ${formatEther(balance > maxFee ? balance - maxFee : 0n)} QOR.`);
-    }
+    if (code !== '0x') throw new Error('Contract recipients are not supported by native QOR transfers.');
+    const price = ethers.parseUnits(setupGasPrice, 12);
+    if (price <= 0n) throw new Error('Invalid network fee price.');
+    const feeCap = (NATIVE_GAS_CAP * price + 10n ** 12n - 1n) / 10n ** 12n;
+    const maxFee = feeCap * (status.registered ? 1n : 2n);
+    if (amount === 'MAX') units = balance > maxFee ? balance - maxFee : 0n;
+    if (units <= 0n || balance < units + maxFee) throw new Error(`Insufficient QOR for the amount and up to ${ethers.formatUnits(maxFee, 6)} QOR in network/setup fees.`);
+    const normalized = ethers.formatUnits(units, 6);
     return {
-      id: crypto.randomUUID(), from: account.classicalAddress, to, amount: formatEther(value),
-      value: value.toString(), gasPrice: gasPrice.toString(), gasLimit: gasLimit.toString(),
-      registrationRequired: !status.registered, setupGasPrice, setupFeeCap: setupFeeCap.toString(),
-      maxNetworkFee: formatEther(maxFee), windowMaxValue: windowValueUqor(value, gasLimit, gasPrice).toString(),
-      windowBlocks: QOR_WINDOW_BLOCKS, expiresAt: Date.now() + 120_000,
+      id: crypto.randomUUID(), kind: 'native-qor', from: account.classicalAddress, to,
+      nativeTo: evmToBech32Address(to), amount: normalized, amountUqor: units.toString(), value: parseEther(normalized).toString(),
+      registrationRequired: !status.registered, setupGasPrice, setupFeeCap: feeCap.toString(),
+      maxNetworkFee: ethers.formatUnits(maxFee, 6), expiresAt: Date.now() + 120_000,
     };
   }
 
   async send(account: DerivedAccountKeys, quote: QorTransferQuote, assertUnlocked: () => void = () => {},
-    observeNative?: NativeTxObserver, observeEvm?: (hash: string) => Promise<void>): Promise<string> {
-    if (quote.from !== account.classicalAddress || quote.expiresAt < Date.now()) {
-      throw new Error("The transfer review expired or the account changed. Review the transfer again.");
-    }
-    assertUnlocked();
+    observeRegistration?: NativeTxObserver, observeTransfer?: NativeTxObserver): Promise<string> {
+    const check = () => {
+      assertUnlocked();
+      if (quote.kind !== 'native-qor' || quote.from !== account.classicalAddress || quote.expiresAt <= Date.now()) throw new Error('The transfer review expired or changed. Review the native transfer again.');
+    };
+    check();
+    if (!/^\d+$/.test(quote.amountUqor) || BigInt(quote.amountUqor) <= 0n
+      || ethers.parseUnits(quote.amount, 6) !== BigInt(quote.amountUqor)
+      || parseEther(quote.amount).toString() !== quote.value
+      || evmToBech32Address(ethers.getAddress(quote.to)) !== quote.nativeTo) throw new Error('Invalid native transfer review.');
     await this.checkNetwork();
-    const balance = BigInt(await this.provider.send("eth_getBalance", [account.classicalAddress, "pending"]));
-    if (balance < BigInt(quote.value) + parseEther(quote.maxNetworkFee)) {
-      throw new Error("The balance changed since review. Review the transfer again.");
-    }
-    const status = await this.status(account);
-    if (!status.registered) {
-      if (!quote.registrationRequired) throw new Error("PQC registration changed. Review the transfer again.");
-      const keypair = derivePqcKeypair(account);
-      try {
-        const message = buildRegisterPqcKeyMsg(account.cosmosAddress, {
-          pqcKeypair: keypair,
-          ecdsaPubkey: getBytes(ethers.SigningKey.computePublicKey(account.classicalPrivateKey, true)),
-          proofOfPossession: signProofOfPossession({ chainId: QORECHAIN_CONFIG.cosmosChainId, account: account.cosmosAddress, keypair }),
-        });
-        assertUnlocked();
-        await this.broadcastNative(account, message, true, quote, assertUnlocked, observeNative);
-      } finally {
-        keypair.secretKey.fill(0);
-      }
-      if (!(await this.status(account)).registered) throw new Error("PQC registration is not yet visible. Wait for confirmation before retrying.");
-    }
-    assertUnlocked();
-    const authorization = await this.broadcastNative(account, openEvmWindowMsg({
-      sender: account.cosmosAddress, blocks: quote.windowBlocks, maxTxs: 1,
-      maxValue: quote.windowMaxValue, nativeOnly: true, allowedTargets: [quote.to],
-    }), false, quote, assertUnlocked, observeNative);
-    assertUnlocked();
-    // Bypass ethers' short-lived request cache: native setup advances the shared nonce.
-    let observedNonce = 0n;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      observedNonce = BigInt(await this.provider.send("eth_getTransactionCount", [account.classicalAddress, "pending"]));
-      if (observedNonce >= authorization.nextSequence) break;
-      await new Promise((resolve) => setTimeout(resolve, 1_000));
-    }
-    if (observedNonce < authorization.nextSequence) throw new Error("The EVM endpoint has not caught up with authorization yet. Wait before reviewing again.");
-    const nonce = Number(observedNonce);
-    if (!Number.isSafeInteger(nonce)) throw new Error("Invalid transaction nonce from QoreChain.");
-    const wallet = new ethers.Wallet(account.classicalPrivateKey, this.provider);
-    assertUnlocked();
-    const signed = await wallet.signTransaction({
-      to: quote.to, value: BigInt(quote.value), gasPrice: BigInt(quote.gasPrice),
-      gasLimit: BigInt(quote.gasLimit), nonce, chainId: QORECHAIN_CONFIG.chainId, type: 0,
-    });
-    assertUnlocked();
-    const hash = ethers.keccak256(signed);
-    await observeEvm?.(hash);
-    assertUnlocked();
-    try {
-      const tx = await this.provider.broadcastTransaction(signed);
-      if (tx.hash.toLowerCase() !== hash.toLowerCase()) throw new Error("RPC hash mismatch");
-      return hash;
-    } catch {
-      throw new Error(`Transfer status is unknown. Check transaction ${hash} in Activity before retrying.`);
-    }
+    if (await this.balance(account) < BigInt(quote.amountUqor) + ethers.parseUnits(quote.maxNetworkFee, 6)) throw new Error('The balance changed since review. Review the transfer again.');
+    await this.ensureRegistered(account, quote.registrationRequired, quote, check, observeRegistration);
+    check();
+    if (await this.provider.getCode(quote.to) !== '0x') throw new Error('Contract recipients are not supported by native QOR transfers.');
+    if (await this.balance(account) < BigInt(quote.amountUqor) + BigInt(quote.setupFeeCap)) throw new Error('The balance changed since review. Review the transfer again.');
+    check();
+    const result = await this.broadcastNative(account, bank.send({
+      fromAddress: account.cosmosAddress, toAddress: quote.nativeTo,
+      amount: [{ denom: 'uqor', amount: quote.amountUqor }],
+    }), false, quote, check, observeTransfer);
+    return result.hash;
   }
 }

@@ -247,6 +247,9 @@ class BackgroundController {
       }
 
       case "eth_sendTransaction":
+        port.postMessage({ clientReqId, error: { code: 4200, message: "Use zeni_sendQor for hybrid-signed native transfers. EVM sends are disabled." } });
+        break;
+      case "zeni_sendQor":
       case "personal_sign": {
         const active = this.getActiveAccount();
         const stored = await chrome.storage.local.get(["connectedOrigins"]);
@@ -649,7 +652,7 @@ class BackgroundController {
           try {
             const quote = this.transferQuotes.get(message.quoteId);
             if (!quote || quote.to !== target || quote.value !== parseEther(amount.toString()).toString()) {
-              throw new Error("Review the QOR transfer and its authorization limits before confirming.");
+              throw new Error("Review the native QOR transfer and its fee limits before confirming.");
             }
             if (this.transferInProgress) throw new Error("A transfer is already in progress.");
             this.transferQuotes.delete(quote.id);
@@ -666,12 +669,13 @@ class BackgroundController {
                   timestamp: history.find((item) => item.hash === update.hash)?.timestamp || Date.now(),
                   status: update.status, gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error,
                 }, ...history.filter((item) => item.hash !== update.hash)]);
-              }, async (hash) => {
+              }, async (update) => {
+                const hash = update.hash;
                 await this.writeActivity((history) => [{
-                  hash, type: "SEND", evmChain: true, account: active.cosmosAddress, to: quote.to,
-                  amount: quote.amount, token: "QOR", timestamp: Date.now(), status: "PENDING",
-                  gasCost: `Up to ${quote.maxNetworkFee} QOR (including setup)`,
-                }, ...history]);
+                  hash, type: "SEND", nativeChain: true, account: active.cosmosAddress, to: quote.to,
+                  amount: quote.amount, token: "QOR", timestamp: history.find(item => item.hash === hash)?.timestamp || Date.now(), status: update.status,
+                  gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error,
+                }, ...history.filter(item => item.hash !== hash)]);
               });
             } finally {
               this.transferInProgress = false;
@@ -699,11 +703,9 @@ class BackgroundController {
             }
 
             if (
-              errMsg.includes("has no usable registered post-quantum key") ||
-              errMsg.includes("no open EVM authorisation window") ||
-              errMsg.includes("no open EVM authorization window")
+              errMsg.includes("has no usable registered post-quantum key")
             ) {
-              errMsg = "QoreChain rejected the transfer authorization. Review the transfer again to open a fresh window. Completed setup transactions may have charged fees.";
+              errMsg = "QoreChain rejected the registered post-quantum key. Check key registration before retrying. Completed setup transactions may have charged fees.";
             } else if (
               errMsg.includes("sender balance < tx cost") ||
               errMsg.includes("insufficient balance") ||

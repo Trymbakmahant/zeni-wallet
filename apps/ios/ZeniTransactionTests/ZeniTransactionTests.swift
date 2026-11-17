@@ -110,21 +110,23 @@ struct ZeniTransactionTests {
         #expect(chain.broadcastCount == 1)
     }
 
-    @Test func reviewedTransferSignsOnlyAfterNativeAuthorization() async throws {
+    @Test func reviewedTransferUsesHybridNativeBankSend() async throws {
         let (engine, chain) = try await fixture()
         defer { engine.lock() }
         let quote: TransferQuote = try await engine.call("prepareTransfer", payload: [
             "recipient": "0x4a6b5eed1b7f9ca98d3cb6b8aa593c3afe11b76a", "amount": "1", "token": "QOR"
         ])
-        #expect(quote.windowBlocks == 60)
+        #expect(quote.kind == "native-qor")
+        #expect(quote.amountUqor == "1000000")
         #expect(chain.broadcastCount == 0)
         engine.permitsBroadcast = true
         let result: TransactionResult = try await engine.call("executeTransfer", payload: ["quoteId": quote.id])
-        #expect(result.status == "PENDING")
-        #expect(result.hash.hasPrefix("0x"))
-        #expect(chain.broadcastCount == 3)
+        #expect(result.status == "CONFIRMED")
+        #expect(!result.hash.hasPrefix("0x"))
+        #expect(result.hash.count == 64)
+        #expect(chain.broadcastCount == 2)
         #expect(chain.savedBeforeBroadcast)
-        #expect(Set(chain.records.map(\.stage)) == ["registration", "authorization", "transfer"])
+        #expect(Set(chain.records.map(\.stage)) == ["registration", "transfer"])
     }
 
     @Test func bundledEngineDerivesReferenceAccount() async throws {
@@ -168,10 +170,10 @@ struct ZeniTransactionTests {
         }
     }
     @Test(arguments: ["0x4a6b5eed1b7f9ca98d3cb6b8aa593c3afe11b76a", "qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp"])
-    func dappTransferUsesTheReviewedNativeAuthorizationPath(recipient: String) async throws {
+    func dappTransferUsesReviewedHybridNativeBankSend(recipient: String) async throws {
         let (engine, chain) = try await fixture()
         defer { engine.lock() }
-        let review: DappReview = try await engine.call("prepareDapp", payload: ["method": "eth_sendTransaction", "params": [[
+        let review: DappReview = try await engine.call("prepareDapp", payload: ["method": "zeni_sendQor", "params": [[
             "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
             "to": recipient, "value": "0xde0b6b3a7640000", "chainId": "0x2648"
         ]]])
@@ -182,7 +184,8 @@ struct ZeniTransactionTests {
         engine.permitsBroadcast = true
         let result: TransactionResult = try await engine.call("executeTransfer", payload: ["quoteId": review.reviewId])
         #expect(result.stage == "transfer")
-        #expect(result.hash.hasPrefix("0x"))
+        #expect(!result.hash.hasPrefix("0x"))
+        #expect(result.hash.count == 64)
         #expect(chain.broadcastCount > 0)
         #expect(chain.savedBeforeBroadcast)
     }
@@ -200,6 +203,25 @@ struct ZeniTransactionTests {
         engine.persistActivity = { chain.persist($0) }
         let state = AppState(account: account, engine: engine, signingKeyLoader: signingKeyLoader)
         return (state, engine, chain)
+    }
+
+    @Test func uncertainNativeTransferCannotReportDappSuccess() async throws {
+        let phrase = referencePhrase
+        let (state, engine, chain) = try await viewingFixture { _ in Data(phrase.utf8) }
+        let review = try await state.prepareDapp(method: "zeni_sendQor", params: [[
+            "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "to": "qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp",
+            "value": "0xde0b6b3a7640000", "chainId": "0x2648"
+        ]])
+        chain.loseTransferResponse = true
+        do {
+            _ = try await state.executeDapp(review: review)
+            Issue.record("An uncertain transfer was reported as confirmed to the web app")
+        } catch { #expect(error.localizedDescription.contains("Broadcast status is unknown")) }
+        #expect(chain.broadcastCount == 2)
+        #expect(chain.savedBeforeBroadcast)
+        #expect(!state.isUnlocked)
+        #expect(!engine.permitsBroadcast)
     }
 
     @Test func publicBalancesAndQuotesDoNotRequestAuthentication() async throws {

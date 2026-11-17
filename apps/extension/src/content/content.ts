@@ -56,7 +56,7 @@ window.addEventListener("message", (event: MessageEvent) => {
 
   const { clientReqId, payload } = event.data;
   if (!Number.isSafeInteger(clientReqId) || !payload || typeof payload.method !== "string" || payload.method.length > 100) return;
-  const signing = payload.method === "personal_sign" || payload.method === "eth_sendTransaction";
+  const signing = payload.method === "personal_sign" || payload.method === "zeni_sendQor";
   if (signing) {
     try {
       if (!Array.isArray(payload.params) || JSON.stringify(payload.params).length > 12000) throw new Error("Invalid parameters");

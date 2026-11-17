@@ -11,7 +11,7 @@ This implementation connects an integrated web app to the native Zeni iOS wallet
 - `apps/connect-demo`: working React app that requests a message signature, verifies it locally, and requests a QOR transfer.
 - iOS: Connect entry on the home screen, camera scanning, pasted/deep-link pairing, site approval, message/transfer review, local signing, result delivery, and disconnect.
 
-Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `eth_sendTransaction` for QOR transfers to ordinary wallet addresses on Diana (9800). QOR recipients may use a checksummed `qor1…` address or an EVM `0x…` address; the wallet shows the EVM equivalent before signing. Every signing request needs explicit approval in the selected wallet. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration/authorization and fee limits apply to transfers.
+Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `zeni_sendQor` for QOR transfers to ordinary wallet addresses on Diana (9800). QOR recipients may use a checksummed `qor1…` address or an EVM `0x…` address; the wallet shows the EVM equivalent before signing. Every signing request needs explicit approval in the selected wallet. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration and native fee limits apply to transfers.
 
 This work does not add a gas-sponsoring transaction relayer, chain history indexer, Android app, push service, contract-call signing, or WalletConnect interoperability.
 
@@ -19,7 +19,7 @@ This work does not add a gas-sponsoring transaction relayer, chain history index
 
 The demo’s **Browser extension** option discovers Zeni through EIP-6963 or `window.zeni`. It calls the injected provider directly; it does not use the relay or create a QR session. The React/JS mobile SDK remains the QR transport.
 
-The extension supports reviewed `personal_sign` messages and `eth_sendTransaction` QOR transfers on Diana, with the same validation limits described above. Open Zeni from the Chrome toolbar to review the website origin, signing account, message or transfer details, and the maximum network/setup fees before approving. Typed-data signing and contract calls remain unsupported.
+The extension supports reviewed `personal_sign` messages and `zeni_sendQor` QOR transfers on Diana, with the same validation limits described above. Open Zeni from the Chrome toolbar to review the website origin, signing account, message or transfer details, and the maximum network/setup fees before approving. Typed-data signing and contract calls remain unsupported.
 
 After updating the source, build with `pnpm --filter @zeni/core build` and `pnpm --filter @zeni/extension build`. Reload the unpacked extension at `chrome://extensions`, refresh the web app, and reconnect. An older installed extension will still reject signing with error 4200. Local demo disconnect does not revoke the extension’s stored site permission.
 
@@ -108,3 +108,5 @@ Validation completed on 2026-11-17: 48 core tests, 3 relay tests, 4 SDK tests, 9
 - Xcode Zeni tests include WebCrypto-to-CryptoKit ciphertext compatibility, altered-frame/direction rejection, actual local message signatures, single-use review enforcement, locking, and dApp transfer preparation/execution against mocked chain responses.
 
 The domain, TLS deployment, npm publication, physical-camera scan and live funded phone transaction are not claimed as completed by these automated tests.
+
+Native QOR transfers use `zeni_sendQor`, with the `[{ from, to, value, chainId }]` request shape. `value` remains a hexadecimal amount in 18-decimal EVM units for integration convenience, but must be an exact multiple of 10^12 (native QOR has 6 decimals). The result is a 64-character native Cosmos transaction ID without `0x`; use the native explorer/receipt API. `eth_sendTransaction` is disabled instead of silently returning a non-Ethereum receipt. Transfers are hybrid-signed bank `MsgSend` transactions, with no EVM window or classical EVM fallback. First-time PQC key registration is a separate classical-signed bootstrap with proof of possession; subsequent transfers carry both signatures. Existing classical transactions cannot be retroactively upgraded. Message signing remains classical EIP-191.

@@ -171,7 +171,7 @@ function ExtensionPreview() {
 
 const securityCards = [
   { title: "An encrypted local vault", color: "bg-orange-50 text-framer-orange", description: "Create a wallet or import an existing recovery phrase in the extension. Your password encrypts the vault on your device and unlocks it when you return.", footer: "AES-256-GCM · 600,000 PBKDF2 iterations" },
-  { title: "Post-quantum authorization", color: "bg-blue-50 text-blue-600", description: "Zeni registers your post-quantum key when needed. Native swaps use hybrid signatures, while QOR sends open a limited authorization window before the EVM transfer.", footer: "ML-DSA-87 + classical secp256k1" },
+  { title: "Hybrid-signed transfers", color: "bg-blue-50 text-blue-600", description: "Zeni registers your post-quantum key when needed. Native QOR transfers and swaps carry both classical and post-quantum signatures.", footer: "ML-DSA-87 + classical secp256k1" },
   { title: "Review before you confirm", color: "bg-emerald-50 text-emerald-600", description: "See transfer fees before sending. For swaps, review the quote, price impact, and minimum received. The signed swap enforces your reviewed minimum output.", footer: "Live quotes · Slippage protection" },
 ];
 

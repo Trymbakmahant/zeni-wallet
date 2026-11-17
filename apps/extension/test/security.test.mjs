@@ -52,14 +52,15 @@ function fixture() {
       async prepare(account, to, amount) {
         if (prepareGate) await prepareGate;
         prepared++;
-        return { id: `quote-${prepared}`, from: account.classicalAddress, to, amount, value: ethers.parseEther(amount).toString(), expiresAt: now + 120000, maxNetworkFee: '0.01', windowBlocks: 60, windowMaxValue: '1010000' };
+        return { id: `quote-${prepared}`, from: account.classicalAddress, to, amount, value: ethers.parseEther(amount).toString(), expiresAt: now + 120000, maxNetworkFee: '0.01', kind: 'native-qor', nativeTo: 'qor1mock', amountUqor: '1000000' };
       }
-      async send(account, quote, guard, observeNative, observeEvm) {
+      async send(account, quote, guard, observeRegistration, observeTransfer) {
         if (sendGate) await sendGate;
         guard();
         transfers.push({ account: account.classicalAddress, quote });
-        const hash = '0x' + 'ab'.repeat(32);
-        await observeEvm(hash);
+        const hash = 'AB'.repeat(32);
+        await observeTransfer({ hash, status: 'PENDING', feeUqor: '10000' });
+        await observeTransfer({ hash, status: 'CONFIRMED', feeUqor: '10000' });
         return hash;
       }
     },
@@ -134,7 +135,7 @@ test('dApp bridge rejects foreign, opaque, and subframe senders', () => {
 
 test('unauthorized signing, unsupported methods, and malformed requests cannot create approvals', async () => {
   const f = fixture(), p = f.port();
-  for (const method of ['eth_sendTransaction', 'personal_sign', 'eth_signTypedData_v4']) {
+  for (const method of ['zeni_sendQor', 'personal_sign', 'eth_signTypedData_v4']) {
     await p.request(method);
     assert.equal(p.messages.at(-1).error.code, method === 'eth_signTypedData_v4' ? 4200 : 4100);
   }
@@ -201,7 +202,7 @@ test('message signatures require explicit approval and verify against the reques
 test('signing rejects invalid account, chain, calldata, unsupported fields, and hidden message characters', async () => {
   const { f, p } = await connected();
   for (const tx of [{ ...transaction, from: transaction.to }, { ...transaction, chainId: '0x1' }, { ...transaction, data: '0x1234' }, { ...transaction, nonce: '0x1' }, { ...transaction, to: 'qor1invalid' }]) {
-    await p.request('eth_sendTransaction', 1, [tx]);
+    await p.request('zeni_sendQor', 1, [tx]);
     assert.equal(p.messages.at(-1).error.code, -32602);
   }
   await p.request('personal_sign', 2, ['0x00', keys.classicalAddress]);
@@ -212,7 +213,7 @@ test('signing rejects invalid account, chain, calldata, unsupported fields, and 
 
 test('QOR transfers require the displayed quote and explicit approval, then record the submitted hash', async () => {
   const { f, p } = await connected();
-  await p.request('eth_sendTransaction', 42, [{ ...transaction, to: 'qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp' }]);
+  await p.request('zeni_sendQor', 42, [{ ...transaction, to: 'qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp' }]);
   const pending = await pendingRequest(f);
   assert.equal(pending.intent.to.toLowerCase(), '0x4a6b5eed1b7f9ca98d3cb6b8aa593c3afe11b76a');
   assert.equal(f.prepared(), 0);
@@ -225,14 +226,15 @@ test('QOR transfers require the displayed quote and explicit approval, then reco
   assert.equal(result.success, true, result.error);
   assert.equal(f.transfers.length, 1);
   assert.equal(p.messages.at(-1).clientReqId, 42);
-  assert.equal(p.messages.at(-1).result, '0x' + 'ab'.repeat(32));
-  assert.equal(f.stored.activityHistory[0].status, 'PENDING');
+  assert.equal(p.messages.at(-1).result, 'AB'.repeat(32));
+  assert.equal(f.stored.activityHistory[0].status, 'CONFIRMED');
+  assert.equal(f.stored.activityHistory[0].nativeChain, true);
   assert.equal(f.stored.activityHistory[0].hash, p.messages.at(-1).result);
 });
 
 test('rejecting a reviewed transfer sends no transaction', async () => {
   const { f, p } = await connected();
-  await p.request('eth_sendTransaction', 1, [transaction]);
+  await p.request('zeni_sendQor', 1, [transaction]);
   const pending = await pendingRequest(f);
   await f.message('PREPARE_DAPP_APPROVAL', { internalId: pending.internalId });
   await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: false });
@@ -242,7 +244,7 @@ test('rejecting a reviewed transfer sends no transaction', async () => {
 
 test('expired fee quotes cannot be approved', async () => {
   const { f, p } = await connected();
-  await p.request('eth_sendTransaction', 1, [transaction]);
+  await p.request('zeni_sendQor', 1, [transaction]);
   const pending = await pendingRequest(f);
   const review = await f.message('PREPARE_DAPP_APPROVAL', { internalId: pending.internalId });
   f.now(121001);
@@ -253,7 +255,7 @@ test('expired fee quotes cannot be approved', async () => {
 test('locking or closing the requesting page during execution prevents signing/broadcast', async () => {
   for (const cancel of ['lock', 'disconnect']) {
     const { f, p } = await connected();
-    await p.request('eth_sendTransaction', 1, [transaction]);
+    await p.request('zeni_sendQor', 1, [transaction]);
     const pending = await pendingRequest(f);
     const review = await f.message('PREPARE_DAPP_APPROVAL', { internalId: pending.internalId });
     let release;
@@ -269,7 +271,7 @@ test('locking or closing the requesting page during execution prevents signing/b
 
 test('locking during fee preparation invalidates the review', async () => {
   const { f, p } = await connected();
-  await p.request('eth_sendTransaction', 1, [transaction]);
+  await p.request('zeni_sendQor', 1, [transaction]);
   const pending = await pendingRequest(f);
   let release;
   f.deferPrepare(new Promise(resolve => { release = resolve; }));
@@ -290,7 +292,7 @@ test('content bridge forwards bounded signing parameters only for same-page requ
   const port = { onMessage: { addListener() {} }, onDisconnect: { addListener() {} }, postMessage: value => forwarded.push(value) };
   const document = { head: { firstChild: null, insertBefore() {} }, createElement: () => ({ setAttribute() {} }) };
   vm.runInNewContext(contentCompiled, { window, document, console, chrome: { runtime: { getURL: path => path, connect: () => port } } });
-  const request = params => ({ source: window, origin: window.location.origin, data: { target: 'zeni-content-bridge', clientReqId: 1, payload: { method: 'eth_sendTransaction', params } } });
+  const request = params => ({ source: window, origin: window.location.origin, data: { target: 'zeni-content-bridge', clientReqId: 1, payload: { method: 'zeni_sendQor', params } } });
   listener(request([transaction]));
   assert.deepEqual(JSON.parse(JSON.stringify(forwarded[0].payload.params)), [transaction]);
   listener({ ...request([transaction]), origin: 'https://evil.example' });
@@ -305,7 +307,7 @@ test('content bridge forwards bounded signing parameters only for same-page requ
 
 test('a late fee response cannot replace the newer review the user sees', async () => {
   const { f, p } = await connected();
-  await p.request('eth_sendTransaction', 1, [transaction]);
+  await p.request('zeni_sendQor', 1, [transaction]);
   const pending = await pendingRequest(f);
   let release;
   f.deferPrepare(new Promise(resolve => { release = resolve; }));
@@ -317,4 +319,12 @@ test('a late fee response cannot replace the newer review the user sees', async 
   assert.equal((await oldReview).success, false);
   assert.equal((await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true, quoteId: currentReview.data.id })).success, true);
   assert.equal(f.transfers.length, 1);
+});
+
+test('legacy EVM transfer requests cannot fall back to classical signing', async () => {
+  const { f, p } = await connected();
+  await p.request('eth_sendTransaction', 1, [transaction]);
+  assert.equal(p.messages.at(-1).error.code, 4200);
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 0);
+  assert.equal(f.transfers.length, 0);
 });

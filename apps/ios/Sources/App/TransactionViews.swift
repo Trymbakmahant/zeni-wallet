@@ -273,7 +273,7 @@ private struct TransferForm: View {
                 HStack {
                     Text("Amount").font(.caption).foregroundStyle(Color.zeniMuted)
                     Spacer(minLength: 8)
-                    Text("Available: \(state.evmQorBalance) QOR")
+                    Text("Available: \(state.tokens.first(where: { $0.symbol == "QOR" })?.balance ?? "0") QOR")
                         .font(.caption).foregroundStyle(Color.zeniMuted)
                     Spacer()
                     Button("MAX") { prepare(maximum: true) }
@@ -332,10 +332,10 @@ private struct TransferReview: View {
             Text("Recipient").font(.caption).foregroundStyle(Color.zeniMuted)
             Text(quote.to).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
             TransactionDetail(title: "Maximum network fees", value: quote.maxNetworkFee + " QOR")
-            Text("Authorize one transfer to this recipient for \(quote.windowBlocks) blocks, capped at \(quote.authorizationLimit) including transfer gas.")
+            Text("This native transfer is signed with both your classical and post-quantum keys. Native recipient: \(quote.nativeTo)")
                 .font(.caption)
             if quote.registrationRequired {
-                Text("Includes first-time registration of your post-quantum public key.").font(.caption)
+                Text("First-time registration uses your classical key and proof of possession before the hybrid-signed transfer.").font(.caption)
             }
             Text("Completed setup fees remain charged if a later step fails.")
                 .font(.caption).foregroundStyle(Color.zeniMuted)

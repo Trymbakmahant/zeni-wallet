@@ -198,8 +198,8 @@ private struct ConnectAppDetail: View {
                     detail("Maximum network & setup fees", quote.maxNetworkFee + " QOR")
                     DisclosureGroup("QoreChain authorization details") {
                         VStack(alignment: .leading, spacing: 12) {
-                            detail("Authorization limit", quote.authorizationLimit)
-                            Text("One transfer to this recipient for \(quote.windowBlocks) blocks. Setup fees may still be charged if the transfer fails.").font(.caption)
+                            detail("Signing", "Hybrid PQC native transfer")
+                            Text("The transfer itself is hybrid PQC signed. First-time registration may charge a setup fee even if the transfer fails.").font(.caption)
                             if quote.registrationRequired { Text("Includes registration of your post-quantum public key.").font(.caption) }
                         }.padding(.top, 12)
                     }.font(.subheadline).padding(16).zeniSurface()
@@ -236,7 +236,7 @@ private struct ConnectAppDetail: View {
                     Text(item.status).font(.caption).foregroundStyle(Color.zeniMuted)
                     if let hash = item.transactionHash {
                         Text(hash).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
-                        Text("Submitted is not confirmed. Check Activity for the receipt.").font(.caption2).foregroundStyle(Color.zeniMuted)
+                        Text("Check Activity for the native transaction receipt and setup fees.").font(.caption2).foregroundStyle(Color.zeniMuted)
                     }
                 }.padding(16).zeniSurface()
             }

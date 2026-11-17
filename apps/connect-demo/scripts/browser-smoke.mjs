@@ -93,7 +93,7 @@ try {
   peer = await ZeniWalletSession.pair(uri, { pollIntervalMs: 20 });
   assert.equal(peer.info.origin, new URL(url).origin);
   let reject = false, requestCount = 0;
-  const testHash = '0x' + 'ab'.repeat(32); // Mock response; no chain transaction is broadcast.
+  const testHash = 'AB'.repeat(32); // Mock response; no chain transaction is broadcast.
   await peer.approve(signer.address, async request => {
     requestCount++;
     const intent = validateDappRequest(request.method, request.params, signer.address);
@@ -120,13 +120,11 @@ try {
   await input('#recipient', 'qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp');
   await input('#amount', '1');
   await click('form:has(#recipient) .request-button');
-  await until(`document.querySelector('output')?.textContent.includes('Transaction submitted.')`);
+  await until(`document.querySelector('output')?.textContent.includes('Native transfer completed.')`);
   assert.equal(requestCount, 2);
-  assert.ok(await evaluate(`document.querySelector('output').textContent.includes('not yet confirmed')`));
-  await until(`document.querySelector('output')?.textContent.includes('Waiting for explorer indexing')`);
-  assert.equal(await evaluate(`!!document.querySelector('output a[href^="https://explore.qore.network/tx/"]')`), false);
-  await click('output .switch-mobile');
-  await until(`document.querySelector('output a[href^="https://explore.qore.network/tx/"]')?.href.endsWith('${explorerHash}')`);
+  assert.ok(await evaluate(`document.querySelector('output').textContent.includes('native transaction ID')`));
+  await until(`document.querySelector('output a[href^="https://explore.qore.network/tx/"]')?.href.endsWith('${testHash}')`);
+  assert.equal(await evaluate('window.explorerLookups'), 0, 'Native transfer IDs do not need an EVM lookup');
   await screenshot('transfer');
   await call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await evaluate('window.scrollTo(0, 0)'); await delay(200); await screenshot('mobile');
@@ -178,7 +176,7 @@ try {
         if (method === 'eth_chainId') return window.extensionChain;
         if (window.extensionMode === 'reject') throw new Error('User rejected request');
         if (method === 'personal_sign') return window.extensionSignature;
-        if (method === 'eth_sendTransaction') { window.lastExtensionTransfer = params[0]; return '${testHash}'; }
+        if (method === 'zeni_sendQor') { window.lastExtensionTransfer = params[0]; return '${testHash}'; }
         throw new Error('Unsupported extension request: ' + method);
       }
     };
@@ -213,7 +211,7 @@ try {
   await until(`document.querySelector('output')?.textContent.includes('Verified signature from')`);
   await evaluate(`document.querySelectorAll('[role="tab"]')[1].click()`);
   await click('form:has(#recipient) .request-button');
-  await until(`document.querySelector('output')?.textContent.includes('Transaction submitted.')`);
+  await until(`document.querySelector('output')?.textContent.includes('Native transfer completed.')`);
   assert.equal(await evaluate(`window.lastExtensionTransfer.from`), signer.address);
   assert.equal(await evaluate(`window.lastExtensionTransfer.to`), 'qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp');
   await evaluate(`window.extensionMode = 'reject'`);
@@ -236,7 +234,7 @@ try {
   await until(`document.querySelector('img[alt*="Scan"]')?.src.startsWith('data:image/png')`);
   assert.equal(await evaluate(`!!document.querySelector('.account-box')`), false);
   await click('.cancel-pairing');
-  assert.ok(await evaluate(`window.extensionCalls.every(method => ['eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'personal_sign', 'eth_sendTransaction'].includes(method))`), 'Only supported RPC methods sent to extension');
+  assert.ok(await evaluate(`window.extensionCalls.every(method => ['eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'personal_sign', 'zeni_sendQor'].includes(method))`), 'Only supported RPC methods sent to extension');
   assert.equal(errors.length, 0, JSON.stringify(errors));
   console.log('PASS: local QR, Escape/cancel, relay connection, real signature verification, keyboard tabs, QOR address validation, mocked transfer submission, rejection, disconnect, mobile layout, extension discovery, rejected/cancelled approvals, network validation, lock detection, extension message/transfer requests without a relay, and switching to mobile.');
 

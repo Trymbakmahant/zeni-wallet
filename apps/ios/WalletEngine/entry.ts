@@ -52,16 +52,7 @@ async function record(item: any) {
   history = [next, ...others.filter(entry => entry.status === 'PENDING'), ...others.filter(entry => entry.status !== 'PENDING').slice(0, 100)];
   await native('activity', history);
 }
-class ObservedProvider extends ethers.JsonRpcProvider {
-  override async broadcastTransaction(signedTx: string) {
-    if (!transferContext) throw new Error('No reviewed transfer.');
-    const item = { ...transferContext, hash: ethers.keccak256(signedTx), nativeChain: false, stage: 'transfer', status: 'PENDING' };
-    await record(item);
-    try { return await super.broadcastTransaction(signedTx); }
-    catch { throw new Error(`Transfer broadcast is unconfirmed. Check Activity before retrying. Transaction: ${item.hash}`); }
-  }
-}
-const provider = new ObservedProvider(QORECHAIN_CONFIG.rpcUrls[0], undefined, { batchMaxCount: 1, cacheTimeout: -1 });
+const provider = new ethers.JsonRpcProvider(QORECHAIN_CONFIG.rpcUrls[0], undefined, { batchMaxCount: 1, cacheTimeout: -1 });
 const swaps = new AmmSwapClient(provider);
 // Quote preparation needs public key registration status, never a private signing key.
 async function publicStatus(active: PublicAccount) {
@@ -94,7 +85,7 @@ function samePublicAccount(a: PublicAccount | null, b: PublicAccount): boolean {
 class ObservedTransfer extends QorTransferClient {
   protected override async broadcastNative(active: any, message: any, classical: boolean, quote: any, check: () => void) {
     return super.broadcastNative(active, message, classical, quote, check, async update => {
-      await record({ ...transferContext, hash: update.hash, nativeChain: true, stage: classical ? 'registration' : 'authorization', status: update.status, gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error });
+      await record({ ...transferContext, hash: update.hash, nativeChain: true, stage: classical ? 'registration' : 'transfer', status: update.status, gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error });
     });
   }
 }
@@ -243,9 +234,9 @@ async function invoke(method: string, payload: any) {
       transferContext = { account: active.cosmosAddress, tokenIn: 'QOR', amountIn: quote.amount, recipient: quote.to, gasCost: `Up to ${quote.maxNetworkFee} QOR` };
       try {
         const hash = await transfers.send(unlocked(), quote, reviewed);
-        return { hash, stage: 'transfer', status: 'PENDING', explorerUrl: '' };
+        return { hash, stage: 'transfer', status: 'CONFIRMED', explorerUrl: transactionExplorerUrl(hash) };
       } catch (error) {
-        if (error instanceof NativeTxError) return { hash: error.update.hash, stage: 'setup', status: error.update.status, explorerUrl: transactionExplorerUrl(error.update.hash), error: error.message };
+        if (error instanceof NativeTxError) return { hash: error.update.hash, stage: history.find(item => item.hash === error.update.hash)?.stage || 'transfer', status: error.update.status, explorerUrl: transactionExplorerUrl(error.update.hash), error: error.message };
         throw error;
       }
     } finally { busy = false; transferContext = null; }

@@ -13,6 +13,7 @@ final class MockChain: @unchecked Sendable {
     private var broadcasts = 0
     private var hashWasSaved = true
     var loseBroadcastResponse = false
+    var loseTransferResponse = false
     var quoteOutput = "81062"
 
     func configure(account: PublicAccountInfo) { lock.withLock { self.account = account } }
@@ -52,10 +53,8 @@ final class MockChain: @unchecked Sendable {
                 case "eth_blockNumber": result = "0x100"
                 case "eth_getTransactionReceipt": result = NSNull()
                 case "eth_sendRawTransaction":
-                    let pending = history.first { !$0.nativeChain && $0.status == "PENDING" }
-                    hashWasSaved = hashWasSaved && pending != nil
-                    broadcasts += 1
-                    result = pending?.hash ?? ""
+                    throw NSError(domain: "MockChain", code: 3, userInfo: [NSLocalizedDescriptionKey: "Native transfers must never broadcast EVM transactions"])
+
                 default: throw NSError(domain: "MockChain", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unexpected RPC method: " + method])
                 }
                 return try json(["jsonrpc": "2.0", "id": rpc["id"] ?? 1, "result": result])
@@ -72,6 +71,9 @@ final class MockChain: @unchecked Sendable {
                     return try json(["found": true, "account": ["public_key": Data(bytes).base64EncodedString(), "possession_proven": true]])
                 }
                 return try json(["found": false])
+            }
+            if path.contains("/spendable_balances/"), path.hasSuffix("/by_denom") {
+                return try json(["balance": ["denom": "uqor", "amount": "10000000"]])
             }
             if path.contains("/spendable_balances/") {
                 return try json(["balances": [
@@ -109,10 +111,11 @@ final class MockChain: @unchecked Sendable {
                 hashWasSaved = hashWasSaved && history.contains { $0.hash == hash && $0.status == "PENDING" }
                 broadcasts += 1
                 pendingIsRegistration = !registered
-                if loseBroadcastResponse { throw URLError(.networkConnectionLost) }
+                if loseBroadcastResponse || (loseTransferResponse && !pendingIsRegistration) { throw URLError(.networkConnectionLost) }
                 return try json(["tx_response": ["code": 0, "txhash": hash]])
             }
             if path.contains("/txs/") {
+                if loseTransferResponse && !pendingIsRegistration { throw URLError(.networkConnectionLost) }
                 sequence += 1
                 if pendingIsRegistration { registered = true; pendingIsRegistration = false }
                 return try json(["tx_response": [

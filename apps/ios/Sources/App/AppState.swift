@@ -299,7 +299,7 @@ public final class AppState {
         try requireTransactionAccount()
         if review.kind == "transfer", let quote = review.quote {
             let result = try await execute(quoteID: quote.id, isSwap: false, validateRequest: validateRequest)
-            guard result.stage == "transfer", result.status != "FAILED" else {
+            guard result.stage == "transfer", result.status == "CONFIRMED" else {
                 throw WalletEngineError.message(result.error ?? "Transfer did not complete. Check Activity before retrying.")
             }
             return result.hash

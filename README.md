@@ -58,7 +58,7 @@ pnpm --filter @zeni/extension build
 pnpm --filter @zeni/core test
 ```
 
-Choose **Review Transfer**, inspect the fee allowance and authorization limits, then **Authorize & Send**. On Diana testnet, the first send registers the wallet's ML-DSA-87 public key with proof of possession. Each confirmed send authorizes one native QOR transfer to the selected recipient for 60 blocks, with a value limit covering the amount plus EVM gas. Registration and authorization are confirmed on the native lane before the extension reads the updated EVM nonce and signs the transfer.
+Choose **Review Transfer**, inspect the recipient, amount, and maximum fees, then **Authorize & Send**. QOR sends are native bank `MsgSend` transactions signed with both ML-DSA-87 and classical secp256k1. Amounts support six decimal places and use spendable bank balances. First-time key registration is a separate classical-signed bootstrap with proof of possession; the transfer itself is hybrid signed. There is no EVM authorization window or classical EVM fallback. Connect apps must use `zeni_sendQor`, which returns a native 64-character transaction ID without `0x`.
 
 The wallet needs QOR for setup as well as the transfer. Setup transactions are simulated and their fees must fit the reviewed allowance; successful setup fees remain charged if a later step fails. This flow supports ordinary wallet recipients. Contract calls and the existing demo-token flows are separate.
 
