@@ -31,7 +31,7 @@ struct WalletTransactionSheet: View {
                         TransactionActivityView(state: state)
                     } else if destination == .receive, let account = state.activeAccount {
                         ReceiveAssetsView(evmAddress: account.evmAddress, cosmosAddress: account.cosmosAddress)
-                    } else if !state.isUnlocked || destination == .wallet {
+                    } else if !state.hasWallet || destination == .wallet {
                         WalletAccessView(state: state)
                     } else if destination == .send {
                         TransferForm(state: state)
@@ -212,29 +212,26 @@ private struct WalletAccessView: View {
             }
             if let error { TransactionErrorView(message: error) }
             if let error = state.walletError { TransactionErrorView(message: error) }
-            if state.isUnlocked {
-                Text("Connected to QoreChain Diana Testnet. Swaps use native bank balances; QOR sends use the EVM lane.")
+            if state.hasWallet {
+                Text("Balances and transaction previews are available without unlocking. Face ID or Touch ID is requested when you confirm a transaction or message signature.")
                     .font(.subheadline).foregroundStyle(Color.zeniMuted)
-                Button("Lock Wallet") { state.lock() }
+                Button("Refresh balances") { Task { await state.refresh() } }
                     .buttonStyle(ZeniPrimaryButtonStyle())
-                    .disabled(state.isTransacting)
+                    .disabled(state.isRefreshing)
             } else {
                 Button {
                     Task {
                         error = nil
                         do {
-                            if state.hasWallet { try await state.unlock() }
-                            else {
-                                let phrase = mnemonic
-                                mnemonic = ""
-                                try await state.importWallet(mnemonic: phrase)
-                            }
+                            let phrase = mnemonic
+                            mnemonic = ""
+                            try await state.importWallet(mnemonic: phrase)
                         } catch { self.error = error.localizedDescription }
                     }
                 } label: {
                     HStack {
                         if state.isAuthenticating { ProgressView() }
-                        Text(state.hasWallet ? "Unlock Wallet" : "Import Wallet")
+                        Text("Import Wallet")
                     }.frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(ZeniPrimaryButtonStyle())
@@ -542,7 +539,7 @@ struct TransactionActivityView: View {
         VStack(alignment: .leading, spacing: 16) {
             Button { Task { await state.refresh() } } label: {
                 Label("Refresh status", systemImage: "arrow.clockwise")
-            }.disabled(state.isRefreshing || !state.isUnlocked)
+            }.disabled(state.isRefreshing || !state.hasWallet)
             if let error = state.walletError { TransactionErrorView(message: error) }
             if state.activity.isEmpty {
                 ContentUnavailableView("No transactions yet", systemImage: "clock",
@@ -746,6 +743,14 @@ private extension View {
     }
     .background(Color.zeniBackground)
     .preferredColorScheme(.dark)
+}
+
+#Preview("Public QOR balance") {
+    WalletBalanceHero(balance: "123.456789", hasLoadedBalances: true, isRefreshing: false)
+        .padding(20)
+        .background(Color.zeniBackground)
+        .foregroundStyle(.white)
+        .preferredColorScheme(.dark)
 }
 
 #Preview("Home") {

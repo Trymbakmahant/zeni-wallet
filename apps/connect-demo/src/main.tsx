@@ -20,10 +20,10 @@ function Demo() {
         if (verifyMessage(message, signature).toLowerCase() !== account!.toLowerCase()) throw new Error('Signature verification failed');
         return `Verified signature from ${account}: ${signature}`;
       })}>Request signature</button></section>
-    <section><h2>Send testnet QOR</h2><label>Recipient<input value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="0x…" /></label>
+    <section><h2>Send testnet QOR</h2><label>Recipient<input value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="qor1… or 0x…" /></label>
       <label>Amount<input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal" /></label>
       <button disabled={!account || busy} onClick={() => void run(async () => {
-        const hash = await provider.request({ method: 'eth_sendTransaction', params: [{ from: account, to: recipient, value: toQuantity(parseEther(amount)), chainId: '0x2648' }] });
+        const hash = await provider.request({ method: 'eth_sendTransaction', params: [{ from: account, to: recipient.trim(), value: toQuantity(parseEther(amount)), chainId: '0x2648' }] });
         return `Submitted: ${hash}. Check the testnet explorer for confirmation.`;
       })}>Review transfer in Zeni</button></section>
     <output aria-live="polite">{result}</output>

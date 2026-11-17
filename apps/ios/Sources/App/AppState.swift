@@ -29,6 +29,7 @@ public final class AppState {
     private(set) var isTransacting = false
     private(set) var isRefreshing = false
     private(set) var evmQorBalance = "0"
+    private(set) var hasLoadedBalances = false
     private(set) var activity: [WalletActivityItem] = []
     var walletError: String?
 
@@ -38,6 +39,9 @@ public final class AppState {
     @ObservationIgnored private var activityLoadError: Error?
     @ObservationIgnored private let accountKey = "zeni.public-account.v1"
     @ObservationIgnored private let activityURL: URL?
+    @ObservationIgnored private var signingKeyLoader: (String) async throws -> Data = { prompt in
+        try await Task.detached { try KeychainManager.loadMasterEntropy(prompt: prompt) }.value
+    }
 
     private static let emptyTokens = [
         TokenItem(symbol: "QOR", name: "QoreChain Native", balance: "0", usdValue: "—", icon: "💎"),
@@ -60,17 +64,24 @@ public final class AppState {
         }
     }
 
+    // Inject a public account and isolated runtime for tests without accessing the real Keychain.
+    init(account: PublicAccountInfo, engine: WalletTransactionEngine,
+         signingKeyLoader: @escaping (String) async throws -> Data) {
+        activityURL = nil
+        activeAccount = account
+        hasWallet = true
+        self.engine = engine
+        self.signingKeyLoader = signingKeyLoader
+    }
+
     private func transactionEngine() async throws -> WalletTransactionEngine {
-        if activityLoadError != nil {
-            throw WalletEngineError.message("Transaction history could not be loaded. Recover it before sending another transaction.")
-        }
         if let engine { return engine }
         let new = WalletTransactionEngine()
         new.onTermination = { [weak self] in
             self?.isUnlocked = false
             self?.sessionVersion += 1
             self?.engine = nil
-            self?.walletError = "The wallet engine stopped. Unlock again; check Activity before retrying a transaction."
+            self?.walletError = "The wallet engine stopped. Refresh and review again; check Activity before retrying a transaction."
         }
         new.persistActivity = { [weak self] items in
             guard let self, let activityURL = self.activityURL else {
@@ -86,6 +97,17 @@ public final class AppState {
         do { try await new.restoreActivity(activity) }
         catch { engine = nil; throw error }
         return new
+    }
+
+    func generateRecoveryPhrase() async throws -> String {
+        guard !hasWallet, !isAuthenticating else { throw WalletEngineError.message("A wallet is already saved or setup is in progress.") }
+        let runtime = try await transactionEngine()
+        return try await runtime.call("generateMnemonic")
+    }
+
+    func validateRecoveryPhrase(_ phrase: String) async throws -> Bool {
+        let runtime = try await transactionEngine()
+        return try await runtime.call("validateMnemonic", payload: ["mnemonic": phrase])
     }
 
     func importWallet(mnemonic: String) async throws {
@@ -107,7 +129,8 @@ public final class AppState {
             activeAccount = account
             hasWallet = true
             guard version == sessionVersion else { runtime.lock(); return }
-            isUnlocked = true
+            runtime.lock()
+            isUnlocked = false
             walletError = nil
             await refresh()
         } catch {
@@ -116,27 +139,43 @@ public final class AppState {
         }
     }
 
-    func unlock() async throws {
-        guard hasWallet, !isAuthenticating, !isTransacting else {
-            throw WalletEngineError.message("Import a wallet first, or wait for the current operation.")
+    private func publicEngine() async throws -> WalletTransactionEngine {
+        guard let account = activeAccount else { throw WalletEngineError.message("Import a wallet first.") }
+        let runtime = try await transactionEngine()
+        let _: Bool = try await runtime.call("watchAccount", payload: [
+            "evmAddress": account.evmAddress, "cosmosAddress": account.cosmosAddress,
+            "pqcPublicKeyHex": account.pqcPublicKeyHex, "pqcPublicKeyHashHex": account.pqcPublicKeyHashHex
+        ])
+        return runtime
+    }
+
+    private func withSigningAuthorization<Result>(
+        prompt: String,
+        operation: (WalletTransactionEngine) async throws -> Result
+    ) async throws -> Result {
+        try requireTransactionAccount()
+        guard !isTransacting, !isAuthenticating, let expectedAccount = activeAccount else {
+            throw WalletEngineError.message("Another wallet operation is in progress.")
         }
+        isTransacting = true
         isAuthenticating = true
-        defer { isAuthenticating = false }
         let version = sessionVersion
-        let data = try await Task.detached { try KeychainManager.loadMasterEntropy() }.value
-        guard version == sessionVersion else { throw CancellationError() }
+        defer { isTransacting = false; isAuthenticating = false; isUnlocked = false }
+        let runtime = try await publicEngine()
+        // Every signature obtains a fresh Keychain authentication context. No browsing unlock is reused.
+        defer { runtime.lock() }
+        let data = try await signingKeyLoader(prompt)
+        guard version == sessionVersion, activeAccount == expectedAccount else { throw CancellationError() }
         guard let mnemonic = String(data: data, encoding: .utf8) else {
             throw WalletEngineError.message("The saved wallet could not be read.")
         }
-        let runtime = try await transactionEngine()
-        let account: PublicAccountInfo = try await runtime.call("unlock", payload: ["mnemonic": mnemonic])
-        guard version == sessionVersion, account.evmAddress == activeAccount?.evmAddress else {
-            runtime.lock()
-            throw WalletEngineError.message("Wallet changed or was locked. Unlock again.")
+        let signer: PublicAccountInfo = try await runtime.call("unlock", payload: ["mnemonic": mnemonic])
+        guard version == sessionVersion, signer == expectedAccount else {
+            throw WalletEngineError.message("Wallet changed or authorization was cancelled. Review again.")
         }
+        isAuthenticating = false
         isUnlocked = true
-        walletError = nil
-        await refresh()
+        return try await operation(runtime)
     }
 
     func lock() {
@@ -147,29 +186,31 @@ public final class AppState {
     }
 
     func refresh() async {
-        guard isUnlocked, !isRefreshing else { return }
+        guard hasWallet, let account = activeAccount, !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
-        let version = sessionVersion
         do {
-            let runtime = try await transactionEngine()
+            let runtime = try await publicEngine()
             let balances: WalletBalances = try await runtime.call("balances")
-            guard version == sessionVersion else { return }
+            guard activeAccount == account else { return }
             tokens = Self.emptyTokens.map { token in
                 TokenItem(symbol: token.symbol, name: token.name, balance: balances.bank[token.symbol] ?? "0", usdValue: "—", icon: token.icon)
             }
             evmQorBalance = balances.evmQor
-            let _: [WalletActivityItem] = try await runtime.call("reconcile")
-            walletError = nil
+            hasLoadedBalances = true
+            if activityLoadError == nil {
+                let _: [WalletActivityItem] = try await runtime.call("reconcile")
+                walletError = nil
+            }
         } catch {
-            if version == sessionVersion { walletError = error.localizedDescription }
+            if activeAccount == account { walletError = error.localizedDescription }
         }
     }
 
     func prepareSwap(tokenIn: String, tokenOut: String, amount: String, slippageBps: Int) async throws -> SwapQuote {
-        try requireUnlocked()
+        try requireTransactionAccount()
         let version = sessionVersion
-        let runtime = try await transactionEngine()
+        let runtime = try await publicEngine()
         let quote: SwapQuote = try await runtime.call("prepareSwap", payload: [
             "tokenIn": tokenIn, "tokenOut": tokenOut, "amount": amount, "slippageBps": slippageBps
         ])
@@ -178,9 +219,9 @@ public final class AppState {
     }
 
     func prepareTransfer(recipient: String, amount: String, token: String) async throws -> TransferQuote {
-        try requireUnlocked()
+        try requireTransactionAccount()
         let version = sessionVersion
-        let runtime = try await transactionEngine()
+        let runtime = try await publicEngine()
         let quote: TransferQuote = try await runtime.call("prepareTransfer", payload: [
             "recipient": recipient, "amount": amount, "token": token
         ])
@@ -188,18 +229,16 @@ public final class AppState {
         return quote
     }
 
-    func execute(quoteID: String, isSwap: Bool) async throws -> TransactionResult {
-        try requireUnlocked()
-        guard !isTransacting else { throw WalletEngineError.message("A transaction is already in progress.") }
-        isTransacting = true
-        let version = sessionVersion
-        defer { isTransacting = false }
-        let runtime = try await transactionEngine()
-        guard version == sessionVersion else { throw CancellationError() }
-        runtime.permitsBroadcast = true
-        defer { runtime.permitsBroadcast = false }
+    func execute(quoteID: String, isSwap: Bool, validateRequest: () throws -> Void = {}) async throws -> TransactionResult {
         do {
-            let result: TransactionResult = try await runtime.call(isSwap ? "executeSwap" : "executeTransfer", payload: ["quoteId": quoteID])
+            let result: TransactionResult = try await withSigningAuthorization(
+                prompt: isSwap ? "Authorize this swap in Zeni" : "Authorize this transfer in Zeni"
+            ) { runtime in
+                try validateRequest()
+                runtime.permitsBroadcast = true
+                defer { runtime.permitsBroadcast = false }
+                return try await runtime.call(isSwap ? "executeSwap" : "executeTransfer", payload: ["quoteId": quoteID])
+            }
             await refresh()
             return result
         } catch {
@@ -209,35 +248,37 @@ public final class AppState {
     }
 
     func prepareDapp(method: String, params: [Any]) async throws -> DappReview {
-        try requireUnlocked()
+        try requireTransactionAccount()
         let version = sessionVersion
-        let runtime = try await transactionEngine()
+        let runtime = try await publicEngine()
         let review: DappReview = try await runtime.call("prepareDapp", payload: ["method": method, "params": params])
         guard version == sessionVersion else { throw CancellationError() }
         return review
     }
 
-    func executeDapp(review: DappReview) async throws -> String {
-        try requireUnlocked()
+    func executeDapp(review: DappReview, validateRequest: () throws -> Void = {}) async throws -> String {
+        try requireTransactionAccount()
         if review.kind == "transfer", let quote = review.quote {
-            let result = try await execute(quoteID: quote.id, isSwap: false)
+            let result = try await execute(quoteID: quote.id, isSwap: false, validateRequest: validateRequest)
             guard result.stage == "transfer", result.status != "FAILED" else {
                 throw WalletEngineError.message(result.error ?? "Transfer did not complete. Check Activity before retrying.")
             }
             return result.hash
         }
-        guard review.kind == "message", !isTransacting else { throw WalletEngineError.message("Unsupported request or wallet busy.") }
-        isTransacting = true
-        defer { isTransacting = false }
+        guard review.kind == "message" else { throw WalletEngineError.message("Unsupported signing request.") }
         let version = sessionVersion
-        let runtime = try await transactionEngine()
-        guard version == sessionVersion else { throw CancellationError() }
-        let signature: String = try await runtime.call("signDappMessage", payload: ["reviewId": review.reviewId])
-        guard version == sessionVersion else { throw CancellationError() }
-        return signature
+        return try await withSigningAuthorization(prompt: "Authorize this message signature in Zeni") { runtime in
+            try validateRequest()
+            let signature: String = try await runtime.call("signDappMessage", payload: ["reviewId": review.reviewId])
+            guard version == sessionVersion else { throw CancellationError() }
+            return signature
+        }
     }
 
-    private func requireUnlocked() throws {
-        guard isUnlocked else { throw WalletEngineError.message("Unlock your wallet to continue.") }
+    private func requireTransactionAccount() throws {
+        guard hasWallet, activeAccount != nil else { throw WalletEngineError.message("Import a wallet to continue.") }
+        guard activityLoadError == nil else {
+            throw WalletEngineError.message("Transaction history could not be loaded. Recover it before sending another transaction.")
+        }
     }
 }

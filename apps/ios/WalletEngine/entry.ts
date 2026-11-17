@@ -1,6 +1,7 @@
 import { validateDappRequest } from '../../../packages/core/src/account/dapp';
 import { ethers } from 'ethers';
-import { deriveAccountKeys, derivePqcKeypair, isValidMnemonic, normalizeMnemonic } from '../../../packages/core/src/crypto/derivation';
+import { clearPqcStatusCache, fetchPqcStatus, isRegisteredPqcKey } from '@qorechain/sdk';
+import { bech32ToEvmAddress, deriveAccountKeys, derivePqcKeypair, generateNewMnemonic, isValidMnemonic, normalizeMnemonic } from '../../../packages/core/src/crypto/derivation';
 import { AmmSwapClient, swapReceivedAmount } from '../../../packages/core/src/rpc/amm';
 import { QorTransferClient } from '../../../packages/core/src/rpc/qor-transfer';
 import { NativeTxError } from '../../../packages/core/src/rpc/native-transaction';
@@ -24,6 +25,13 @@ if (!crypto.randomUUID) (crypto as any).randomUUID = () => {
 };
 
 let account: ReturnType<typeof deriveAccountKeys> | null = null;
+type PublicAccount = {
+  classicalAddress: string;
+  cosmosAddress: string;
+  pqcPublicKeyHex: string;
+  pqcPublicKeyHash: string;
+};
+let publicAccount: PublicAccount | null = null;
 let epoch = 0;
 let busy = false;
 let history: any[] = [];
@@ -54,6 +62,34 @@ class ObservedProvider extends ethers.JsonRpcProvider {
 }
 const provider = new ObservedProvider(QORECHAIN_CONFIG.rpcUrls[0], undefined, { batchMaxCount: 1, cacheTimeout: -1 });
 const swaps = new AmmSwapClient(provider);
+// Quote preparation needs public key registration status, never a private signing key.
+async function publicStatus(active: PublicAccount) {
+  clearPqcStatusCache();
+  const status = await fetchPqcStatus({ rest: QORECHAIN_CONFIG.restUrl, address: active.cosmosAddress, fetch: globalThis.fetch });
+  if (status.registered) {
+    if (isRegisteredPqcKey(status, ethers.getBytes(active.pqcPublicKeyHex)) !== true) {
+      throw new Error('This account has a different or unreadable PQC key registered. Restore the original wallet before sending.');
+    }
+    if (status.possessionProven === false) throw new Error('The registered PQC key needs proof-of-possession migration before sending.');
+  }
+  return status;
+}
+class PublicSwapQuotes extends AmmSwapClient {
+  protected override status(active: any) { return publicStatus(active); }
+}
+class PublicTransferQuotes extends QorTransferClient {
+  protected override status(active: any) { return publicStatus(active); }
+}
+const swapQuotes = new PublicSwapQuotes(provider);
+const transferQuotes = new PublicTransferQuotes(provider);
+function watching(): PublicAccount {
+  if (!publicAccount) throw new Error('Import a wallet before viewing balances.');
+  return publicAccount;
+}
+function samePublicAccount(a: PublicAccount | null, b: PublicAccount): boolean {
+  return a?.classicalAddress === b.classicalAddress && a.cosmosAddress === b.cosmosAddress
+    && a.pqcPublicKeyHex === b.pqcPublicKeyHex && a.pqcPublicKeyHash === b.pqcPublicKeyHash;
+}
 class ObservedTransfer extends QorTransferClient {
   protected override async broadcastNative(active: any, message: any, classical: boolean, quote: any, check: () => void) {
     return super.broadcastNative(active, message, classical, quote, check, async update => {
@@ -96,26 +132,56 @@ function remember(kind: string, quote: any) {
 }
 async function invoke(method: string, payload: any) {
   try {
+    if (method === 'generateMnemonic') return generateNewMnemonic(128);
+    if (method === 'validateMnemonic') return typeof payload.mnemonic === 'string' && isValidMnemonic(normalizeMnemonic(payload.mnemonic));
     if (method === 'restoreActivity') { history = payload; return true; }
+    if (method === 'watchAccount') {
+      const next: PublicAccount = {
+        classicalAddress: ethers.getAddress(payload.evmAddress), cosmosAddress: payload.cosmosAddress,
+        pqcPublicKeyHex: payload.pqcPublicKeyHex, pqcPublicKeyHash: payload.pqcPublicKeyHashHex,
+      };
+      if (ethers.getAddress(bech32ToEvmAddress(next.cosmosAddress)) !== next.classicalAddress
+        || !ethers.isHexString(next.pqcPublicKeyHex) || !ethers.isHexString(next.pqcPublicKeyHash, 32)) {
+        throw new Error('Invalid public wallet account.');
+      }
+      if (!samePublicAccount(publicAccount, next)) {
+        if (busy) throw new Error('A transaction is still in progress.');
+        epoch++; account = null; quotes.clear(); messageReviews.clear(); publicAccount = next;
+      }
+      return true;
+    }
     if (method === 'lock') { epoch++; account = null; quotes.clear(); messageReviews.clear(); return true; }
     if (method === 'unlock') {
       if (busy) throw new Error('A transaction is still in progress.');
       const mnemonic = normalizeMnemonic(payload.mnemonic);
       if (!isValidMnemonic(mnemonic)) throw new Error('Enter a valid BIP-39 recovery phrase.');
       const next = deriveAccountKeys(mnemonic);
-      epoch++; quotes.clear(); messageReviews.clear(); account = next;
       const keypair = derivePqcKeypair(next);
       const pqcPublicKeyHex = ethers.hexlify(keypair.publicKey);
       keypair.secretKey.fill(0);
+      const metadata: PublicAccount = { classicalAddress: next.classicalAddress, cosmosAddress: next.cosmosAddress,
+        pqcPublicKeyHex, pqcPublicKeyHash: next.pqcPublicKeyHash };
+      // Preserve canonical reviews only when authentication loads the exact reviewed public account.
+      if (!samePublicAccount(publicAccount, metadata)) { quotes.clear(); messageReviews.clear(); }
+      epoch++; publicAccount = metadata; account = next;
       return { evmAddress: next.classicalAddress, cosmosAddress: next.cosmosAddress, pqcPublicKeyHex, pqcPublicKeyHashHex: next.pqcPublicKeyHash };
     }
     if (method === 'reconcile') return await reconcile();
-    const active = unlocked(), version = epoch;
-    const check = () => checkSession(active, version);
     if (method === 'balances') {
+      const active = watching();
       const [bank, evm] = await Promise.all([swaps.balances(active.cosmosAddress), provider.getBalance(active.classicalAddress, 'pending')]);
-      check(); return { bank, evmQor: ethers.formatEther(evm) };
+      if (!samePublicAccount(publicAccount, active)) throw new Error('Account changed. Refresh balances.');
+      return { bank, evmQor: ethers.formatEther(evm) };
     }
+    const signing = ['executeSwap', 'executeTransfer', 'signDappMessage'].includes(method);
+    const active = signing ? unlocked() : watching(), version = epoch;
+    const check = () => {
+      if (version !== epoch || (signing ? account !== active : publicAccount !== active)) {
+        throw new Error('Wallet session changed. Review again.');
+      }
+    };
+    // Shared quote APIs accept DerivedAccountKeys, but their public-status adapters above read only metadata.
+    const quoteAccount = active as ReturnType<typeof deriveAccountKeys>;
     if (busy) throw new Error('A transaction is already in progress.');
     if (method === 'prepareDapp') {
       const intent = validateDappRequest(payload.method, payload.params, active.classicalAddress);
@@ -126,7 +192,7 @@ async function invoke(method: string, payload: any) {
         return { kind: 'message', message: intent.text, reviewId };
       }
       await noPending(active); check();
-      const quote = await transfers.prepare(active, intent.to, intent.amount);
+      const quote = await transferQuotes.prepare(quoteAccount, intent.to, intent.amount);
       check(); remember('transfer', quote);
       return { kind: 'transfer', quote, reviewId: quote.id };
     }
@@ -135,18 +201,18 @@ async function invoke(method: string, payload: any) {
       messageReviews.delete(payload.reviewId);
       if (!review || review.expiresAt <= Date.now()) throw new Error('Message review expired. Review again.');
       check();
-      const signature = await new ethers.Wallet(active.classicalPrivateKey).signMessage(ethers.getBytes(review.hex));
+      const signature = await new ethers.Wallet(unlocked().classicalPrivateKey).signMessage(ethers.getBytes(review.hex));
       check(); return signature;
     }
     if (method === 'prepareSwap') {
       await noPending(active); check();
-      const quote = await swaps.prepareSwap(active, payload.tokenIn, payload.tokenOut, payload.amount, payload.slippageBps);
+      const quote = await swapQuotes.prepareSwap(quoteAccount, payload.tokenIn, payload.tokenOut, payload.amount, payload.slippageBps);
       check(); return remember('swap', quote);
     }
     if (method === 'prepareTransfer') {
       if (payload.token !== 'QOR') throw new Error('Only QOR transfers are supported in this release.');
       await noPending(active); check();
-      const quote = await transfers.prepare(active, payload.recipient.trim(), payload.amount);
+      const quote = await transferQuotes.prepare(quoteAccount, payload.recipient.trim(), payload.amount);
       check(); return remember('transfer', quote);
     }
     const kind = method === 'executeSwap' ? 'swap' : method === 'executeTransfer' ? 'transfer' : null;
@@ -163,7 +229,7 @@ async function invoke(method: string, payload: any) {
       if (kind === 'swap') {
         let stage = 'swap';
         try {
-          return await swaps.executeSwap(active, quote, reviewed, async (update, currentStage) => {
+          return await swaps.executeSwap(unlocked(), quote, reviewed, async (update, currentStage) => {
             stage = currentStage;
             await record({ hash: update.hash, account: active.cosmosAddress, nativeChain: true, stage, tokenIn: quote.tokenIn, tokenOut: quote.tokenOut, amountIn: quote.amountIn, amountOut: stage === 'swap' ? swapReceivedAmount(update.receipt, active.cosmosAddress, quote.tokenOut) : undefined, status: update.status, gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error });
           });
@@ -174,7 +240,7 @@ async function invoke(method: string, payload: any) {
       }
       transferContext = { account: active.cosmosAddress, tokenIn: 'QOR', amountIn: quote.amount, recipient: quote.to, gasCost: `Up to ${quote.maxNetworkFee} QOR` };
       try {
-        const hash = await transfers.send(active, quote, reviewed);
+        const hash = await transfers.send(unlocked(), quote, reviewed);
         return { hash, stage: 'transfer', status: 'PENDING', explorerUrl: transactionExplorerUrl(hash) };
       } catch (error) {
         if (error instanceof NativeTxError) return { hash: error.update.hash, stage: 'setup', status: error.update.status, explorerUrl: transactionExplorerUrl(error.update.hash), error: error.message };

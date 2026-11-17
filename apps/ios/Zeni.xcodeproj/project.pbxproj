@@ -14,6 +14,8 @@
 		CCBB00000000000000000000 /* ZeniConnectProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA00000000000000000000 /* ZeniConnectProtocol.swift */; };
 		CCBB00000000000000000001 /* ZeniConnectController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA00000000000000000001 /* ZeniConnectController.swift */; };
 		CCBB00000000000000000002 /* ZeniConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA00000000000000000002 /* ZeniConnectView.swift */; };
+		CDDB00000000000000000001 /* WalletOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDDA00000000000000000001 /* WalletOnboardingView.swift */; };
+		CDDB00000000000000000002 /* zen-landscape-blended.png in Resources */ = {isa = PBXBuildFile; fileRef = CDDA00000000000000000002 /* zen-landscape-blended.png */; };
 		F267A3D730AB83B700CBABCC /* WalletEngine.html in Resources */ = {isa = PBXBuildFile; fileRef = F267A3D630AB83B700CBABCC /* WalletEngine.html */; };
 		F267A3D930AB841E00CBABCC /* WalletTransactionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */; };
 		F267A3DB30AB853C00CBABCC /* TransactionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267A3DA30AB853C00CBABCC /* TransactionViews.swift */; };
@@ -23,6 +25,16 @@
 		F2AE353F30A995D300FE1DD4 /* HybridSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353E30A995D300FE1DD4 /* HybridSigner.swift */; };
 		F2AE354130A995D300FE1DD4 /* RPCClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE354030A995D300FE1DD4 /* RPCClient.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CCCC00000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0900012CE0000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0500012CE0000100000001;
+			remoteInfo = Zeni;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		AA0000012CE0000100000001 /* Zeni.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zeni.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -34,6 +46,8 @@
 		CCAA00000000000000000000 /* ZeniConnectProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniConnectProtocol.swift; sourceTree = "<group>"; };
 		CCAA00000000000000000001 /* ZeniConnectController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniConnectController.swift; sourceTree = "<group>"; };
 		CCAA00000000000000000002 /* ZeniConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniConnectView.swift; sourceTree = "<group>"; };
+		CDDA00000000000000000001 /* WalletOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletOnboardingView.swift; sourceTree = "<group>"; };
+		CDDA00000000000000000002 /* zen-landscape-blended.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "zen-landscape-blended.png"; sourceTree = "<group>"; };
 		F267A3D630AB83B700CBABCC /* WalletEngine.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = WalletEngine.html; sourceTree = "<group>"; };
 		F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletTransactionEngine.swift; sourceTree = "<group>"; };
 		F267A3DA30AB853C00CBABCC /* TransactionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionViews.swift; sourceTree = "<group>"; };
@@ -104,6 +118,8 @@
 				AA0200022CE0000100000001 /* AppState.swift */,
 				F267A3DA30AB853C00CBABCC /* TransactionViews.swift */,
 				CCAA00000000000000000002 /* ZeniConnectView.swift */,
+				CDDA00000000000000000002 /* zen-landscape-blended.png */,
+				CDDA00000000000000000001 /* WalletOnboardingView.swift */,
 				CCAA00000000000000000001 /* ZeniConnectController.swift */,
 			);
 			path = App;
@@ -166,13 +182,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXContainerItemProxy section */
-        CCCC00000000000000000001 = {isa = PBXContainerItemProxy; containerPortal = AA0900012CE0000100000001; proxyType = 1; remoteGlobalIDString = AA0500012CE0000100000001; remoteInfo = Zeni; };
-/* End PBXContainerItemProxy section */
-/* Begin PBXTargetDependency section */
-        CCCC00000000000000000002 = {isa = PBXTargetDependency; target = AA0500012CE0000100000001; targetProxy = CCCC00000000000000000001; };
-/* End PBXTargetDependency section */
-
 /* Begin PBXNativeTarget section */
 		AA0500012CE0000100000001 /* Zeni */ = {
 			isa = PBXNativeTarget;
@@ -202,7 +211,7 @@
 			buildRules = (
 			);
 			dependencies = (
-                CCCC00000000000000000002,
+				CCCC00000000000000000002 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F267A3E130AB880B00CBABCC /* ZeniTransactionTests */,
@@ -257,6 +266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F267A3D730AB83B700CBABCC /* WalletEngine.html in Resources */,
+				CDDB00000000000000000002 /* zen-landscape-blended.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -282,6 +292,7 @@
 				F2AE353F30A995D300FE1DD4 /* HybridSigner.swift in Sources */,
 				F267A3D930AB841E00CBABCC /* WalletTransactionEngine.swift in Sources */,
 				CCBB00000000000000000002 /* ZeniConnectView.swift in Sources */,
+				CDDB00000000000000000001 /* WalletOnboardingView.swift in Sources */,
 				CCBB00000000000000000001 /* ZeniConnectController.swift in Sources */,
 				CCBB00000000000000000000 /* ZeniConnectProtocol.swift in Sources */,
 				AA0100082CE0000100000001 /* PortfolioView.swift in Sources */,
@@ -300,6 +311,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		CCCC00000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0500012CE0000100000001 /* Zeni */;
+			targetProxy = CCCC00000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		AA0A00012CE0000100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -309,9 +328,11 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = G25HHD9GJF;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -347,9 +368,11 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGN_IDENTITY = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = G25HHD9GJF;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_OPTIMIZATION_LEVEL = s;
 				INFOPLIST_FILE = Sources/Info.plist;

@@ -1,5 +1,6 @@
 import { getAddress, getBytes, formatEther } from 'ethers';
 import { QORECHAIN_CONFIG } from './constants.js';
+import { bech32ToEvmAddress } from '../crypto/derivation.js';
 
 export type DappIntent = { kind: 'transfer'; to: string; amount: string } | { kind: 'message'; text: string; hex: string };
 /** Validate every field before displaying an approval; unsupported transaction semantics fail closed. */
@@ -22,7 +23,13 @@ export function validateDappRequest(method: string, params: unknown, activeAddre
   if (tx.chainId !== undefined && (typeof tx.chainId !== 'string' || !/^0x[0-9a-fA-F]+$/.test(tx.chainId) || BigInt(tx.chainId) !== BigInt(QORECHAIN_CONFIG.chainId))) throw new Error('Only QoreChain Diana Testnet is supported.');
   if (tx.data !== undefined && tx.data !== '0x') throw new Error('Contract calls are not supported by Zeni Connect v1.');
   if (typeof tx.to !== 'string' || typeof tx.value !== 'string' || !/^0x[0-9a-fA-F]{1,64}$/.test(tx.value) || BigInt(tx.value) <= 0n) throw new Error('Enter a recipient and a positive hexadecimal QOR value.');
-  const to = getAddress(tx.to);
+  const recipient = tx.to.trim();
+  let to: string;
+  try {
+    to = getAddress(recipient.toLowerCase().startsWith('qor1') ? bech32ToEvmAddress(recipient) : recipient);
+  } catch {
+    throw new Error('Enter a valid QoreChain qor1… or EVM 0x… recipient address.');
+  }
   if (to === '0x0000000000000000000000000000000000000000') throw new Error('The zero address cannot receive this transfer.');
   return { kind: 'transfer', to, amount: formatEther(BigInt(tx.value)) };
 }

@@ -14,7 +14,11 @@ public struct ZeniApp: App {
     public var body: some Scene {
         WindowGroup {
             ZStack {
-                PortfolioView(state: appState)
+                if appState.hasWallet {
+                    PortfolioView(state: appState)
+                } else {
+                    WalletOnboardingView(state: appState)
+                }
 
                 // Privacy snapshot mask
                 if isPrivacyMaskActive {
@@ -32,13 +36,17 @@ public struct ZeniApp: App {
             }
             .onOpenURL { url in
                 guard url.scheme == "zeni" else { return }
-                if url.host == "request" { appState.connect.isPresented = true }
+                if url.host == "request" {
+                    appState.connect.presentNextPending()
+                    appState.connect.isPresented = true
+                }
                 else if url.host == "connect" { Task { await appState.connect.pair(url.absoluteString) } }
             }
             .onChange(of: scenePhase) {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     self.isPrivacyMaskActive = (scenePhase != .active)
                     if scenePhase == .background { appState.lock() }
+                    if scenePhase == .active { Task { await appState.refresh() } }
                 }
             }
         }

@@ -7,7 +7,10 @@ const { build } = viteRequire('esbuild');
 const result = await build({
   entryPoints: [fileURLToPath(new URL('../WalletEngine/entry.ts', import.meta.url))],
   bundle: true, write: false, format: 'iife', platform: 'browser', target: 'safari17',
-  nodePaths: [fileURLToPath(new URL('../../extension/node_modules', import.meta.url))],
+  nodePaths: [
+    fileURLToPath(new URL('../../extension/node_modules', import.meta.url)),
+    fileURLToPath(new URL('../../../packages/core/node_modules', import.meta.url))
+  ],
   minify: true, legalComments: 'inline', define: { 'process.env.NODE_ENV': '"production"' }
 });
 const script = result.outputFiles[0].text.replaceAll('</script', '<\\/script');

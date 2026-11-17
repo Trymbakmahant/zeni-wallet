@@ -11,7 +11,7 @@ This implementation connects an integrated web app to the native Zeni iOS wallet
 - `apps/connect-demo`: working React app that requests a message signature, verifies it locally, and requests a QOR transfer.
 - iOS: Connect entry on the home screen, camera scanning, pasted/deep-link pairing, site approval, message/transfer review, local signing, result delivery, and disconnect.
 
-Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `eth_sendTransaction` for QOR transfers to ordinary wallet addresses on Diana (9800). Every signing request needs explicit approval on the phone. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration/authorization and fee limits apply to transfers.
+Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `eth_sendTransaction` for QOR transfers to ordinary wallet addresses on Diana (9800). QOR recipients may use a checksummed `qor1…` address or an EVM `0x…` address; the wallet shows the EVM equivalent before signing. Every signing request needs explicit approval on the phone. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration/authorization and fee limits apply to transfers.
 
 This work does not add a gas-sponsoring transaction relayer, chain history indexer, Android app, push service, contract-call signing, WalletConnect interoperability, or extension signing support.
 
@@ -47,7 +47,7 @@ For iOS, regenerate the bundled engine after any shared signing changes:
 node apps/ios/Scripts/build-wallet-engine.mjs
 ```
 
-Build and run the Zeni target in Xcode. Import a disposable testnet wallet or unlock an existing testnet wallet. Tap **Connect a web app**, then scan the QR from the demo, or paste its `zeni://connect#...` link. The same-device **Open Zeni** link invokes the registered URL scheme. After connecting, the React button provides **Open Zeni to approve requests** (`zeni://request`) so mobile-browser users can return to the existing wallet session.
+Build and run the Zeni target in Xcode. On first launch, create a wallet and confirm its recovery-phrase backup, or import an existing phrase. Complete Face ID/Touch ID setup to protect it in the Keychain. Existing wallets open the portfolio. Tap the **QR scanner in the top-right corner**, then scan the QR from the demo, or paste its `zeni://connect#...` link. The same-device **Open Zeni** link invokes the registered URL scheme. After connecting, the React button provides **Open Zeni to approve requests** (`zeni://request`) so mobile-browser users can return to the existing wallet session.
 
 An iOS Simulator shares access to the Mac's localhost; the simulator cannot use the physical-camera scanner, so use the deep link or pasted URI. Physical phones need a publicly reachable **HTTPS** relay. Set `VITE_ZENI_RELAY_URL=https://zeni-wallet.onrender.com` when starting/building the demo and follow `apps/relay/README.md` for Docker deployment. Release iOS builds reject plaintext HTTP; Debug allows localhost only. Do not weaken this for a public deployment.
 
@@ -86,7 +86,7 @@ Frame schema: `{id, iv, ciphertext}`. Decrypted types: `approved`, `rejected`, `
 
 ## Operational limits
 
-Sessions and credentials are memory-only. Relay restart, wallet termination, browser reload, or network failure may require reconnecting. Pairings last five minutes and approved sessions up to one hour. Requests last five minutes; wallet reviews last two minutes. Only one outstanding request per browser provider is allowed. The SDK never automatically re-signs a timed-out transaction. Check wallet activity before retrying.
+Sessions and credentials are memory-only. Relay restart, wallet termination, browser reload, or network failure may require reconnecting. Pairings last five minutes and approved sessions up to one hour. Requests last five minutes; wallet reviews last two minutes. The iOS wallet supports up to eight concurrent app sessions, each with its own encrypted mailbox and one pending request. Tap the app card below the wallet header to see connected apps and their recent requests. New requests open a review prompt without replacing another active review. Names and logos are display metadata; always check the website origin. The app icon uses the site’s public `/favicon.ico`, with an initial as the fallback. Only one outstanding request per browser provider is allowed. The SDK never automatically re-signs a timed-out transaction. Check wallet activity before retrying.
 
 The included server/proxy is a bounded single-instance beta deployment. Horizontal scaling, persistence, push notifications, distributed rate limiting, domain verification, and production observability require further implementation and review. Camera permission, biometric approval on a physical device, and live funded testnet transfers must be verified before public rollout.
 

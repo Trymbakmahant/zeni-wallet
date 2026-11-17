@@ -55,3 +55,5 @@ The relay sees IP addresses, site Origin/name, traffic timing, and ciphertext. T
 See [the repository guide](../../docs/ZENI_CONNECT.md) for deployment and local demo instructions.
 
 The examples use Zeni’s hosted relay. Your web app’s exact origin must be added to its allowlist, or you can supply your own public HTTPS relay URL.
+
+QOR transfers accept `qor1…` and `0x…` recipient addresses in the updated iOS wallet. Publish a PNG or ICO at your app origin’s `/favicon.ico` to show its logo in the wallet; the origin remains visible alongside the app name.

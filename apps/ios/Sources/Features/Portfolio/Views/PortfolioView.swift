@@ -17,17 +17,35 @@ public struct PortfolioView: View {
     let state: AppState
     @State private var destination: TransactionDestination?
     @State private var tab: WalletTab = .home
+    @State private var scanOnOpen = false
 
     public init(state: AppState) { self.state = state }
 
     public var body: some View {
         @Bindable var connection = state.connect
         VStack(spacing: 0) {
-            WalletHeader(state: state) { destination = .wallet }
-            Button { connection.isPresented = true } label: {
-                Label(connection.connected == nil ? "Connect a web app" : "Connected web app", systemImage: "qrcode.viewfinder")
-                    .font(.caption).frame(maxWidth: .infinity).padding(.vertical, 10)
+            WalletHeader(state: state, openWallet: { destination = .wallet }) {
+                scanOnOpen = true
+                connection.selectedID = nil
+                connection.isPresented = true
             }
+            Button { scanOnOpen = false; connection.openApps() } label: {
+                HStack(spacing: 12) {
+                    if let site = connection.connectedApps.first?.connected {
+                        ConnectAppIdentity(site: site, compact: true)
+                    } else {
+                        Label("Connected apps", systemImage: "app.connected.to.app.below.fill")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                    }
+                    if connection.pendingCount > 0 {
+                        Text("\(connection.pendingCount) pending").font(.caption.bold()).foregroundStyle(Color.zeniAccent)
+                    } else if connection.connectedApps.count > 1 {
+                        Text("\(connection.connectedApps.count) apps").font(.caption).foregroundStyle(Color.zeniMuted)
+                    }
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(Color.zeniMuted)
+                }.padding(12).zeniSurface(radius: 14)
+            }.buttonStyle(.plain).padding(.horizontal, 20).padding(.bottom, 12)
             Rectangle().fill(Color.zeniBorder).frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -53,17 +71,27 @@ public struct PortfolioView: View {
         .foregroundStyle(.white)
         .tint(.zeniAccent)
         .preferredColorScheme(.dark)
-        .sheet(item: $destination) { selection in
+        .sheet(item: $destination, onDismiss: {
+            connection.presentationBlocked = false
+            connection.presentNextPending()
+        }) { selection in
             WalletTransactionSheet(state: state, destination: selection)
         }
-        .sheet(isPresented: $connection.isPresented) { ZeniConnectView(state: state, controller: connection) }
+        .sheet(isPresented: $connection.isPresented, onDismiss: { scanOnOpen = false }) {
+            ZeniConnectView(state: state, controller: connection, startScanning: scanOnOpen)
+        }
         .task { await state.refresh() }
+        .onChange(of: destination) { connection.presentationBlocked = destination != nil }
+        .onChange(of: state.isTransacting) {
+            if !state.isTransacting { connection.presentNextPending() }
+        }
     }
 }
 
 private struct WalletHeader: View {
     let state: AppState
     let openWallet: () -> Void
+    let openScanner: () -> Void
     @State private var copied = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -84,7 +112,7 @@ private struct WalletHeader: View {
                     } else { openWallet() }
                 } label: {
                     HStack(spacing: 6) {
-                        Circle().fill(state.isUnlocked ? Color.zeniGreen : Color.zeniMuted).frame(width: 6, height: 6)
+                        Circle().fill(state.hasWallet ? Color.zeniGreen : Color.zeniMuted).frame(width: 6, height: 6)
                         if let address = state.activeAccount?.evmAddress {
                             Text(copied ? "Copied!" : "\(address.prefix(6))…\(address.suffix(4))")
                             Image(systemName: copied ? "checkmark" : "square.on.square")
@@ -109,24 +137,21 @@ private struct WalletHeader: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 10) {
-                Label(state.isUnlocked ? "PQC Ready" : "PQC Wallet", systemImage: "checkmark.shield")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(Color.zeniAccent)
-                    .padding(.horizontal, 8).padding(.vertical, 6)
-                    .background(Color.zeniAccent.opacity(0.12), in: Capsule())
-                    .overlay { Capsule().stroke(Color.zeniAccent.opacity(0.3), lineWidth: 1) }
-                Button {
-                    if state.isUnlocked { state.lock() } else { openWallet() }
-                } label: {
-                    Image(systemName: "lock").font(.subheadline)
-                        .frame(width: 44, height: 44).zeniSurface(radius: 12)
-                }
-                .buttonStyle(.plain)
-                .disabled(state.isTransacting)
-                .accessibilityLabel(state.isUnlocked ? "Lock wallet" : "Unlock wallet")
+            Button(action: openScanner) {
+                Image(systemName: "qrcode.viewfinder")
+                    .font(.system(size: 22, weight: .medium))
+                    .frame(width: 48, height: 48)
+                    .zeniSurface(radius: 14)
+                    .overlay(alignment: .topTrailing) {
+                        if !state.connect.connectedApps.isEmpty {
+                            Circle().fill(Color.zeniGreen).frame(width: 8, height: 8).padding(5)
+                        }
+                    }
             }
-            .fixedSize(horizontal: true, vertical: false)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Scan QR to connect a web app")
+            .accessibilityValue(state.connect.connectedApps.isEmpty ? "Not connected" : "\(state.connect.connectedApps.count) apps connected")
+
         }
         .padding(.horizontal, 20).padding(.vertical, 12)
     }
@@ -139,7 +164,8 @@ private struct WalletHome: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            WalletBalanceHero(isUnlocked: state.isUnlocked)
+            WalletBalanceHero(balance: state.tokens.first(where: { $0.symbol == "QOR" })?.balance ?? "0",
+                              hasLoadedBalances: state.hasLoadedBalances, isRefreshing: state.isRefreshing)
             let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
             layout {
                 WalletActionTile(title: "Send", icon: "arrow.up.right") { open(.send) }
@@ -155,23 +181,27 @@ private struct WalletHome: View {
     }
 }
 
-private struct WalletBalanceHero: View {
-    let isUnlocked: Bool
+struct WalletBalanceHero: View {
+    let balance: String
+    let hasLoadedBalances: Bool
+    let isRefreshing: Bool
     @ScaledMetric(relativeTo: .largeTitle) private var balanceSize = 42
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Diana test assets have no reliable USD price feed.
-            Text("$—").font(.system(size: balanceSize, weight: .bold)).tracking(-1.5)
-                .accessibilityLabel("Portfolio value unavailable")
+            Text("QOR Balance").font(.caption).foregroundStyle(Color.zeniMuted)
+            Text(hasLoadedBalances ? balance : "—")
+                .font(.system(size: balanceSize, weight: .bold)).tracking(-1.5)
+                .minimumScaleFactor(0.5).lineLimit(1)
+                .accessibilityLabel(hasLoadedBalances ? "QOR balance " + balance : "QOR balance not loaded")
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) {
-                    Text(isUnlocked ? "Testnet assets" : "Unlock to view balances").foregroundStyle(Color.zeniGreen)
+                    Text(isRefreshing ? "Refreshing balances…" : "Diana Testnet").foregroundStyle(Color.zeniGreen)
                     Text("·").foregroundStyle(Color.zeniMuted)
                     Label("ML-DSA-87", systemImage: "sparkles").foregroundStyle(Color.zeniMuted)
                 }
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(isUnlocked ? "Testnet assets" : "Unlock to view balances").foregroundStyle(Color.zeniGreen)
+                    Text(isRefreshing ? "Refreshing balances…" : "Diana Testnet").foregroundStyle(Color.zeniGreen)
                     Label("ML-DSA-87", systemImage: "sparkles").foregroundStyle(Color.zeniMuted)
                 }
             }.font(.system(.caption, design: .monospaced))
@@ -264,13 +294,13 @@ private struct WalletAssets: View {
                         Image(systemName: "arrow.clockwise").font(.subheadline)
                             .foregroundStyle(state.isRefreshing ? Color.zeniAccent : Color.zeniMuted)
                             .frame(width: 44, height: 44)
-                    }.buttonStyle(.plain).disabled(state.isRefreshing || !state.isUnlocked)
+                    }.buttonStyle(.plain).disabled(state.isRefreshing || !state.hasWallet)
                         .accessibilityLabel("Refresh balances")
                 }
                 VStack(spacing: 0) {
                     ForEach(state.tokens) { token in
                         Button { open(token.symbol == "QOR" ? .send : .swap) } label: {
-                            WalletTokenRow(token: token, isUnlocked: state.isUnlocked)
+                            WalletTokenRow(token: token, hasLoadedBalances: state.hasLoadedBalances)
                         }.buttonStyle(.plain)
                     }
                 }
@@ -289,7 +319,7 @@ private struct WalletAssets: View {
 
 private struct WalletTokenRow: View {
     let token: TokenItem
-    let isUnlocked: Bool
+    let hasLoadedBalances: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -308,7 +338,7 @@ private struct WalletTokenRow: View {
             }
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 5) {
-                Text(isUnlocked ? token.balance : "—").font(.system(.subheadline, design: .monospaced).weight(.semibold))
+                Text(hasLoadedBalances ? token.balance : "—").font(.system(.subheadline, design: .monospaced).weight(.semibold))
                 Text(token.symbol).font(.system(.caption2, design: .monospaced)).foregroundStyle(Color.zeniMuted)
             }
         }
@@ -363,12 +393,8 @@ private struct WalletSettings: View {
             Button(action: openWallet) {
                 Label(state.hasWallet ? "Manage Wallet" : "Import Wallet", systemImage: "wallet.pass")
             }.buttonStyle(ZeniPrimaryButtonStyle())
-            if state.isUnlocked {
-                Button { state.lock() } label: {
-                    Label("Lock Zeni Wallet", systemImage: "lock")
-                        .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 50).zeniSurface()
-                }.buttonStyle(.plain).disabled(state.isTransacting)
-            }
+            Label("Authenticate when signing", systemImage: "faceid")
+                .font(.subheadline).foregroundStyle(Color.zeniMuted)
             if let url = URL(string: "https://dashboard.qorechain.io/explorer") {
                 Link(destination: url) {
                     Label("Open QoreChain Explorer", systemImage: "arrow.up.right.square").font(.subheadline)

@@ -48,6 +48,8 @@ public final class KeychainManager {
 
     public static func loadMasterEntropy(prompt: String = "Authenticate to unlock your Zeni wallet") throws -> Data {
         let context = LAContext()
+        context.touchIDAuthenticationAllowableReuseDuration = 0
+        defer { context.invalidate() }
         context.localizedReason = prompt
 
         let query: [String: Any] = [
