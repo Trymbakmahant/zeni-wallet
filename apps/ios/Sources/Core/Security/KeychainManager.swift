@@ -15,7 +15,8 @@ public final class KeychainManager {
             [.biometryCurrentSet],
             &error
         ) else {
-            throw error!.takeRetainedValue() as Error
+            if let error { throw error.takeRetainedValue() as Error }
+            throw NSError(domain: "ZeniKeychain", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not create biometric protection."])
         }
         return accessControl
     }
@@ -31,8 +32,15 @@ public final class KeychainManager {
             kSecAttrAccessControl as String: accessControl
         ]
 
-        SecItemDelete(query as CFDictionary)
+        // Import must never delete an existing wallet if saving a replacement fails.
         let status = SecItemAdd(query as CFDictionary, nil)
+        if status == errSecDuplicateItem {
+            let existing = try loadMasterEntropy(prompt: "Authenticate to restore your saved wallet")
+            guard existing == data else {
+                throw NSError(domain: "ZeniKeychain", code: -2, userInfo: [NSLocalizedDescriptionKey: "A different wallet is already saved on this device. Import its original recovery phrase; the saved wallet has not been replaced."])
+            }
+            return
+        }
         guard status == errSecSuccess else {
             throw NSError(domain: NSOSStatusErrorDomain, code: Int(status), userInfo: nil)
         }
