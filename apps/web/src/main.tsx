@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from "react";
 import { MotionConfig } from "framer-motion";
 import ReactDOM from "react-dom/client";
+import { PageLoader } from "./components/PageLoader";
 import "./index.css";
 
 const App = lazy(() => import("./App.tsx").then(module => ({ default: module.App })));
@@ -10,7 +11,7 @@ const Page = window.location.pathname.replace(/\/+$/, "") === "/docs" ? DocsPage
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <MotionConfig reducedMotion="user">
-      <Suspense fallback={<div role="status" style={{ padding: "2rem" }}>Loading Zeni…</div>}><Page /></Suspense>
+      <Suspense fallback={<PageLoader />}><Page /></Suspense>
     </MotionConfig>
   </React.StrictMode>
 );

@@ -1,0 +1,36 @@
+.zeni-page-loader {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: #fffaf5;
+  color: #121111;
+}
+
+.zeni-page-loader-coin { width: 112px; height: 112px; color: #ff2f00; }
+.zeni-page-loader-ring,
+.zeni-page-loader-square {
+  stroke-dasharray: 1;
+  animation: zeni-coin-trace 2.4s ease-in-out infinite;
+}
+.zeni-page-loader-square { animation-name: zeni-coin-center; }
+.zeni-page-loader-wordmark { margin-top: 18px; font-size: 32px; font-weight: 600; letter-spacing: -.06em; }
+.zeni-page-loader-label { margin-top: 10px; color: #756e68; font-size: 13px; }
+
+@keyframes zeni-coin-trace {
+  0%, 8% { stroke-dashoffset: 1; opacity: .35; }
+  48%, 72% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -1; opacity: .35; }
+}
+@keyframes zeni-coin-center {
+  0%, 24% { stroke-dashoffset: 1; opacity: .35; }
+  58%, 72% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -1; opacity: .35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zeni-page-loader-ring,
+  .zeni-page-loader-square { animation: none; stroke-dashoffset: 0; }
+}
