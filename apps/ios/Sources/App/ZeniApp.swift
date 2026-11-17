@@ -6,7 +6,7 @@ import UIKit
 @main
 public struct ZeniApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var appState = AppState()
+    @State private var appState = AppState()
     @State private var isPrivacyMaskActive: Bool = false
 
     public init() {}
@@ -21,9 +21,7 @@ public struct ZeniApp: App {
                     ZStack {
                         Color.zeniBackground.ignoresSafeArea()
                         VStack(spacing: 12) {
-                            Text("銭")
-                                .font(.system(size: 48, weight: .bold))
-                                .foregroundColor(.zeniPurple)
+                            ZeniBrandMark()
                             Text("Zeni")
                                 .font(.headline)
                                 .foregroundColor(.white)
@@ -35,6 +33,7 @@ public struct ZeniApp: App {
             .onChange(of: scenePhase) {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     self.isPrivacyMaskActive = (scenePhase != .active)
+                    if scenePhase == .background { appState.lock() }
                 }
             }
         }

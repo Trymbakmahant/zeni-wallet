@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,6 +11,9 @@
 		AA0100022CE0000100000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200022CE0000100000001 /* AppState.swift */; };
 		AA0100082CE0000100000001 /* PortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200082CE0000100000001 /* PortfolioView.swift */; };
 		AA0100092CE0000100000001 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200092CE0000100000001 /* Colors.swift */; };
+		F267A3D730AB83B700CBABCC /* WalletEngine.html in Resources */ = {isa = PBXBuildFile; fileRef = F267A3D630AB83B700CBABCC /* WalletEngine.html */; };
+		F267A3D930AB841E00CBABCC /* WalletTransactionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */; };
+		F267A3DB30AB853C00CBABCC /* TransactionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267A3DA30AB853C00CBABCC /* TransactionViews.swift */; };
 		F2AE353930A995D200FE1DD4 /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353830A995D200FE1DD4 /* KeychainManager.swift */; };
 		F2AE353B30A995D200FE1DD4 /* SecureData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353A30A995D200FE1DD4 /* SecureData.swift */; };
 		F2AE353D30A995D300FE1DD4 /* KeyDerivation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2AE353C30A995D300FE1DD4 /* KeyDerivation.swift */; };
@@ -25,6 +28,10 @@
 		AA0200082CE0000100000001 /* PortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
 		AA0200092CE0000100000001 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		AA0200102CE0000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F267A3D630AB83B700CBABCC /* WalletEngine.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = WalletEngine.html; sourceTree = "<group>"; };
+		F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletTransactionEngine.swift; sourceTree = "<group>"; };
+		F267A3DA30AB853C00CBABCC /* TransactionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionViews.swift; sourceTree = "<group>"; };
+		F267A3E030AB880B00CBABCC /* ZeniTransactionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZeniTransactionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F2AE353830A995D200FE1DD4 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		F2AE353A30A995D200FE1DD4 /* SecureData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureData.swift; sourceTree = "<group>"; };
 		F2AE353C30A995D300FE1DD4 /* KeyDerivation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyDerivation.swift; sourceTree = "<group>"; };
@@ -32,8 +39,19 @@
 		F2AE354030A995D300FE1DD4 /* RPCClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RPCClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F267A3E130AB880B00CBABCC /* ZeniTransactionTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = ZeniTransactionTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		AA0300012CE0000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F267A3DD30AB880B00CBABCC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -47,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0400022CE0000100000001 /* Sources */,
+				F267A3E130AB880B00CBABCC /* ZeniTransactionTests */,
 				AA0400032CE0000100000001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -67,6 +86,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000012CE0000100000001 /* Zeni.app */,
+				F267A3E030AB880B00CBABCC /* ZeniTransactionTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -76,6 +96,7 @@
 			children = (
 				AA0200012CE0000100000001 /* ZeniApp.swift */,
 				AA0200022CE0000100000001 /* AppState.swift */,
+				F267A3DA30AB853C00CBABCC /* TransactionViews.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -128,6 +149,8 @@
 			isa = PBXGroup;
 			children = (
 				F2AE354030A995D300FE1DD4 /* RPCClient.swift */,
+				F267A3D630AB83B700CBABCC /* WalletEngine.html */,
+				F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
@@ -152,6 +175,28 @@
 			productReference = AA0000012CE0000100000001 /* Zeni.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F267A3DF30AB880B00CBABCC /* ZeniTransactionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F267A3E430AB880B00CBABCC /* Build configuration list for PBXNativeTarget "ZeniTransactionTests" */;
+			buildPhases = (
+				F267A3DC30AB880B00CBABCC /* Sources */,
+				F267A3DD30AB880B00CBABCC /* Frameworks */,
+				F267A3DE30AB880B00CBABCC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F267A3E130AB880B00CBABCC /* ZeniTransactionTests */,
+			);
+			name = ZeniTransactionTests;
+			packageProductDependencies = (
+			);
+			productName = ZeniTransactionTests;
+			productReference = F267A3E030AB880B00CBABCC /* ZeniTransactionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -159,10 +204,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2720;
 				LastUpgradeCheck = 1530;
 				TargetAttributes = {
 					AA0500012CE0000100000001 = {
 						CreatedOnToolsVersion = 15.3;
+					};
+					F267A3DF30AB880B00CBABCC = {
+						CreatedOnToolsVersion = 27.2;
 					};
 				};
 			};
@@ -180,12 +229,21 @@
 			projectRoot = "";
 			targets = (
 				AA0500012CE0000100000001 /* Zeni */,
+				F267A3DF30AB880B00CBABCC /* ZeniTransactionTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		AA0800012CE0000100000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F267A3D730AB83B700CBABCC /* WalletEngine.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F267A3DE30AB880B00CBABCC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -203,11 +261,20 @@
 				AA0100012CE0000100000001 /* ZeniApp.swift in Sources */,
 				AA0100022CE0000100000001 /* AppState.swift in Sources */,
 				F2AE353D30A995D300FE1DD4 /* KeyDerivation.swift in Sources */,
+				F267A3DB30AB853C00CBABCC /* TransactionViews.swift in Sources */,
 				F2AE353F30A995D300FE1DD4 /* HybridSigner.swift in Sources */,
+				F267A3D930AB841E00CBABCC /* WalletTransactionEngine.swift in Sources */,
 				AA0100082CE0000100000001 /* PortfolioView.swift in Sources */,
 				AA0100092CE0000100000001 /* Colors.swift in Sources */,
 				F2AE353B30A995D200FE1DD4 /* SecureData.swift in Sources */,
 				F2AE353930A995D200FE1DD4 /* KeychainManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F267A3DC30AB880B00CBABCC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -295,6 +362,158 @@
 			};
 			name = Release;
 		};
+		F267A3E530AB880B00CBABCC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/Zeni.app/Zeni.debug.dylib";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.7;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.qorechain.ZeniTransactionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Zeni.app/Zeni";
+				XROS_DEPLOYMENT_TARGET = 27.2;
+			};
+			name = Debug;
+		};
+		F267A3E630AB880B00CBABCC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/Zeni.app/Zeni.debug.dylib";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.7;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = io.qorechain.ZeniTransactionTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Zeni.app/Zeni";
+				XROS_DEPLOYMENT_TARGET = 27.2;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -312,6 +531,15 @@
 			buildConfigurations = (
 				AA0A00032CE0000100000001 /* Debug */,
 				AA0A00042CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F267A3E430AB880B00CBABCC /* Build configuration list for PBXNativeTarget "ZeniTransactionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F267A3E530AB880B00CBABCC /* Debug */,
+				F267A3E630AB880B00CBABCC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
