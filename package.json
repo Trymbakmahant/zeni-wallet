@@ -2,7 +2,7 @@
   "name": "zeni-wallet-monorepo",
   "version": "0.1.0",
   "private": true,
-  "description": "Zeni — The Post-Quantum Smart Wallet for QoreChain",
+  "description": "Zeni \u2014 The Post-Quantum Smart Wallet for QoreChain",
   "license": "MIT",
   "scripts": {
     "build": "pnpm -r run build",
@@ -10,7 +10,12 @@
     "dev:web": "pnpm --filter @zeni/web dev",
     "build:contracts": "cd packages/contracts && forge build",
     "test:contracts": "cd packages/contracts && forge test",
-    "lint": "pnpm -r run lint"
+    "zip:ext": "pnpm --filter @zeni/core build && pnpm --filter @zeni/extension build && cd apps/extension/dist && zip -r ../../../zeni-wallet-extension.zip . && cd ../../..",
+    "lint": "pnpm -r run lint",
+    "build:connect": "pnpm --filter @zeni/connect-protocol build && pnpm --filter @zeni/connect build && pnpm --filter @zeni/react build && pnpm --filter @zeni/connect-demo build",
+    "dev:relay": "pnpm --filter @zeni/relay start",
+    "dev:connect": "pnpm --filter @zeni/connect-demo dev",
+    "test:connect": "pnpm --filter @zeni/core test && pnpm --filter @zeni/connect-protocol build && pnpm --filter @zeni/connect build && pnpm --filter @zeni/relay test && pnpm --filter @zeni/connect test"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

@@ -1,0 +1,94 @@
+# Zeni Connect v1
+
+This implementation connects an integrated web app to the native Zeni iOS wallet using an encrypted QR/deep-link session and a self-hosted relay. It is a Zeni-specific protocol, not a WalletConnect-compatible relay. It is a testnet beta implementation, not a production security certification.
+
+## What is included
+
+- `apps/relay`: standalone Node HTTP service, bounded encrypted mailboxes, one-time QR credential rotation, revocation, expiry, CORS/origin admission, Docker Compose/Caddy HTTPS deployment.
+- `packages/connect-protocol`: typed wire format and WebCrypto AES-GCM implementation.
+- `packages/connect`: JS/TS provider, QR event, account connection, request/response flow, error codes, cancellation, and a wallet adapter.
+- `packages/react`: `ZeniConnectProvider`, `useZeni`, and `ZeniConnectButton` with local QR rendering and an iOS deep link.
+- `apps/connect-demo`: working React app that requests a message signature, verifies it locally, and requests a QOR transfer.
+- iOS: Connect entry on the home screen, camera scanning, pasted/deep-link pairing, site approval, message/transfer review, local signing, result delivery, and disconnect.
+
+Supported methods are account/chain queries, `eth_requestAccounts`, `personal_sign` for readable UTF-8 messages, and `eth_sendTransaction` for QOR transfers to ordinary wallet addresses on Diana (9800). Every signing request needs explicit approval on the phone. Requests with calldata, unsupported chain/account, custom gas/nonce, invalid amounts, or hidden/binary message contents are rejected. Message signatures are standard EIP-191 ECDSA. Existing QoreChain registration/authorization and fee limits apply to transfers.
+
+This work does not add a gas-sponsoring transaction relayer, chain history indexer, Android app, push service, contract-call signing, WalletConnect interoperability, or extension signing support.
+
+## Run locally
+
+From the repository root, using Node 22+ and pnpm:
+
+```sh
+pnpm install
+pnpm build:connect
+pnpm dev:relay
+```
+
+In a second terminal:
+
+```sh
+pnpm dev:connect
+```
+
+Open `http://localhost:5174`. The local relay is `http://localhost:8787`.
+
+For iOS, regenerate the bundled engine after any shared signing changes:
+
+```sh
+node apps/ios/Scripts/build-wallet-engine.mjs
+```
+
+Build and run the Zeni target in Xcode. Import a disposable testnet wallet or unlock an existing testnet wallet. Tap **Connect a web app**, then scan the QR from the demo, or paste its `zeni://connect#...` link. The same-device **Open Zeni** link invokes the registered URL scheme. After connecting, the React button provides **Open Zeni to approve requests** (`zeni://request`) so mobile-browser users can return to the existing wallet session.
+
+An iOS Simulator shares access to the Mac's localhost; the simulator cannot use the physical-camera scanner, so use the deep link or pasted URI. Physical phones need a publicly reachable **HTTPS** relay. Set `VITE_ZENI_RELAY_URL=https://relay.your-domain.com` when starting/building the demo and follow `apps/relay/README.md` for Docker deployment. Release iOS builds reject plaintext HTTP; Debug allows localhost only. Do not weaken this for a public deployment.
+
+Approve the connection, then request a signature or transfer from the website. Keep Zeni foregrounded during requests. Unlocking is required again after the app backgrounds. A returned transfer hash means submission, not confirmation; use the explorer and wallet activity for receipt status.
+
+## Integrate/distribute the SDK
+
+See `packages/connect/README.md` for plain JavaScript/TypeScript and `packages/react/README.md` for React examples. The packages are not published to npm. They work through workspace dependencies in this repository. To distribute local tarballs:
+
+```sh
+pnpm build:connect
+pnpm --dir packages/connect-protocol pack --pack-destination ../../artifacts/connect-sdk
+pnpm --dir packages/connect pack --pack-destination ../../artifacts/connect-sdk
+pnpm --dir packages/react pack --pack-destination ../../artifacts/connect-sdk
+```
+
+Install the protocol and provider tarballs together in a consuming app; include the React tarball for React bindings. `pnpm pack` converts workspace ranges into version ranges. Publishing the scoped packages to a registry and configuring a public relay/domain are separate owner actions; neither has been performed here.
+
+## Wire format
+
+The browser creates a relay session with its Origin and display name. The relay returns separate browser and wallet bearer credentials. The browser generates a 32-byte encryption key locally and builds:
+
+```text
+zeni://connect#v=1&relay=<encoded HTTPS origin>&session=<32 hex characters>&token=<wallet pairing token>&key=<32-byte base64url key>
+```
+
+Only the QR/deep link carries the encryption key. Never log the link or submit it to remote QR rendering/analytics. The wallet fetches site metadata, asks the user to connect, then exchanges its pairing credential for a new session credential. The original QR token is invalid after that exchange.
+
+Messages use AES-256-GCM, fresh 12-byte nonces, and UTF-8 JSON. Ciphertext includes the 16-byte tag at the end; all binary values use unpadded base64url. Authenticated additional data is exactly:
+
+```text
+zeni-connect:v1:<session ID>:<sender role dapp|wallet>:<frame UUID>
+```
+
+Frame schema: `{id, iv, ciphertext}`. Decrypted types: `approved`, `rejected`, `request`, `response`, `disconnect`. Request IDs, expiry, session/role binding, and single-use wallet review IDs prevent replay from becoming an additional signature. A relay can observe traffic metadata, drop/delay messages, or deny service; it cannot decrypt them without the QR key. Site Origin is reported by the relay, not independently domain-verified, and users must check it against the address bar.
+
+## Operational limits
+
+Sessions and credentials are memory-only. Relay restart, wallet termination, browser reload, or network failure may require reconnecting. Pairings last five minutes and approved sessions up to one hour. Requests last five minutes; wallet reviews last two minutes. Only one outstanding request per browser provider is allowed. The SDK never automatically re-signs a timed-out transaction. Check wallet activity before retrying.
+
+The included server/proxy is a bounded single-instance beta deployment. Horizontal scaling, persistence, push notifications, distributed rate limiting, domain verification, and production observability require further implementation and review. Camera permission, biometric approval on a physical device, and live funded testnet transfers must be verified before public rollout.
+
+## Validation
+
+- `pnpm test:connect`: core intent/signing tests plus relay and SDK round-trip tests. Network tests bind loopback only and never broadcast funds.
+- `pnpm build:connect`: protocol/provider/React TypeScript builds and production demo build.
+- With both local servers running: `pnpm --filter @zeni/connect-demo test:browser` launches a separate temporary Chrome profile, renders a QR, connects through the actual local relay, requests a real signature from a test wallet adapter, verifies it in the browser, and disconnects. Set `CHROME_BIN` for your Chrome executable outside macOS.
+
+Validation completed on 2026-11-17: 48 core tests, 3 relay tests, 4 SDK tests, 9 existing extension security tests, and 14 iOS simulator tests passed (78 total). The real Chrome QR/signature round trip passed. TypeScript/demo and iOS builds passed, package tarballs were created, relay `/healthz` returned OK, and Docker Compose configuration validated. No live blockchain transaction was sent.
+- Xcode Zeni tests include WebCrypto-to-CryptoKit ciphertext compatibility, altered-frame/direction rejection, actual local message signatures, single-use review enforcement, locking, and dApp transfer preparation/execution against mocked chain responses.
+
+The domain, TLS deployment, npm publication, physical-camera scan and live funded phone transaction are not claimed as completed by these automated tests.
