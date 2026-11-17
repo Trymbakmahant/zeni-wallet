@@ -1,10 +1,16 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
+import { MotionConfig } from "framer-motion";
 import ReactDOM from "react-dom/client";
-import { App } from "./App.tsx";
 import "./index.css";
+
+const App = lazy(() => import("./App.tsx").then(module => ({ default: module.App })));
+const DocsPage = lazy(() => import("./docs/DocsPage").then(module => ({ default: module.DocsPage })));
+const Page = window.location.pathname.replace(/\/+$/, "") === "/docs" ? DocsPage : App;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <MotionConfig reducedMotion="user">
+      <Suspense fallback={<div role="status" style={{ padding: "2rem" }}>Loading Zeni…</div>}><Page /></Suspense>
+    </MotionConfig>
   </React.StrictMode>
 );

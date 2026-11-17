@@ -8,7 +8,7 @@ JavaScript/TypeScript provider for **Zeni Connect v1**, the Zeni mobile wallet's
 import { ZeniProvider } from '@zeni/connect';
 
 const provider = new ZeniProvider({
-  relayUrl: 'https://relay.your-domain.com',
+  relayUrl: 'https://zeni-wallet.onrender.com',
   name: 'Your application',
 });
 
@@ -53,3 +53,5 @@ The relay sees IP addresses, site Origin/name, traffic timing, and ciphertext. T
 `ZeniWalletSession` is an adapter for wallet implementers and tests. Its `approve(account, handler)` callback must explicitly obtain user approval and independently validate each request before accessing a signer. A website must never hold a user's private key to implement this callback.
 
 See [the repository guide](../../docs/ZENI_CONNECT.md) for deployment and local demo instructions.
+
+The examples use Zeni’s hosted relay. Your web app’s exact origin must be added to its allowlist, or you can supply your own public HTTPS relay URL.

@@ -32,6 +32,7 @@ public final class AppState {
     private(set) var activity: [WalletActivityItem] = []
     var walletError: String?
 
+    @ObservationIgnored lazy var connect = ZeniConnectController(state: self)
     @ObservationIgnored private var engine: WalletTransactionEngine?
     @ObservationIgnored private var sessionVersion = 0
     @ObservationIgnored private var activityLoadError: Error?
@@ -142,6 +143,7 @@ public final class AppState {
         sessionVersion += 1
         isUnlocked = false
         engine?.lock()
+        connect.walletLocked()
     }
 
     func refresh() async {
@@ -204,6 +206,35 @@ public final class AppState {
             await refresh()
             throw error
         }
+    }
+
+    func prepareDapp(method: String, params: [Any]) async throws -> DappReview {
+        try requireUnlocked()
+        let version = sessionVersion
+        let runtime = try await transactionEngine()
+        let review: DappReview = try await runtime.call("prepareDapp", payload: ["method": method, "params": params])
+        guard version == sessionVersion else { throw CancellationError() }
+        return review
+    }
+
+    func executeDapp(review: DappReview) async throws -> String {
+        try requireUnlocked()
+        if review.kind == "transfer", let quote = review.quote {
+            let result = try await execute(quoteID: quote.id, isSwap: false)
+            guard result.stage == "transfer", result.status != "FAILED" else {
+                throw WalletEngineError.message(result.error ?? "Transfer did not complete. Check Activity before retrying.")
+            }
+            return result.hash
+        }
+        guard review.kind == "message", !isTransacting else { throw WalletEngineError.message("Unsupported request or wallet busy.") }
+        isTransacting = true
+        defer { isTransacting = false }
+        let version = sessionVersion
+        let runtime = try await transactionEngine()
+        guard version == sessionVersion else { throw CancellationError() }
+        let signature: String = try await runtime.call("signDappMessage", payload: ["reviewId": review.reviewId])
+        guard version == sessionVersion else { throw CancellationError() }
+        return signature
     }
 
     private func requireUnlocked() throws {

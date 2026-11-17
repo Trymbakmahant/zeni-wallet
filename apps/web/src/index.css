@@ -2,11 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scroll-behavior: smooth;
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 130px; }
+  body { margin: 0; background: #fffaf5; color: #121111; font-family: 'Figtree', 'Inter', sans-serif; }
+  ::selection { background: #ff2f00; color: white; }
+  button, a, input { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible, pre:focus-visible { outline: 3px solid #ff6b3d; outline-offset: 4px; }
+  button { cursor: pointer; }
+  footer a:hover { color: #ff2f00; }
 }
 
-body {
-  background-color: #0B0E14;
-  color: #FFFFFF;
+@layer components {
+  .section-space { @apply py-16 sm:py-20 px-5 sm:px-6; }
+  .section-title { @apply text-3xl sm:text-4xl md:text-5xl font-semibold tracking-[-0.04em] leading-[1.08]; }
+  .eyebrow { @apply text-[11px] sm:text-xs font-mono uppercase tracking-widest text-framer-orange font-bold; }
+  .framer-btn-orange { background: #ff2f00; border: 1px solid #ff2f01; border-radius: 14px; box-shadow: inset 0 2px 1px rgba(255,255,255,.5), inset 0 .6px .6px -1.25px rgba(255,255,255,.72), 0 14px 18px -8px rgba(255,47,0,.35); transition: transform .2s, box-shadow .2s, background .2s; }
+  .framer-btn-orange:hover { background: #ed2e03; transform: translateY(-1px); box-shadow: inset 0 2px 1px rgba(255,255,255,.6), 0 18px 22px -6px rgba(255,47,0,.45); }
+  .framer-btn-dark { background: #171717; border: 1px solid #292929; border-radius: 14px; box-shadow: inset 0 2px 1px rgba(255,255,255,.2), 0 10px 15px -5px rgba(0,0,0,.3); transition: transform .2s, background .2s, border-color .2s; }
+  .framer-btn-dark:hover { background: #1f1f1f; border-color: #383838; transform: translateY(-1px); }
+  .zeni-logo { @apply w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0; background: linear-gradient(35deg,#ff2f00,#ff6b3d); box-shadow: 0 0 12px rgba(255,47,0,.3); }
+  .zeni-logo-small { @apply w-6 h-6; }
+  .testnet-banner { @apply sticky top-0 z-50 w-full bg-framer-dark1 text-white/80 font-mono text-[10px] lg:text-[11px] py-2 px-4 border-b border-white/10 text-center; }
+  .testnet-pill { @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold border border-emerald-500/30; }
+  .status-dot { @apply w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0; }
+  .floating-header { @apply fixed top-14 left-1/2 -translate-x-1/2 z-40 w-[94%] sm:w-[92%] max-w-[940px]; }
+  .nav-capsule { @apply bg-[#171717]/95 backdrop-blur-xl border border-white/10 rounded-full px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3; box-shadow: 0 20px 40px -15px rgba(0,0,0,.5); }
+  .bg-grid-lines { background-size: 40px 40px; background-image: linear-gradient(to right,rgba(0,0,0,.03) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,.03) 1px,transparent 1px); }
+  .hero-glow { position: absolute; pointer-events: none; top: 80px; left: 50%; transform: translateX(-50%); width: min(900px,100%); height: 650px; background: radial-gradient(ellipse,rgba(255,122,77,.16),transparent 65%); }
+  .hero-showcase { @apply relative mt-14 w-full max-w-5xl mx-auto flex flex-col items-center; }
+  .feature-badges { display: contents; }
+  .dashed-badge { border: 1px dashed rgba(33,33,33,.16); background: rgba(255,255,255,.8); backdrop-filter: blur(10px); transition: border-color .25s, background .25s; }
+  .dashed-badge:hover { border-color: #ff2f00; background: rgba(255,255,255,.98); }
+  .feature-badge { @apply absolute z-20 px-3 lg:px-4 py-3 rounded-2xl flex items-center gap-2 lg:gap-3 shadow-lg; }
+  .feature-badge-0 { left: -10px; top: 75px; }
+  .feature-badge-1 { left: -25px; top: 270px; }
+  .feature-badge-2 { left: -5px; bottom: 85px; }
+  .feature-badge-3 { right: -10px; top: 75px; }
+  .feature-badge-4 { right: -25px; top: 270px; }
+  .feature-badge-5 { right: -5px; bottom: 85px; }
+  .phone-frame { position: relative; width: 390px; max-width: 100%; z-index: 10; border-radius: 54px; padding: 10px; background: linear-gradient(#3a3938,#1e1d1c,#2e2d2b); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 35px 80px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.15),inset 0 1px 1px rgba(255,255,255,.4); }
+  .phone-bezel { border-radius: 45px; padding: 3px; background: black; overflow: hidden; }
+  .phone-screen { border-radius: 42px; background: linear-gradient(#0c0c0d,#151414); overflow: hidden; color: white; border: 1px solid rgba(255,255,255,.05); }
+  .phone-button { position: absolute; left: -4px; width: 3px; border-radius: 2px 0 0 2px; background: linear-gradient(to right,#2c2b2a,#454341); }
+  .phone-button-one { top: 115px; height: 28px; }
+  .phone-button-two { top: 158px; height: 52px; }
+  .phone-button-three { top: 222px; height: 52px; }
+  .phone-button-right { left: auto; right: -4px; top: 165px; height: 68px; transform: rotate(180deg); }
+  .phone-status { display: flex; align-items: center; justify-content: space-between; gap: 5px; padding: 12px 20px 8px; background: #0c0c0d; }
+  .dynamic-island { @apply flex items-center justify-center gap-2 bg-black rounded-full h-8 px-3 border border-white/5 text-[9px] font-mono text-emerald-400; box-shadow: 0 2px 12px rgba(0,0,0,.8); }
+  .camera-lens { width: 9px; height: 9px; border-radius: 100%; background: radial-gradient(circle,#356094,#08080a 65%); border: 1px solid #17304c; }
+  .battery { width: 17px; height: 9px; border: 1px solid rgba(255,255,255,.8); border-radius: 3px; padding: 1px; background: #34d399; background-clip: content-box; }
+  .phone-action { @apply flex flex-col items-center gap-1.5 py-2 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-[10px]; transition: background .2s; }
+  .phone-action-selected { @apply border-framer-orange/50 bg-framer-orange/10; }
+  .phone-operation { @apply p-3.5 rounded-2xl bg-framer-dark1 border border-framer-orange/40 relative shadow-md; min-height: 139px; }
+  .browser-window { @apply bg-framer-dark1 rounded-[28px] sm:rounded-[36px] p-4 border border-framer-border shadow-2xl text-white min-w-0; }
+  .dark-panel { @apply bg-framer-dark2 rounded-2xl border border-white/5 p-3 sm:p-4; }
+  .mini-panel { @apply p-3 rounded-xl bg-white/5 border border-white/5; }
+  .detail-row { @apply flex justify-between items-start gap-3 text-[11px] sm:text-xs; }
+  .detail-row > span { @apply text-white/55; }
+  .detail-row > strong { @apply font-mono font-medium text-right; overflow-wrap: anywhere; }
+  .ecosystem-card { @apply p-4 sm:p-5 rounded-2xl bg-white border border-framer-dark1/10 shadow-sm flex flex-col items-center text-center justify-center gap-2; }
+  .download-card { @apply p-7 sm:p-14 rounded-[36px] bg-framer-dark1 text-white border border-framer-border text-center relative overflow-hidden shadow-2xl; }
+  .download-card::before { content: ''; position: absolute; right: -80px; bottom: -80px; width: 320px; height: 320px; background: rgba(255,47,0,.16); border-radius: 50%; filter: blur(65px); pointer-events: none; }
+  .skip-link { position: fixed; top: -100px; left: 16px; z-index: 100; background: white; color: #121111; padding: 12px 20px; border-radius: 8px; }
+  .skip-link:focus { top: 12px; }
+}
+
+@media (max-width: 1023px) {
+  .feature-badges { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; order: 2; width: 100%; margin-top: 48px; }
+  .feature-badge { position: static; transform: none; padding: 12px; box-shadow: 0 5px 15px rgba(0,0,0,.04); }
+  .feature-badge > div:last-child { min-width: 0; }
+  .feature-badge-3 { order: 1; }
+}
+@media (max-width: 639px) {
+  .feature-badges { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .feature-badge { flex-direction: column; align-items: flex-start; gap: 9px; }
+  .phone-frame { width: 365px; }
+  .phone-status { padding-left: 16px; padding-right: 16px; }
+  .dynamic-island { gap: 5px; padding-left: 8px; padding-right: 8px; font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Motion transforms live on separate layers so scroll, tilt, and floating never compete. */
+.phone-depth { position: relative; z-index: 10; width: 390px; max-width: 100%; perspective: 1400px; }
+.phone-float, .phone-tilt { width: 100%; position: relative; }
+.phone-tilt { transform-style: preserve-3d; }
+.phone-depth .phone-frame { width: 100%; }
+.phone-reflection { position: absolute; z-index: 11; inset: 12px; pointer-events: none; border-radius: 44px; background-image: radial-gradient(ellipse at center,rgba(255,255,255,.13),transparent 65%); background-size: 170% 170%; mix-blend-mode: screen; }
+.scroll-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 60; background: linear-gradient(90deg,#ff2f00,#ff956c); transform-origin: left; pointer-events: none; }
+.framer-btn-orange:active, .framer-btn-dark:active { transform: translateY(1px) scale(.98); }
+@media (max-width: 639px) { .phone-depth { width: 365px; } }
+@media (prefers-reduced-motion: reduce) {
+  .framer-btn-orange:hover, .framer-btn-dark:hover,
+  .framer-btn-orange:active, .framer-btn-dark:active { transform: none; }
 }

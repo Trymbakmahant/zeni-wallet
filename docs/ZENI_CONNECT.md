@@ -15,6 +15,14 @@ Supported methods are account/chain queries, `eth_requestAccounts`, `personal_si
 
 This work does not add a gas-sponsoring transaction relayer, chain history indexer, Android app, push service, contract-call signing, WalletConnect interoperability, or extension signing support.
 
+## Hosted endpoints
+
+- Connect demo: https://zeni-connect-demo.vercel.app
+- Relay origin: https://zeni-wallet.onrender.com
+- Health endpoint: https://zeni-wallet.onrender.com/healthz
+
+Use the relay origin as `relayUrl` in the SDK. The demo uses it by default in production builds; `VITE_ZENI_RELAY_URL` overrides that default. Local development still defaults to `http://localhost:8787`. Each web app’s exact origin must be in the relay’s `ALLOWED_ORIGINS` allowlist.
+
 ## Run locally
 
 From the repository root, using Node 22+ and pnpm:
@@ -41,7 +49,7 @@ node apps/ios/Scripts/build-wallet-engine.mjs
 
 Build and run the Zeni target in Xcode. Import a disposable testnet wallet or unlock an existing testnet wallet. Tap **Connect a web app**, then scan the QR from the demo, or paste its `zeni://connect#...` link. The same-device **Open Zeni** link invokes the registered URL scheme. After connecting, the React button provides **Open Zeni to approve requests** (`zeni://request`) so mobile-browser users can return to the existing wallet session.
 
-An iOS Simulator shares access to the Mac's localhost; the simulator cannot use the physical-camera scanner, so use the deep link or pasted URI. Physical phones need a publicly reachable **HTTPS** relay. Set `VITE_ZENI_RELAY_URL=https://relay.your-domain.com` when starting/building the demo and follow `apps/relay/README.md` for Docker deployment. Release iOS builds reject plaintext HTTP; Debug allows localhost only. Do not weaken this for a public deployment.
+An iOS Simulator shares access to the Mac's localhost; the simulator cannot use the physical-camera scanner, so use the deep link or pasted URI. Physical phones need a publicly reachable **HTTPS** relay. Set `VITE_ZENI_RELAY_URL=https://zeni-wallet.onrender.com` when starting/building the demo and follow `apps/relay/README.md` for Docker deployment. Release iOS builds reject plaintext HTTP; Debug allows localhost only. Do not weaken this for a public deployment.
 
 Approve the connection, then request a signature or transfer from the website. Keep Zeni foregrounded during requests. Unlocking is required again after the app backgrounds. A returned transfer hash means submission, not confirmation; use the explorer and wallet activity for receipt status.
 

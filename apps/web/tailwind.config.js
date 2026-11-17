@@ -4,13 +4,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        zeni: {
-          bg: "#0B0E14",
-          card: "#141824",
-          border: "#20283E",
-          purple: "#9939FF",
-          cyan: "#00F0FF",
+        framer: {
+          cream: "#fffaf5", dark1: "#121111", dark2: "#171717", dark3: "#0f0f0f",
+          border: "#292929", orange: "#ff2f00", orangeHover: "#e02a00",
         },
+      },
+      fontFamily: {
+        sans: ["Figtree", "Inter", "sans-serif"],
+        mono: ['"Geist Mono"', "monospace"],
+        inter: ["Inter", "sans-serif"],
       },
     },
   },

@@ -119,4 +119,22 @@ struct ZeniTransactionTests {
             #expect(error.localizedDescription.contains("fresh quote"))
         }
     }
+    @Test func dappTransferUsesTheReviewedNativeAuthorizationPath() async throws {
+        let (engine, chain) = try await fixture()
+        defer { engine.lock() }
+        let review: DappReview = try await engine.call("prepareDapp", payload: ["method": "eth_sendTransaction", "params": [[
+            "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "to": "0x4a6b5eed1b7f9ca98d3cb6b8aa593c3afe11b76a", "value": "0xde0b6b3a7640000", "chainId": "0x2648"
+        ]]])
+        #expect(review.kind == "transfer")
+        #expect(review.quote?.amount == "1.0")
+        #expect(chain.broadcastCount == 0)
+        engine.permitsBroadcast = true
+        let result: TransactionResult = try await engine.call("executeTransfer", payload: ["quoteId": review.reviewId])
+        #expect(result.stage == "transfer")
+        #expect(result.hash.hasPrefix("0x"))
+        #expect(chain.broadcastCount > 0)
+        #expect(chain.savedBeforeBroadcast)
+    }
+
 }

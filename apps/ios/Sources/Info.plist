@@ -22,6 +22,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Scan a Zeni connection QR code to approve requests from a web app.</string>
+	<key>CFBundleURLTypes</key>
+	<array><dict><key>CFBundleURLName</key><string>io.zeni.connect</string><key>CFBundleURLSchemes</key><array><string>zeni</string></array></dict></array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Zeni uses Face ID to securely authenticate and protect your post-quantum smart wallet keys.</string>
 	<key>UIApplicationSceneManifest</key>

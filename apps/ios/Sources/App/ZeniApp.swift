@@ -30,6 +30,11 @@ public struct ZeniApp: App {
                     .transition(.opacity)
                 }
             }
+            .onOpenURL { url in
+                guard url.scheme == "zeni" else { return }
+                if url.host == "request" { appState.connect.isPresented = true }
+                else if url.host == "connect" { Task { await appState.connect.pair(url.absoluteString) } }
+            }
             .onChange(of: scenePhase) {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     self.isPrivacyMaskActive = (scenePhase != .active)

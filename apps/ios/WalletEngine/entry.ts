@@ -1,3 +1,4 @@
+import { validateDappRequest } from '../../../packages/core/src/account/dapp';
 import { ethers } from 'ethers';
 import { deriveAccountKeys, derivePqcKeypair, isValidMnemonic, normalizeMnemonic } from '../../../packages/core/src/crypto/derivation';
 import { AmmSwapClient, swapReceivedAmount } from '../../../packages/core/src/rpc/amm';
@@ -28,6 +29,7 @@ let busy = false;
 let history: any[] = [];
 const quotes = new Map<string, { kind: string; quote: any }>();
 let transferContext: any = null;
+const messageReviews = new Map<string, { hex: string; expiresAt: number }>();
 
 function errorMessage(error: any): string {
   if (error instanceof NativeTxError) return error.message;
@@ -95,13 +97,13 @@ function remember(kind: string, quote: any) {
 async function invoke(method: string, payload: any) {
   try {
     if (method === 'restoreActivity') { history = payload; return true; }
-    if (method === 'lock') { epoch++; account = null; quotes.clear(); return true; }
+    if (method === 'lock') { epoch++; account = null; quotes.clear(); messageReviews.clear(); return true; }
     if (method === 'unlock') {
       if (busy) throw new Error('A transaction is still in progress.');
       const mnemonic = normalizeMnemonic(payload.mnemonic);
       if (!isValidMnemonic(mnemonic)) throw new Error('Enter a valid BIP-39 recovery phrase.');
       const next = deriveAccountKeys(mnemonic);
-      epoch++; quotes.clear(); account = next;
+      epoch++; quotes.clear(); messageReviews.clear(); account = next;
       const keypair = derivePqcKeypair(next);
       const pqcPublicKeyHex = ethers.hexlify(keypair.publicKey);
       keypair.secretKey.fill(0);
@@ -115,13 +117,34 @@ async function invoke(method: string, payload: any) {
       check(); return { bank, evmQor: ethers.formatEther(evm) };
     }
     if (busy) throw new Error('A transaction is already in progress.');
+    if (method === 'prepareDapp') {
+      const intent = validateDappRequest(payload.method, payload.params, active.classicalAddress);
+      if (intent.kind === 'message') {
+        const reviewId = crypto.randomUUID();
+        messageReviews.clear();
+        messageReviews.set(reviewId, { hex: intent.hex, expiresAt: Date.now() + 120000 });
+        return { kind: 'message', message: intent.text, reviewId };
+      }
+      await noPending(active); check();
+      const quote = await transfers.prepare(active, intent.to, intent.amount);
+      check(); remember('transfer', quote);
+      return { kind: 'transfer', quote, reviewId: quote.id };
+    }
+    if (method === 'signDappMessage') {
+      const review = messageReviews.get(payload.reviewId);
+      messageReviews.delete(payload.reviewId);
+      if (!review || review.expiresAt <= Date.now()) throw new Error('Message review expired. Review again.');
+      check();
+      const signature = await new ethers.Wallet(active.classicalPrivateKey).signMessage(ethers.getBytes(review.hex));
+      check(); return signature;
+    }
     if (method === 'prepareSwap') {
       await noPending(active); check();
       const quote = await swaps.prepareSwap(active, payload.tokenIn, payload.tokenOut, payload.amount, payload.slippageBps);
       check(); return remember('swap', quote);
     }
     if (method === 'prepareTransfer') {
-      if (payload.token !== 'QOR') throw new Error('Only QOR transfers are live. Faucet-token transfers in the extension are simulated.');
+      if (payload.token !== 'QOR') throw new Error('Only QOR transfers are supported in this release.');
       await noPending(active); check();
       const quote = await transfers.prepare(active, payload.recipient.trim(), payload.amount);
       check(); return remember('transfer', quote);

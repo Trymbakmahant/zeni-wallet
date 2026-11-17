@@ -21,8 +21,13 @@ public struct PortfolioView: View {
     public init(state: AppState) { self.state = state }
 
     public var body: some View {
+        @Bindable var connection = state.connect
         VStack(spacing: 0) {
             WalletHeader(state: state) { destination = .wallet }
+            Button { connection.isPresented = true } label: {
+                Label(connection.connected == nil ? "Connect a web app" : "Connected web app", systemImage: "qrcode.viewfinder")
+                    .font(.caption).frame(maxWidth: .infinity).padding(.vertical, 10)
+            }
             Rectangle().fill(Color.zeniBorder).frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
@@ -51,6 +56,7 @@ public struct PortfolioView: View {
         .sheet(item: $destination) { selection in
             WalletTransactionSheet(state: state, destination: selection)
         }
+        .sheet(isPresented: $connection.isPresented) { ZeniConnectView(state: state, controller: connection) }
         .task { await state.refresh() }
     }
 }

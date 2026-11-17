@@ -11,6 +11,9 @@
 		AA0100022CE0000100000001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200022CE0000100000001 /* AppState.swift */; };
 		AA0100082CE0000100000001 /* PortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200082CE0000100000001 /* PortfolioView.swift */; };
 		AA0100092CE0000100000001 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0200092CE0000100000001 /* Colors.swift */; };
+		CCBB00000000000000000000 /* ZeniConnectProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA00000000000000000000 /* ZeniConnectProtocol.swift */; };
+		CCBB00000000000000000001 /* ZeniConnectController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA00000000000000000001 /* ZeniConnectController.swift */; };
+		CCBB00000000000000000002 /* ZeniConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAA00000000000000000002 /* ZeniConnectView.swift */; };
 		F267A3D730AB83B700CBABCC /* WalletEngine.html in Resources */ = {isa = PBXBuildFile; fileRef = F267A3D630AB83B700CBABCC /* WalletEngine.html */; };
 		F267A3D930AB841E00CBABCC /* WalletTransactionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */; };
 		F267A3DB30AB853C00CBABCC /* TransactionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F267A3DA30AB853C00CBABCC /* TransactionViews.swift */; };
@@ -28,6 +31,9 @@
 		AA0200082CE0000100000001 /* PortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
 		AA0200092CE0000100000001 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		AA0200102CE0000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CCAA00000000000000000000 /* ZeniConnectProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniConnectProtocol.swift; sourceTree = "<group>"; };
+		CCAA00000000000000000001 /* ZeniConnectController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniConnectController.swift; sourceTree = "<group>"; };
+		CCAA00000000000000000002 /* ZeniConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZeniConnectView.swift; sourceTree = "<group>"; };
 		F267A3D630AB83B700CBABCC /* WalletEngine.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = WalletEngine.html; sourceTree = "<group>"; };
 		F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletTransactionEngine.swift; sourceTree = "<group>"; };
 		F267A3DA30AB853C00CBABCC /* TransactionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionViews.swift; sourceTree = "<group>"; };
@@ -97,6 +103,8 @@
 				AA0200012CE0000100000001 /* ZeniApp.swift */,
 				AA0200022CE0000100000001 /* AppState.swift */,
 				F267A3DA30AB853C00CBABCC /* TransactionViews.swift */,
+				CCAA00000000000000000002 /* ZeniConnectView.swift */,
+				CCAA00000000000000000001 /* ZeniConnectController.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -151,11 +159,19 @@
 				F2AE354030A995D300FE1DD4 /* RPCClient.swift */,
 				F267A3D630AB83B700CBABCC /* WalletEngine.html */,
 				F267A3D830AB841E00CBABCC /* WalletTransactionEngine.swift */,
+				CCAA00000000000000000000 /* ZeniConnectProtocol.swift */,
 			);
 			path = Network;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXContainerItemProxy section */
+        CCCC00000000000000000001 = {isa = PBXContainerItemProxy; containerPortal = AA0900012CE0000100000001; proxyType = 1; remoteGlobalIDString = AA0500012CE0000100000001; remoteInfo = Zeni; };
+/* End PBXContainerItemProxy section */
+/* Begin PBXTargetDependency section */
+        CCCC00000000000000000002 = {isa = PBXTargetDependency; target = AA0500012CE0000100000001; targetProxy = CCCC00000000000000000001; };
+/* End PBXTargetDependency section */
 
 /* Begin PBXNativeTarget section */
 		AA0500012CE0000100000001 /* Zeni */ = {
@@ -186,6 +202,7 @@
 			buildRules = (
 			);
 			dependencies = (
+                CCCC00000000000000000002,
 			);
 			fileSystemSynchronizedGroups = (
 				F267A3E130AB880B00CBABCC /* ZeniTransactionTests */,
@@ -264,6 +281,9 @@
 				F267A3DB30AB853C00CBABCC /* TransactionViews.swift in Sources */,
 				F2AE353F30A995D300FE1DD4 /* HybridSigner.swift in Sources */,
 				F267A3D930AB841E00CBABCC /* WalletTransactionEngine.swift in Sources */,
+				CCBB00000000000000000002 /* ZeniConnectView.swift in Sources */,
+				CCBB00000000000000000001 /* ZeniConnectController.swift in Sources */,
+				CCBB00000000000000000000 /* ZeniConnectProtocol.swift in Sources */,
 				AA0100082CE0000100000001 /* PortfolioView.swift in Sources */,
 				AA0100092CE0000100000001 /* Colors.swift in Sources */,
 				F2AE353B30A995D200FE1DD4 /* SecureData.swift in Sources */,

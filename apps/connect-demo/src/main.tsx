@@ -29,4 +29,4 @@ function Demo() {
     <output aria-live="polite">{result}</output>
   </main>;
 }
-createRoot(document.getElementById('root')!).render(<ZeniConnectProvider relayUrl={import.meta.env.VITE_ZENI_RELAY_URL || 'http://localhost:8787'} name="Zeni Connect Demo"><Demo /></ZeniConnectProvider>);
+createRoot(document.getElementById('root')!).render(<ZeniConnectProvider relayUrl={import.meta.env.VITE_ZENI_RELAY_URL || (import.meta.env.PROD ? 'https://zeni-wallet.onrender.com' : 'http://localhost:8787')} name="Zeni Connect Demo"><Demo /></ZeniConnectProvider>);
