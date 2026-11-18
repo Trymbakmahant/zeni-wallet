@@ -139,8 +139,9 @@ try {
     writeFileSync(join(process.env.SCREENSHOT_DIR, name + '.png'), Buffer.from((await call('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
   };
   await call('Runtime.enable');
-  await call('Emulation.setDeviceMetricsOverride', { width: 360, height: 600, deviceScaleFactor: 1, mobile: false });
-  await call('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/index.html` });
+  const approvalWindow = process.env.APPROVAL_WINDOW === '1';
+  await call('Emulation.setDeviceMetricsOverride', { width: approvalWindow ? 400 : 360, height: approvalWindow ? 640 : 600, deviceScaleFactor: 1, mobile: false });
+  await call('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/index.html${approvalWindow ? '?approval=1' : ''}` });
   await until(`document.body.textContent.includes('Fee calculation timed out')`);
   await clickText('Retry fee review');
   await until(`document.body.textContent.includes('Fee endpoint unavailable')`);
@@ -256,7 +257,7 @@ try {
     await delay(Math.min(Number(process.env.BROWSER_REVIEW_MS), 60000));
   }
   assert.equal(errors.length, 0, JSON.stringify(errors));
-  console.log('PASS: real mouse clicks approve connections, messages, and reviewed transfers at 360x600; stalled/failed/stale fee reviews show visible errors and recover through retry.');
+  console.log(`PASS: real mouse clicks approve connections, messages, and reviewed transfers in ${approvalWindow ? '400x640 approval window' : '360x600 toolbar popup'}; stalled/failed/stale fee reviews show visible errors and recover through retry.`);
 } finally {
   socket?.close(); chrome.kill('SIGTERM'); server.close();
 }

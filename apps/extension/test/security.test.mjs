@@ -15,7 +15,9 @@ function fixture() {
   let now = 1000;
   const stored = {};
   const events = {};
-  let decryptGate, prepareGate, sendGate, historyGate;
+  let decryptGate, prepareGate, sendGate, historyGate, windowGate;
+  const windows = new Map(), createdWindows = [], focusedWindows = [];
+  let windowFailure = false;
   let chainItems = [], historyFailure = false, historyCalls = 0;
   const transfers = [];
   let prepared = 0;
@@ -29,12 +31,26 @@ function fixture() {
   };
   const chrome = {
     storage: { local, session: { remove() {} } },
-    runtime: { id: 'wallet-id', getURL: (path) => `chrome-extension://wallet-id/${path}`,
+    runtime: { getContexts: async () => Array.from(windows.values()).map(w => ({ windowId: w.id })), id: 'wallet-id', getURL: (path) => `chrome-extension://wallet-id/${path}`,
       onMessage: { addListener: (cb) => { events.message = cb; } },
       onConnect: { addListener: (cb) => { events.connect = cb; } },
     },
     action: { setBadgeText() {}, setBadgeBackgroundColor() {} },
-    windows: { create() { throw new Error('Untrusted pages must not open approval windows'); } },
+    windows: {
+      onRemoved: { addListener: cb => { events.windowRemoved = cb; } },
+      async create(options) {
+        createdWindows.push(options);
+        if (windowGate) await windowGate;
+        if (windowFailure) throw new Error('Window unavailable');
+        const window = { ...options, id: createdWindows.length + 10 };
+        windows.set(window.id, window); return window;
+      },
+      async update(id, options) {
+        if (!windows.has(id)) throw new Error('Window closed');
+        focusedWindows.push({ id, ...options }); return windows.get(id);
+      },
+      async remove(id) { windows.delete(id); events.windowRemoved(id); },
+    },
   };
   const core = {
     QORECHAIN_CONFIG: { rpcUrls: ['https://example.invalid'], chainId: 9800 },
@@ -92,7 +108,10 @@ function fixture() {
     events.connect(p);
     return { p, messages, request: (method, clientReqId = 1, params) => onMessage({ clientReqId, payload: { method, params } }), malformed: (msg) => onMessage(msg) };
   };
-  return { stored, message, port, transfers, prepared: () => prepared, deferPrepare: gate => { prepareGate = gate; }, deferSend: gate => { sendGate = gate; }, now: (value) => { now = value; }, access: () => accessLevel,
+  return { stored, message, port, transfers, createdWindows, focusedWindows,
+    closeWindow: () => chrome.windows.remove(Array.from(windows.keys())[0]),
+    failWindows: () => { windowFailure = true; }, deferWindow: gate => { windowGate = gate; },
+    recoverWindow: () => windows.set(99, { id: 99 }), prepared: () => prepared, deferPrepare: gate => { prepareGate = gate; }, deferSend: gate => { sendGate = gate; }, now: (value) => { now = value; }, access: () => accessLevel,
     deferDecrypt: (gate) => { decryptGate = gate; },
     history: (items, fail = false) => { chainItems = items; historyFailure = fail; },
     deferHistory: gate => { historyGate = gate; }, historyCalls: () => historyCalls,
@@ -505,4 +524,64 @@ test('chain history stays separate for each account and is hidden while locked',
   assert.equal((await f.message('GET_ACCOUNT_ACTIVITY')).data.items.length,1);
   await f.message('LOCK_VAULT');
   assert.equal((await f.message('GET_ACCOUNT_ACTIVITY')).data.items.length,0);
+});
+
+
+test('connection and signing requests automatically open one trusted review window', async () => {
+  const f = fixture(), p = f.port(); await f.create();
+  await p.request('eth_requestAccounts');
+  assert.equal(f.createdWindows.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.createdWindows[0])), {
+    url: 'chrome-extension://wallet-id/index.html?approval=1', type: 'popup', width: 400, height: 680, focused: true,
+  });
+  const pending = (await f.message('GET_PENDING_APPROVALS')).data[0];
+  await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true });
+  await p.request('personal_sign', 2, ['0x6869', keys.classicalAddress]);
+  assert.equal(f.createdWindows.length, 1);
+  assert.equal(f.focusedWindows.length, 1);
+  await f.closeWindow();
+  assert.equal(p.messages.at(-1).error.code, 4001);
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 0);
+  await p.request('zeni_sendQor', 3, [transaction]);
+  assert.equal(f.createdWindows.length, 2);
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data[0].intent.kind, 'transfer');
+  assert.equal(f.transfers.length, 0);
+});
+
+test('simultaneous approval requests cannot spawn multiple windows', async () => {
+  const f = fixture();
+  let release;
+  f.deferWindow(new Promise(resolve => { release = resolve; }));
+  const requests = Array.from({ length: 5 }, (_, i) => f.port(`https://app${i}.example`).request('eth_requestAccounts'));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.createdWindows.length, 1);
+  release(); await Promise.all(requests);
+  assert.equal(f.createdWindows.length, 1);
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 5);
+  await f.closeWindow();
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 0);
+});
+
+test('existing review window is recovered after worker restart and focused', async () => {
+  const f = fixture(); f.recoverWindow();
+  await f.port().request('eth_requestAccounts');
+  assert.equal(f.createdWindows.length, 0);
+  assert.equal(f.focusedWindows[0].id, 99);
+});
+
+test('window creation failure retains the request for toolbar approval', async () => {
+  const f = fixture(), p = f.port(); await f.create(); f.failWindows();
+  await p.request('eth_requestAccounts');
+  const pending = (await f.message('GET_PENDING_APPROVALS')).data[0];
+  assert.ok(pending);
+  assert.equal((await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true })).success, true);
+  assert.equal(p.messages.at(-1).result[0], keys.classicalAddress);
+});
+
+test('unauthorized and malformed requests never open review windows', async () => {
+  const f = fixture(), p = f.port();
+  await p.request('personal_sign', 1, ['0x6869', keys.classicalAddress]);
+  await p.request('zeni_sendQor', 2, [transaction]);
+  await p.malformed(null);
+  assert.equal(f.createdWindows.length, 0);
 });

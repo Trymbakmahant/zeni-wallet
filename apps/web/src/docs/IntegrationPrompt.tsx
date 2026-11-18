@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import extensionRelease from '../extension-release.json';
 import { Sparkles } from 'lucide-react';
 import { CodeBlock } from './CodeBlock';
 import { REPOSITORY, ZENI_RELAY } from './content';
@@ -21,7 +22,7 @@ The @zeni/connect-protocol, @zeni/connect, and @zeni/react packages are not publ
 Connection:
 Offer Browser extension and Mobile wallet choices.
 ${framework === 'React + TypeScript' ? 'Use useBrowserWallet from @zeni/react for extension discovery, connection, account/network changes, and local disconnect. Use ZeniConnectProvider, useZeni, and ZeniConnectButton (or a custom local QR UI) for mobile.' : 'For extension discovery, use EIP-6963 (rdns io.qorechain.zeni) or window.zeni, check isZeni, and call eth_requestAccounts only after a user click. For mobile, use ZeniProvider from @zeni/connect, listen to display_uri, accountsChanged and disconnect, render the QR locally, and call connect() on user action.'}
-The extension connects directly without a relay. The Chrome Web Store beta (extension 0.1.1) only injects on https://zeni-connect-demo.vercel.app and https://zeni-wallet.vercel.app. On another origin, offer mobile connection or explain that an explicitly scoped development extension build is required; do not claim installing the store extension enables every website. For mobile use relayUrl ${ZENI_RELAY} and my app name; the app's exact origin must be allowlisted by the hosted relay operator, or use my own HTTPS relay. Never proxy requests to pretend my app is the demo origin. QR links contain secrets: never log, persist, or send them to remote QR services. Clean up providers, polling, and event listeners on unmount.
+The extension connects directly without a relay. The downloadable extension beta (v${extensionRelease.version}) only injects on https://zeni-connect-demo.vercel.app and https://zeni-wallet.vercel.app. On another origin, offer mobile connection or explain that an explicitly scoped development extension build is required; do not claim installing the store extension enables every website. For mobile use relayUrl ${ZENI_RELAY} and my app name; the app's exact origin must be allowlisted by the hosted relay operator, or use my own HTTPS relay. Never proxy requests to pretend my app is the demo origin. QR links contain secrets: never log, persist, or send them to remote QR services. Clean up providers, polling, and event listeners on unmount.
 
 Network and requests:
 Use QoreChain Diana only: chain ID 9800 / 0x2648. Validate the extension network and connected account before signing. Handle cancellation, rejection, expiry, lock/disconnect, account/network changes, pending requests and unsupported methods. Disable duplicate requests.

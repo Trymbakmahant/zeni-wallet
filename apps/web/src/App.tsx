@@ -1,3 +1,4 @@
+import extensionRelease from './extension-release.json';
 import { Chrome, Github } from './components/BrandIcons';
 import { ConnectShowcase } from './docs/ConnectShowcase';
 import { CONNECT_DEMO } from './docs/content';
@@ -15,8 +16,8 @@ import {
 const REPO = "https://github.com/Trymbakmahant/zeni-wallet";
 const INSTALL = `${REPO}#chrome-extension-qor-transfers`;
 const FAUCET = "https://dashboard.qorechain.io/faucet";
-const EXTENSION_VERSION = "0.1.2";
-const EXTENSION_FILENAME = `zeni-wallet-extension-${EXTENSION_VERSION}.zip`;
+const EXTENSION_VERSION = extensionRelease.version;
+const EXTENSION_FILENAME = extensionRelease.filename;
 const EXTENSION_DOWNLOAD = `/downloads/${EXTENSION_FILENAME}`;
 
 type PreviewAction = "Wallet" | "Send" | "Receive" | "Swap" | "Activity" | "Settings";
@@ -250,10 +251,13 @@ export const App: React.FC = () => {
             </div>
 
             <p className="text-[11px] font-mono text-white/40 mt-4 text-center">
-              Pre-compiled distribution bundle. Download, unzip, and load directly into Chrome.
+              Account switching · On-chain activity · Automatic approval windows
             </p>
             <p className="text-[11px] text-white/60 mt-2 text-center">
               This beta supports website connections on the Zeni demo and docs playground.
+            </p>
+            <p className="text-xs text-white/60 mt-3 text-center leading-relaxed">
+              Already installed? Replace the files in your existing unpacked folder, reload Zeni in chrome://extensions, then refresh your connected app.
             </p>
           </div>
 

@@ -74,6 +74,8 @@ class BackgroundController {
   private vaultGeneration = 0;
   private vaultMutationInProgress = false;
   private approvalInProgress = false;
+  private approvalWindowId: number | null = null;
+  private approvalWindowOpening: Promise<void> | null = null;
   private storageReady: Promise<void>;
 
   constructor() {
@@ -81,6 +83,13 @@ class BackgroundController {
     this.client = new QoreChainClient(QORECHAIN_CONFIG.rpcUrls[0]);
     this.setupPortListener();
     this.setupInternalMessageListener();
+    chrome.windows.onRemoved.addListener((id) => {
+      if (id !== this.approvalWindowId) return;
+      this.approvalWindowId = null;
+      // Submitted transactions are already removed from this queue; closing a
+      // review window must not pretend that an in-flight broadcast was cancelled.
+      for (const pendingId of this.pendingRequests.keys()) this.rejectApproval(pendingId, "Approval window closed");
+    });
   }
 
   // --- Vault Lifecycle ---
@@ -371,7 +380,7 @@ class BackgroundController {
         }
 
         // Queue connection approval request
-        this.queueApproval(port, clientReqId, origin, payload);
+        await this.queueApproval(port, clientReqId, origin, payload);
         break;
       }
 
@@ -395,7 +404,7 @@ class BackgroundController {
           return;
         }
         if (this.getActiveAccount() !== active) throw new Error("Wallet changed. Connect again.");
-        this.queueApproval(port, clientReqId, origin, payload, active.classicalAddress, intent);
+        await this.queueApproval(port, clientReqId, origin, payload, active.classicalAddress, intent);
         break;
       }
 
@@ -407,7 +416,7 @@ class BackgroundController {
     }
   }
 
-  private queueApproval(
+  private async queueApproval(
     port: chrome.runtime.Port,
     clientReqId: number,
     origin: string,
@@ -436,11 +445,41 @@ class BackgroundController {
 
     this.pendingRequests.set(internalId, req);
 
-    // Spawn popup window or badge notification
+    // Keep the toolbar badge as a fallback if Chrome cannot create a window.
     chrome.action.setBadgeText({ text: String(this.pendingRequests.size) });
     chrome.action.setBadgeBackgroundColor({ color: "#9939FF" });
 
-    // Review requests from the wallet toolbar; a page cannot spawn unlimited windows.
+    await this.showApprovalWindow();
+  }
+
+  private async showApprovalWindow(): Promise<void> {
+    if (this.approvalWindowOpening) return this.approvalWindowOpening;
+    this.approvalWindowOpening = this.openOrFocusApprovalWindow()
+      .catch(() => { /* The request remains available through the toolbar badge. */ })
+      .finally(() => { this.approvalWindowOpening = null; });
+    return this.approvalWindowOpening;
+  }
+
+  private async openOrFocusApprovalWindow(): Promise<void> {
+    // A fixed extension-owned URL: request data and dApp URLs never enter navigation.
+    const url = chrome.runtime.getURL("index.html?approval=1");
+    const contexts = await chrome.runtime.getContexts({ documentUrls: [url] });
+    const existingId = contexts.find(context => context.windowId >= 0)?.windowId ?? this.approvalWindowId;
+    this.expireApprovals();
+    if (!this.pendingRequests.size) return;
+    if (existingId != null) {
+      this.approvalWindowId = existingId;
+      try {
+        await chrome.windows.update(existingId, { focused: true, state: "normal" });
+        return;
+      } catch { this.approvalWindowId = null; /* Window was closed while focusing. */ }
+    }
+    if (!this.pendingRequests.size) return;
+    const window = await chrome.windows.create({ url, type: "popup", width: 400, height: 680, focused: true });
+    this.approvalWindowId = window.id ?? null;
+    if (!this.pendingRequests.size && window.id != null) {
+      await chrome.windows.remove(window.id).catch(() => {});
+    }
   }
 
   private rejectApproval(id: string, message: string) {
