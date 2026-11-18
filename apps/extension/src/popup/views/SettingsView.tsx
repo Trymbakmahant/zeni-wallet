@@ -82,6 +82,10 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
+      <a href="https://zeni-wallet.vercel.app/privacy.html" target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 rounded-2xl bg-[#0D0D10] border border-[#222226] text-xs text-zinc-300 hover:text-white">
+        Privacy policy <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+      </a>
+
       {/* Export Recovery Phrase */}
       <div className="p-4 rounded-2xl bg-[#0D0D10] border border-[#222226] space-y-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-white">

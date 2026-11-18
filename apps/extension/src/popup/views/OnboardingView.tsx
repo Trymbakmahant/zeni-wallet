@@ -98,7 +98,7 @@ export const OnboardingView: React.FC = () => {
             </button>
 
             <p className="text-[10px] text-zinc-500 text-center pt-1">
-              By continuing, you agree to Zeni's Terms of Use
+              Learn how Zeni handles your data in our <a href="https://zeni-wallet.vercel.app/privacy.html" target="_blank" rel="noreferrer" className="text-zinc-300 underline underline-offset-2">Privacy policy</a>.
             </p>
           </div>
 

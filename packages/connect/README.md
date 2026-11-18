@@ -2,6 +2,12 @@
 
 JavaScript/TypeScript provider for **Zeni Connect v1**, the Zeni mobile wallet's custom encrypted QR connection protocol. This protocol is not WalletConnect and does not accept WalletConnect QR codes.
 
+## Installation
+
+The first npm release is being prepared; these packages are not published yet. Use the local tarballs described in the [SDK guide](https://github.com/Trymbakmahant/zeni-wallet/blob/main/docs/ZENI_CONNECT.md) until publication is confirmed. Release maintainers should follow the [npm release guide](https://github.com/Trymbakmahant/zeni-wallet/blob/main/docs/NPM_RELEASE.md).
+
+This package is ESM and includes TypeScript declarations. Browser integrations require a secure context with WebCrypto and modern fetch/AbortSignal support.
+
 ## Browser integration
 
 ```ts
@@ -52,7 +58,7 @@ The relay sees IP addresses, site Origin/name, traffic timing, and ciphertext. T
 
 `ZeniWalletSession` is an adapter for wallet implementers and tests. Its `approve(account, handler)` callback must explicitly obtain user approval and independently validate each request before accessing a signer. A website must never hold a user's private key to implement this callback.
 
-See [the repository guide](../../docs/ZENI_CONNECT.md) for deployment and local demo instructions.
+See [the repository guide](https://github.com/Trymbakmahant/zeni-wallet/blob/main/docs/ZENI_CONNECT.md) for deployment and local demo instructions.
 
 The examples use Zeni’s hosted relay. Your web app’s exact origin must be added to its allowlist, or you can supply your own public HTTPS relay URL.
 

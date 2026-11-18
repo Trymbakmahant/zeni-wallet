@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How Zeni Wallet for Chrome handles wallet information, local storage, website connections and QoreChain network requests.">
+  <meta name="referrer" content="no-referrer">
+  <title>Privacy Policy — Zeni Wallet</title>
+  <style>
+    :root{color-scheme:light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#252820;background:#fffaf5;line-height:1.75}*{box-sizing:border-box}body{margin:0}a{color:#a33e21;text-underline-offset:4px}a:hover{text-decoration-thickness:2px}a:focus-visible{outline:3px solid #d75e3b;outline-offset:5px;border-radius:2px}.skip{position:absolute;left:20px;top:-100px;background:white;padding:10px;z-index:2}.skip:focus{top:12px}header{border-bottom:1px solid #e6dfd5}header nav{max-width:980px;margin:auto;padding:23px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-size:27px;font-weight:650;letter-spacing:-1px;color:#252820}.brand svg{color:#db603e;width:34px;height:34px}.nav-links{display:flex;gap:22px;font-size:14px}main{max-width:850px;margin:auto;padding:54px 28px 72px}.eyebrow{font-size:12px;letter-spacing:2px;color:#865c49;font-weight:600;text-transform:uppercase}h1{font-size:clamp(36px,7vw,54px);line-height:1.12;letter-spacing:-2px;margin:15px 0 18px;font-weight:600}h2{font-size:23px;letter-spacing:-.5px;line-height:1.35;margin:36px 0 14px}p{margin:12px 0}li{margin:9px 0}ul{padding-left:23px}.meta{color:#767365;font-size:14px}.summary{padding:20px 24px;background:#f1eee4;border-left:3px solid #d75e3b;border-radius:0 10px 10px 0;margin:28px 0}.summary p{margin:0}.contents{display:flex;flex-wrap:wrap;gap:8px 19px;font-size:14px;margin:26px 0 36px;padding-bottom:24px;border-bottom:1px solid #e6dfd5}section{scroll-margin-top:24px}code{font-size:.88em;overflow-wrap:anywhere;background:#f1eee7;padding:2px 5px;border-radius:4px}.contact{background:#f1eee4;border:1px solid #e3dbcc;border-radius:12px;padding:20px 24px;margin-top:30px}.contact h2{margin-top:0}footer{max-width:850px;margin:auto;border-top:1px solid #e6dfd5;padding:22px 28px 35px;color:#767365;font-size:13px}a{overflow-wrap:anywhere}@media(max-width:520px){main{padding-top:36px}.nav-links{gap:14px;font-size:13px}header nav{padding:18px 22px}.summary,.contact{padding:17px 19px}}@media print{header,.skip,.contents{display:none}main{max-width:none;padding:0}body{background:white}h2{break-after:avoid}.contact{break-inside:avoid}a{color:inherit}}
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to privacy policy</a>
+<header><nav aria-label="Main navigation"><a class="brand" href="/" aria-label="Zeni home"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="20" cy="20" r="17" stroke="currentColor" stroke-width="2"/><path d="M16 16h8v8h-8z" stroke="currentColor" stroke-width="1.8"/></svg>zeni</a><div class="nav-links"><a href="/docs">Documentation</a><a href="#contact">Contact</a></div></nav></header>
+<main id="main">
+  <div class="eyebrow">Zeni Wallet · Chrome extension</div>
+  <h1>Privacy policy</h1>
+  <p class="meta">Effective and last updated: <time datetime="2026-11-18">November 18, 2026</time></p>
+  <p>This policy describes how the Zeni Wallet Team ("Zeni", "we", "us") handles information when you use the Zeni browser extension for QoreChain Diana Testnet. Zeni's purpose is to let you manage a self-custody wallet, connect to supported websites, and review and approve supported signing requests, transfers and swaps.</p>
+  <div class="summary"><p><strong>Your wallet keys stay on your device.</strong> Zeni stores an encrypted wallet vault locally. To operate, it sends public account information and user-approved signed transactions to QoreChain services, and returns approved accounts and signing results to connected websites. Blockchain transactions are public. Zeni does not sell wallet data or use it for advertising.</p></div>
+  <nav class="contents" aria-label="Policy sections"><a href="#information">Information handled</a><a href="#uses">How it is used</a><a href="#sharing">Sharing</a><a href="#permissions">Permissions</a><a href="#retention">Retention and deletion</a><a href="#security">Security</a><a href="#limited-use">Limited use</a><a href="#contact">Contact</a></nav>
+
+  <section id="information"><h2>1. Information Zeni handles</h2>
+    <ul>
+      <li><strong>Wallet and authentication information.</strong> Your recovery phrase, private keys and derived account data are stored in an encrypted vault in the extension's local browser storage. Your password is used locally to create or unlock that vault; Zeni does not persist the plaintext password. Decrypted wallet material is held in extension memory while unlocked. Zeni does not send your password, recovery phrase or private keys to its developers, RPC providers or connected websites.</li>
+      <li><strong>Financial and transaction information.</strong> Zeni handles public wallet addresses, public-key information, balances, asset identifiers, recipients, amounts, swap quotes, fees, transaction hashes and statuses. It stores public account identifiers, the post-quantum public-key hash, and transaction activity locally, outside the encrypted vault. These records are not private keys.</li>
+      <li><strong>Connected website information and requests.</strong> Zeni handles the requesting website's origin, tab title and favicon URL, its connection or signing request, and message or transfer details needed for review. Approved website origins are stored locally. This information supports wallet connections and approval screens; Zeni does not build a general browsing-history profile or scrape unrelated page content.</li>
+      <li><strong>Network metadata.</strong> RPC providers receive the requests your wallet sends, including relevant public addresses and transaction data. As with other internet services, they also receive your IP address and connection metadata. Their infrastructure may record request times, errors and access logs. Zeni does not request GPS location or independently determine your physical location.</li>
+      <li><strong>Support information you choose to send.</strong> If you contact us through GitHub, we receive your GitHub username and the contents and attachments of your issue or message. If you contact us by email, we also receive your email address. Do not send passwords, private keys or recovery phrases.</li>
+    </ul>
+    <p>The extension does not include advertising trackers or analytics telemetry, and does not monitor unrelated clicks, keystrokes, emails or chats. Creating a wallet does not require your name, email address or identity documents. Local handling is still data processing, even when information never leaves your device.</p>
+  </section>
+
+  <section id="uses"><h2>2. Why this information is used</h2>
+    <p>Zeni uses this information to create and unlock your wallet, show accounts and balances, obtain quotes and fees, identify websites requesting access, show approval details, sign operations you approve, submit transactions, and display their status and local history. Support information is used to answer your request and investigate reported problems.</p>
+    <p>Connected websites receive an account only after approval, and each signing or transfer request requires a separate review. A connected website can subsequently query its approved account while the wallet is unlocked. Rejecting a request does not submit that request to the blockchain.</p>
+  </section>
+
+  <section id="sharing"><h2>3. Where information goes</h2>
+    <ul>
+      <li><strong>QoreChain RPC services.</strong> The extension connects over HTTPS to <code>https://api-testnet.qore.host</code> and <code>https://evm-testnet.qore.host</code> for blockchain queries, fee and pool information, account state and submission of approved signed transactions. Those services operate their own infrastructure and retention practices; we do not control their logs.</li>
+      <li><strong>The public blockchain.</strong> Submitted transfers, swaps and key registrations may make public wallet addresses, amounts, public keys, signatures, fees and other transaction details available to validators, explorers and anyone reading the chain. Public records can be linked to other information and cannot be made private or deleted by Zeni.</li>
+      <li><strong>Connected applications.</strong> An approved application receives the permitted public account and the signature, transaction identifier or other supported response for its request. It never receives the wallet's private keys from Zeni. The application controls its own use and storage of those results.</li>
+      <li><strong>Links you open.</strong> Opening an explorer, faucet, documentation or privacy-policy link connects your browser to that website. Its operator receives normal connection metadata and any information included in the link, such as a transaction hash. Website hosting, GitHub and any email providers used for support process requests and messages needed to deliver those services. GitHub issues are public and subject to GitHub’s own privacy and retention practices.</li>
+      <li><strong>Legal requirements.</strong> We may disclose information we actually hold if legally required, or as necessary to protect users, address abuse or establish or defend legal rights. We cannot disclose wallet secrets that we do not possess.</li>
+    </ul>
+    <p>Direct browser-extension connections do not use Zeni's mobile relay. The mobile app and QR-based Zeni Connect flow are separate from the extension's provider connection and have different data flows. This policy covers the browser extension; independent websites and services have their own privacy practices. Service providers may process information in countries other than yours.</p>
+  </section>
+
+  <section id="permissions"><h2>4. Why the extension needs permissions</h2>
+    <ul>
+      <li><strong>Storage:</strong> to retain the encrypted wallet vault, public account identifiers, approved website origins and local activity across browser sessions. It uses local extension storage rather than Chrome's synchronized storage.</li>
+      <li><strong>QoreChain host access:</strong> to query the two RPC hosts listed above and submit user-approved signed transactions.</li>
+      <li><strong>HTTP and HTTPS content scripts:</strong> to inject Zeni's wallet provider so supported sites can discover it and request a connection. The bridge processes wallet-provider messages; it does not read arbitrary page text, form fields or unrelated browsing activity. Website access does not itself authorize account disclosure or signing.</li>
+    </ul>
+  </section>
+
+  <section id="retention"><h2>5. Retention, choices and deletion</h2>
+    <p>The encrypted vault, public account identifiers and approved website origins remain in this browser profile until you reset the wallet or remove its local data. Local activity remains until cleared or the wallet is reset. Pending requests and unlocked secrets are held in memory; locking clears the extension's unlocked wallet references and rejects pending approval requests. The wallet also has a 15-minute auto-lock timer, refreshed by relevant wallet operations.</p>
+    <ul>
+      <li>Use the <strong>lock</strong> button to end the unlocked session.</li>
+      <li>Use <strong>Activity → Clear activity log</strong> to remove locally stored transaction history. The clear action retains pending on-chain transaction records until they are no longer pending.</li>
+      <li>Use <strong>Settings → Reset Wallet &amp; Start Fresh</strong> to clear the extension's local wallet storage, including the vault and approved website origins. <strong>Back up your recovery phrase first:</strong> resetting can remove your only way to access the wallet.</li>
+      <li>Remove Zeni through your browser's extension settings to remove the installed extension and its associated local storage. Copies you made, clipboard contents and external backups must be managed separately.</li>
+      <li>Disconnecting on a website clears that site's current connection state, but does not necessarily revoke its previously approved permission in the extension. Resetting the wallet clears the stored origin permissions.</li>
+    </ul>
+    <p>Deleting local history or resetting the wallet does not delete blockchain records, information already received by connected websites, or third-party service logs. We retain support correspondence only as long as reasonably needed to address the request, maintain necessary security records or meet legal obligations. Contact us to request access, correction or deletion of information we hold about you; applicable rights and exceptions depend on your location. We cannot recover a lost password or recovery phrase, or erase records on the public blockchain.</p>
+  </section>
+
+  <section id="security"><h2>6. Security and your controls</h2>
+    <p>Zeni encrypts its local vault using AES-GCM with a key derived from your password using PBKDF2-HMAC-SHA256. Network requests to its configured RPC services use HTTPS. Private-key operations run inside the extension, and sensitive request details are presented before signing.</p>
+    <p>Encryption and post-quantum signing do not make your device or wallet immune to compromise. Protect your device and recovery phrase, choose a strong password, and verify the website, recipient and fees before approving. If you export or copy your recovery phrase, that copy is outside the encrypted vault's protection.</p>
+  </section>
+
+  <section id="limited-use"><h2>7. Limited use of extension data</h2>
+    <p>Our use and transfer of information received through the extension follows the <a href="https://developer.chrome.com/docs/webstore/program-policies/user-data" target="_blank" rel="noreferrer">Chrome Web Store User Data Policy</a>, including its Limited Use requirements.</p>
+    <ul>
+      <li>We do not sell user data or transfer it outside permitted purposes and approved use cases.</li>
+      <li>We use and transfer extension data only to provide or improve Zeni's stated wallet functionality, maintain security, or meet applicable legal obligations. We do not use it for advertising, unrelated profiling or unrelated products.</li>
+      <li>We do not use or transfer user data to determine creditworthiness or for lending purposes.</li>
+    </ul>
+  </section>
+
+  <section id="children"><h2>8. Children</h2><p>Zeni is not directed to children under 13, or a higher minimum age where applicable. We do not knowingly solicit personal information from children. If you believe a child has sent personal information to us, contact us so we can address it.</p></section>
+  <section id="changes"><h2>9. Changes to this policy</h2><p>We will update this page and its last-updated date when our practices change. Material new data uses will be disclosed before they begin, with additional notice or consent where required. Chrome Web Store disclosures should reflect the version of the extension being distributed.</p></section>
+  <section id="contact" class="contact"><h2>10. Contact Zeni</h2><p>For privacy questions, support, or a request about information we hold, contact the <strong>Zeni Wallet Team</strong> through the <a href="https://github.com/Trymbakmahant/zeni-wallet/issues" target="_blank" rel="noreferrer">Zeni GitHub issue tracker</a>.</p><p>GitHub issues are public. For a request involving personal information, first ask for a private contact method without posting that information. Never post your recovery phrase, private keys, wallet password or other sensitive account details.</p></section>
+</main>
+<footer>© 2026 Zeni Wallet Team · <a href="/">Home</a> · <a href="/docs">Documentation</a></footer>
+</body>
+</html>

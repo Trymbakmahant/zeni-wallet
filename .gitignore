@@ -53,3 +53,9 @@ ellevenlab.md
 .vercel
 .env*
 *.zip
+output/research/native-fee-grant-feasibility.md
+output/branding/zeni-project-cover.html
+
+# Local generated artwork, store uploads, and research
+output/
+apps/extension/store-assets/

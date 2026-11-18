@@ -3,6 +3,8 @@ export const CONNECT_DEMO = 'https://zeni-connect-demo.vercel.app';
 export const REPOSITORY = 'https://github.com/Trymbakmahant/zeni-wallet';
 export const sections = [
   { id: 'overview', title: 'Overview', group: 'Start here', description: 'Zeni Connect, wallet, encrypted relay, QR connection, Diana testnet' },
+  { id: 'playground', title: 'Live playground', group: 'Start here', description: 'Embedded demo, connect extension, mobile QR, sign message, transfer, live request code' },
+  { id: 'ai-prompt', title: 'AI integration prompt', group: 'Build with Zeni', description: 'Copy prompt, AI assistant, integrate wallet, React, JavaScript, TypeScript, coding agent' },
   { id: 'quickstart', title: 'Quickstart', group: 'Start here', description: 'Installation, source, packages, tarballs, npm, pnpm, local development' },
   { id: 'react', title: 'React integration', group: 'Build with Zeni', description: 'ZeniConnectProvider, useZeni, ZeniConnectButton, hook, QR code' },
   { id: 'javascript', title: 'JavaScript / TypeScript', group: 'Build with Zeni', description: 'ZeniProvider, connect, display_uri, request, disconnect, provider events' },

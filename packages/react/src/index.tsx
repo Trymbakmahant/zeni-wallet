@@ -56,3 +56,5 @@ export function ZeniConnectButton({ className }: { className?: string }) {
     {error && <p role="alert">{error}</p>}
   </div>;
 }
+
+export { useBrowserWallet, type BrowserProvider } from './useBrowserWallet.js';

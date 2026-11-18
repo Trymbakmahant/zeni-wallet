@@ -6,7 +6,8 @@
   "description": "Zeni Connect encrypted mobile-wallet provider for JavaScript and TypeScript",
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,7 +19,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "prepack": "pnpm run build"
   },
   "dependencies": {
     "@zeni/connect-protocol": "workspace:^"
@@ -27,5 +29,24 @@
     "typescript": "^5.4.5",
     "ethers": "^6.13.0",
     "@zeni/core": "workspace:*"
+  },
+  "homepage": "https://zeni-wallet.vercel.app/docs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Trymbakmahant/zeni-wallet.git",
+    "directory": "packages/connect"
+  },
+  "bugs": {
+    "url": "https://github.com/Trymbakmahant/zeni-wallet/issues"
+  },
+  "keywords": [
+    "zeni",
+    "wallet",
+    "qorechain",
+    "sdk"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

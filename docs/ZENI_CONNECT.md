@@ -74,6 +74,8 @@ pnpm --dir packages/react pack --pack-destination ../../artifacts/connect-sdk
 
 Install the protocol and provider tarballs together in a consuming app; include the React tarball for React bindings. `pnpm pack` converts workspace ranges into version ranges. Publishing the scoped packages to a registry and configuring a public relay/domain are separate owner actions; neither has been performed here.
 
+For npm release preparation, run `pnpm check:sdk-release`. It checks the actual archives and installs them into an isolated consumer using React 18 and 19. See [the npm release guide](NPM_RELEASE.md) for scope access, publication order, and registry verification.
+
 ## Wire format
 
 The browser creates a relay session with its Origin and display name. The relay returns separate browser and wallet bearer credentials. The browser generates a 32-byte encryption key locally and builds:
@@ -110,3 +112,8 @@ Validation completed on 2026-11-17: 48 core tests, 3 relay tests, 4 SDK tests, 9
 The domain, TLS deployment, npm publication, physical-camera scan and live funded phone transaction are not claimed as completed by these automated tests.
 
 Native QOR transfers use `zeni_sendQor`, with the `[{ from, to, value, chainId }]` request shape. `value` remains a hexadecimal amount in 18-decimal EVM units for integration convenience, but must be an exact multiple of 10^12 (native QOR has 6 decimals). The result is a 64-character native Cosmos transaction ID without `0x`; use the native explorer/receipt API. `eth_sendTransaction` is disabled instead of silently returning a non-Ethereum receipt. Transfers are hybrid-signed bank `MsgSend` transactions, with no EVM window or classical EVM fallback. First-time PQC key registration is a separate classical-signed bootstrap with proof of possession; subsequent transfers carry both signatures. Existing classical transactions cannot be retroactively upgraded. Message signing remains classical EIP-191.
+
+
+The landing site's `/docs#playground` embeds mobile QR and browser-extension connections, message signature verification, and native QOR transfer review. The code panel shows the same request parameters sent by the playground and retains the last submitted request. `/docs#ai-prompt` provides a copyable integration prompt customized by app name and React or JavaScript/TypeScript stack.
+
+The docs playground uses `VITE_ZENI_RELAY_URL` when provided, defaults to the hosted relay in production, and defaults to `http://localhost:8787` in development. The docs site's exact origin must be on the relay allowlist for mobile pairing; extension connections do not use the relay. Build the shared packages before the web app (`pnpm --filter @zeni/web... build`).
