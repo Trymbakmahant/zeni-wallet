@@ -27,6 +27,10 @@
   "dependencies": {
     "@noble/curves": "^1.4.0",
     "@noble/hashes": "^1.4.0",
+    "@qorechain/asset-kit": "^0.1.0",
+    "@qorechain/pqc": "^0.2.3",
+    "@qorechain/qoresign": "^0.2.0",
+    "@qorechain/qorex-types": "^0.1.0",
     "@qorechain/sdk": "^0.14.0",
     "@scure/base": "^2.4.0",
     "@scure/bip32": "^1.4.0",

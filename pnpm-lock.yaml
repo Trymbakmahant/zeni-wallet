@@ -208,6 +208,18 @@ importers:
       '@noble/hashes':
         specifier: ^1.4.0
         version: 1.8.0
+      '@qorechain/asset-kit':
+        specifier: ^0.1.0
+        version: 0.1.0
+      '@qorechain/pqc':
+        specifier: ^0.2.3
+        version: 0.2.3
+      '@qorechain/qoresign':
+        specifier: ^0.2.0
+        version: 0.2.0
+      '@qorechain/qorex-types':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@qorechain/sdk':
         specifier: ^0.14.0
         version: 0.14.0(viem@2.57.20(typescript@5.9.3))
@@ -347,6 +359,9 @@ packages:
   '@babel/types@7.29.14':
     resolution: {integrity: sha512-UjI/dKmwJwT9pOszJitq2G6EObZPnsZUfdCr92z2TlF3EZK9J3EdfOKUrCzHl6wFthbzwhzl1Soc/UIwxRiq6w==}
     engines: {node: '>=6.9.0'}
+
+  '@bufbuild/protobuf@2.16.0':
+    resolution: {integrity: sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q==}
 
   '@bufbuild/protobuf@2.17.0':
     resolution: {integrity: sha512-hcPkSz6D7MiTU/5VBBhK+kxaYDoOdQ6yJRFJ3kS8Nydp+VZXfg1vrpABKPNod8bXMufsVCmiUJVIKFzCzta4uw==}
@@ -784,6 +799,9 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
+  '@qorechain/asset-kit@0.1.0':
+    resolution: {integrity: sha512-rMpGw7x33TvsYF98+Ub5YBOLXWDh6KHqivXx8pBuEand01ddnvHHX06ip+u9oH2aP6ZRpRljxIX+aD9P3CL4rQ==}
+
   '@qorechain/evm@0.14.0':
     resolution: {integrity: sha512-IdIJpbmJX8T+ctDnGPv50UGUM2o80TfrWAjU41UjUfIEaWTcTVt64fXQR8V86BDuXRlOuFAa9UiM4RtnyKD5Tg==}
     peerDependencies:
@@ -792,6 +810,14 @@ packages:
   '@qorechain/pqc@0.2.3':
     resolution: {integrity: sha512-YLzcfwkeq9mCyTcFf/BQFB7dsNIkyFcUluByp1zrJ7SRAkPj8cwPmv7jtw5Xeh7K80FgwzlvtBeZb/dzzknWZA==}
     engines: {node: '>=18'}
+
+  '@qorechain/qoresign@0.2.0':
+    resolution: {integrity: sha512-bOhFn/Xb5SQbDrOccYa0sKsh7Ds07qyeUd3JrqjqqRyx8sUOgu8HeOYV2tWR+7hVeHKhWaTY6oGEnEax+JeVcQ==}
+    engines: {node: '>=20'}
+
+  '@qorechain/qorex-types@0.1.0':
+    resolution: {integrity: sha512-M3rzdQp9YfEPuQ2EnBtqjAxR61T4lPD0JrW35Hh7k6Ny4E0o3qITvGGN8ssHnBzPz0yq2vVY/BECpjaAvT5xWQ==}
+    engines: {node: '>=20'}
 
   '@qorechain/sdk@0.14.0':
     resolution: {integrity: sha512-EwoH2WX5hRUK685a3NDDd0dZcn7QL/6M11huVh7Kx37nFDMryF8QAHrJe0to8EcRmRnLbMH5UNnZbjoI48wo9Q==}
@@ -945,6 +971,9 @@ packages:
 
   '@scure/bip32@1.7.0':
     resolution: {integrity: sha512-E4FFX/N3f4B80AKWp5dP6ow+flD1LQZo/w8UnLGYZO674jS6YnYeepycOOksv+vLPSpgN35wgKgy+ybfTb2SMw==}
+
+  '@scure/bip32@2.4.0':
+    resolution: {integrity: sha512-i3DS0CptAocyvqE4n3SUkpzeQK4vJMFwWLofTwRiiKo2aWojBOfyMCgfKw9HVpO6fSY5AK86sHS/Uzn8kK9Few==}
 
   '@scure/bip39@1.6.0':
     resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
@@ -1902,6 +1931,8 @@ snapshots:
       '@babel/helper-string-parser': 7.29.14
       '@babel/helper-validator-identifier': 7.29.7
 
+  '@bufbuild/protobuf@2.16.0': {}
+
   '@bufbuild/protobuf@2.17.0': {}
 
   '@cosmjs/amino@0.38.1':
@@ -2305,6 +2336,10 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.3
 
+  '@qorechain/asset-kit@0.1.0':
+    dependencies:
+      '@bufbuild/protobuf': 2.16.0
+
   '@qorechain/evm@0.14.0(viem@2.57.20(typescript@5.9.3))':
     dependencies:
       viem: 2.57.20(typescript@5.9.3)
@@ -2313,6 +2348,17 @@ snapshots:
     dependencies:
       '@noble/hashes': 2.4.0
       '@noble/post-quantum': 0.7.1
+
+  '@qorechain/qoresign@0.2.0':
+    dependencies:
+      '@noble/curves': 2.4.0
+      '@noble/hashes': 2.4.0
+      '@qorechain/pqc': 0.2.3
+      '@scure/base': 2.4.0
+      '@scure/bip32': 2.4.0
+      '@scure/bip39': 2.4.0
+
+  '@qorechain/qorex-types@0.1.0': {}
 
   '@qorechain/sdk@0.14.0(viem@2.57.20(typescript@5.9.3))':
     dependencies:
@@ -2429,6 +2475,12 @@ snapshots:
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
+
+  '@scure/bip32@2.4.0':
+    dependencies:
+      '@noble/curves': 2.4.0
+      '@noble/hashes': 2.4.0
+      '@scure/base': 2.4.0
 
   '@scure/bip39@1.6.0':
     dependencies:
