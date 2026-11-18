@@ -230,7 +230,7 @@ export const App: React.FC = () => {
               <div className="text-left">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-mono font-bold text-white tracking-wide">Zeni Extension v0.1.0</span>
+                  <span className="text-xs font-mono font-bold text-white tracking-wide">Zeni Extension v0.1.1</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/60">Manifest V3</span>
                 </div>
                 <div className="text-xs text-white/50 font-mono mt-1">Direct zip package · Chrome, Brave & Edge</div>

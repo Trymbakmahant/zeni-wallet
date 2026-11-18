@@ -10,7 +10,7 @@
     "dev:web": "pnpm --filter @zeni/web dev",
     "build:contracts": "cd packages/contracts && forge build",
     "test:contracts": "cd packages/contracts && forge test",
-    "zip:ext": "pnpm --filter @zeni/core build && pnpm --filter @zeni/extension build && cd apps/extension/dist && zip -r ../../../zeni-wallet-extension.zip . && cd ../../..",
+    "zip:ext": "pnpm --filter @zeni/core build && pnpm --filter @zeni/extension build && node apps/extension/scripts/package.mjs",
     "lint": "pnpm -r run lint",
     "build:connect": "pnpm --filter @zeni/connect-protocol build && pnpm --filter @zeni/connect build && pnpm --filter @zeni/react build && pnpm --filter @zeni/connect-demo build",
     "dev:relay": "pnpm --filter @zeni/relay start",

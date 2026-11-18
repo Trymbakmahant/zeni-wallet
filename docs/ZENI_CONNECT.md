@@ -17,6 +17,8 @@ This work does not add a gas-sponsoring transaction relayer, chain history index
 
 ## Browser extension
 
+The Chrome Web Store beta (extension 0.1.1) injects its provider only on `https://zeni-connect-demo.vercel.app` and `https://zeni-wallet.vercel.app`. Other domains, preview deployments and localhost do not receive the injected provider. For another app, use the mobile SDK with an allowed relay origin, or build a development extension with that exact HTTPS origin added to both `content_scripts.matches` and `web_accessible_resources.matches`. Adding a domain to the mobile relay allowlist does not change extension permissions.
+
 The demo’s **Browser extension** option discovers Zeni through EIP-6963 or `window.zeni`. It calls the injected provider directly; it does not use the relay or create a QR session. The React/JS mobile SDK remains the QR transport.
 
 The extension supports reviewed `personal_sign` messages and `zeni_sendQor` QOR transfers on Diana, with the same validation limits described above. Open Zeni from the Chrome toolbar to review the website origin, signing account, message or transfer details, and the maximum network/setup fees before approving. Typed-data signing and contract calls remain unsupported.

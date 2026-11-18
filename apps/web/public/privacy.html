@@ -52,7 +52,7 @@
     <ul>
       <li><strong>Storage:</strong> to retain the encrypted wallet vault, public account identifiers, approved website origins and local activity across browser sessions. It uses local extension storage rather than Chrome's synchronized storage.</li>
       <li><strong>QoreChain host access:</strong> to query the two RPC hosts listed above and submit user-approved signed transactions.</li>
-      <li><strong>HTTP and HTTPS content scripts:</strong> to inject Zeni's wallet provider so supported sites can discover it and request a connection. The bridge processes wallet-provider messages; it does not read arbitrary page text, form fields or unrelated browsing activity. Website access does not itself authorize account disclosure or signing.</li>
+      <li><strong>Content scripts on two HTTPS sites:</strong> extension version 0.1.1 injects Zeni's wallet provider only on <code>https://zeni-connect-demo.vercel.app</code> and <code>https://zeni-wallet.vercel.app</code>, so the Zeni demo and documentation playground can discover it and request a connection. It does not inject the provider on other websites. The bridge processes wallet-provider messages; it does not read arbitrary page text, form fields or unrelated browsing activity. Website access does not itself authorize account disclosure or signing.</li>
     </ul>
   </section>
 
