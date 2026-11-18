@@ -42,6 +42,20 @@ struct TransactionResult: Codable, Equatable {
     let error: String?
 }
 
+struct WalletActivityTransfer: Codable, Equatable {
+    let direction: String
+    let amount: String
+    let token: String
+    let counterparty: String?
+}
+
+struct WalletHistoryPage: Decodable {
+    let items: [WalletActivityItem]
+    let hasMore: Bool
+    let updatedAt: Double?
+    let error: String?
+}
+
 struct WalletActivityItem: Codable, Identifiable, Equatable {
     let hash: String
     let account: String
@@ -56,7 +70,21 @@ struct WalletActivityItem: Codable, Identifiable, Equatable {
     let status: String
     let gasCost: String?
     let error: String?
-    var id: String { hash }
+    let type: String?
+    let source: String?
+    let transfers: [WalletActivityTransfer]?
+    var id: String { hash.lowercased() }
+    var title: String {
+        if status == "FAILED" { return "Failed transaction" }
+        switch stage {
+        case "receive": return "Received"
+        case "self": return "Transfer to yourself"
+        case "transfer": return status == "CONFIRMED" ? "Sent" : "Send"
+        case "registration": return "PQC setup"
+        case "swap": return status == "CONFIRMED" ? "Swapped" : "Swap"
+        default: return "On-chain transaction"
+        }
+    }
 
 }
 

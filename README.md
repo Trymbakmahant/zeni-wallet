@@ -52,6 +52,48 @@ pnpm dev:ext
 pnpm dev:web
 ```
 
+The iOS app also supports account creation/switching and indexed on-chain Activity.
+See [the iOS verification steps](apps/ios/README.md#checking-the-account-and-activity-update)
+and [the Xcode update guide](apps/ios/XCODE-UPDATE.md).
+
+### Multiple extension accounts
+
+Click the account name in the top-left corner, choose **Add account**, and enter
+this wallet's password. Zeni derives Account 2, Account 3, and subsequent accounts
+from your existing recovery phrase. Each has its own EVM/native addresses, PQC key,
+balance, and activity. Creation is local and free; each account needs its own
+QOR balance for transaction fees. Up to 100 accounts are supported.
+
+Choose an account in the same selector to switch. The selection survives locking
+and restarting the extension. Switching cancels pending approvals and old fee
+quotes, and websites must reconnect with your approval. It is blocked while a
+transaction is executing. To restore additional accounts after importing the
+phrase on another installation, add them again in the same order.
+
+### Incoming and external activity
+
+The extension's Activity tab merges local records with committed Diana transaction
+history from the official Cosmos REST API. It includes incoming QOR and supported
+bank-token payments, transfers made outside Zeni, swaps, self-transfers, and indexed
+EVM QOR transfers. Receipts determine amounts and status; fees are not counted as
+received funds. Native and EVM hashes are linked only through receipt evidence.
+
+Open **Activity** to refresh, use the refresh icon to check again, and choose
+**Load older activity** for additional pages (up to 500 chain transactions).
+While the tab is open, it checks every 30 seconds. Switching accounts clears the
+view and ignores late responses for the previous account. API failures show an
+error and retain available local/session-cached records. Chain history is fetched
+again after a service-worker restart. Clearing completed local records does not
+remove public chain history or pending transactions.
+
+History uses `message.sender`, `transfer.sender`, `transfer.recipient`, and EVM
+recipient event queries, with a fixed block height for pagination. It is not a
+complete EVM log/trace index: token movements only visible inside contract logs,
+SVM-only activity, and unindexed/pruned history may be absent. Unknown denominations
+are shown in base units instead of guessing decimals. No extra Chrome permissions,
+explorer API key, or private-key export is required. The explorer itself uses the
+same public endpoints: https://docs.qorechain.io/dashboard/explorer.
+
 ### Chrome extension QOR transfers
 
 Build the shared core and extension, then load `apps/extension/dist` as an unpacked extension at `chrome://extensions`. For an existing installation, click **Reload** and unlock the wallet again.

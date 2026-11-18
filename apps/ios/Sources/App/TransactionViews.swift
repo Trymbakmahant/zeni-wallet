@@ -566,33 +566,79 @@ struct TransactionActivityView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Button { Task { await state.refresh() } } label: {
-                Label("Refresh status", systemImage: "arrow.clockwise")
-            }.disabled(state.isRefreshing || !state.hasWallet)
-            if let error = state.walletError { TransactionErrorView(message: error) }
-            if state.activity.isEmpty {
-                ContentUnavailableView("No transactions yet", systemImage: "clock",
-                                       description: Text("Your transfers, swaps, and setup transactions will appear here."))
+            HStack {
+                Button { Task { await state.refreshActivity() } } label: {
+                    Label("Refresh activity", systemImage: "arrow.clockwise")
+                }.disabled(state.isRefreshingActivity || !state.hasWallet)
+                if state.isRefreshingActivity { ProgressView() }
+            }
+            if let error = state.activityError { TransactionErrorView(message: error) }
+            if state.activity.isEmpty && !state.isRefreshingActivity {
+                ContentUnavailableView("No transactions found", systemImage: "clock",
+                    description: Text("Incoming transfers and indexed on-chain activity appear here alongside transactions made in Zeni."))
             }
             ForEach(state.activity) { item in
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text(item.stage.capitalized).font(.headline)
-                        Spacer()
-                        Text(item.status).font(.caption.bold())
-                            .foregroundStyle(item.status == "FAILED" ? Color.red : Color.zeniGreen)
-                    }
-                    if let amount = item.amountIn, let token = item.tokenIn {
-                        Text("\(amount) \(token)").font(.subheadline)
-                    }
-                    if let output = item.amountOut { Text("Received: \(output) \(item.tokenOut ?? "")").font(.caption) }
-                    if let fee = item.gasCost { Text("Network fees: \(fee)").font(.caption) }
-                    if let error = item.error { TransactionErrorView(message: error) }
-                    Text(item.hash).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
-                    TransactionExplorerLink(state: state, hash: item.hash)
-                }.padding(16).transactionCard()
+                WalletActivityRow(state: state, item: item)
+            }
+            if state.activityHasMore {
+                Button("Load older activity") { Task { await state.refreshActivity(older: true) } }
+                    .disabled(state.isRefreshingActivity)
+            }
+            Text("Includes indexed native transfers, swaps, and plain EVM QOR transfers. Token log-only transfers, internal contract transfers, and SVM activity may be missing. Up to 500 on-chain transactions are kept in this session.")
+                .font(.caption2).foregroundStyle(Color.zeniMuted)
+        }
+        .task(id: state.activeAccount?.evmAddress) {
+            while !Task.isCancelled {
+                await state.refreshActivity()
+                do { try await Task.sleep(for: .seconds(30)) } catch { return }
             }
         }
+    }
+}
+
+private struct WalletActivityRow: View {
+    let state: AppState
+    let item: WalletActivityItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(item.title, systemImage: item.stage == "receive" ? "arrow.down.left" : "arrow.up.right")
+                    .font(.headline)
+                    .foregroundStyle(item.stage == "receive" ? Color.zeniGreen : .white)
+                Spacer()
+                Text(item.status).font(.caption2.bold())
+                    .foregroundStyle(item.status == "FAILED" ? Color.red : item.status == "PENDING" ? Color.orange : Color.zeniGreen)
+            }
+            if item.status != "FAILED" {
+                if let transfers = item.transfers, !transfers.isEmpty {
+                    ForEach(Array(transfers.enumerated()), id: \.offset) { _, transfer in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(transfer.direction == "in" ? "+" : transfer.direction == "out" ? "−" : "")\(transfer.amount) \(transfer.token)")
+                                .font(.subheadline).foregroundStyle(transfer.direction == "in" ? Color.zeniGreen : .white)
+                            if let address = transfer.counterparty {
+                                Text("\(transfer.direction == "in" ? "From" : "To"): \(address.prefix(10))…\(address.suffix(6))")
+                                    .font(.system(.caption2, design: .monospaced)).foregroundStyle(Color.zeniMuted)
+                            }
+                        }
+                    }
+                } else {
+                    if let amount = item.amountIn, let token = item.tokenIn { Text("\(amount) \(token)").font(.subheadline) }
+                    if let output = item.amountOut { Text("Received: \(output) \(item.tokenOut ?? "")").font(.caption) }
+                }
+            }
+            HStack {
+                Text(item.source == "chain" || item.source == "merged" ? "On chain" : "Saved in Zeni")
+                Text(Date(timeIntervalSince1970: item.timestamp / 1000), style: .date)
+                Text(Date(timeIntervalSince1970: item.timestamp / 1000), style: .time)
+            }.font(.caption2).foregroundStyle(Color.zeniMuted)
+            if item.stage != "receive", let fee = item.gasCost, !fee.isEmpty {
+                Text("Network fees: \(fee)").font(.caption)
+            }
+            if let error = item.error { TransactionErrorView(message: error) }
+            Text(item.hash).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
+            TransactionExplorerLink(state: state, hash: item.hash)
+        }.padding(16).transactionCard()
     }
 }
 

@@ -29,3 +29,13 @@ Zeni is a native, self-custodial iOS wallet application built in Swift 5.10 and 
 To test Face ID in the iOS Simulator:
 1. Open the Simulator menu: **Features → Face ID → Enrolled** (to simulate registered Face ID).
 2. When prompted for Face ID inside the app, select **Features → Face ID → Matching Face**.
+
+
+## Checking the account and Activity update
+
+1. Build the **Zeni** scheme using **⌘R**. Tap the account name at the top left, then **Add account** and authenticate to create Account 2. Repeat for Account 3; switching back must restore the corresponding balances and history. Account selection survives restarting the app.
+2. Receive testnet QOR at the selected account from another wallet. Open **Activity** or pull to refresh: the confirmed indexed transfer should appear as **Received**, even though Zeni did not send it. Check its explorer link. Use **Load older activity** when available; disconnect networking and refresh to check the cached-history error state.
+3. Switch accounts and reconnect any dApp. Review a transfer from the new account; the first transfer may require PQC registration and testnet QOR for fees. Device authentication is requested when signing. Each account has its own PQC key registration.
+4. Press **⌘U** to run the deterministic simulator test suite. Tests use public fixtures and mock chain responses, not live broadcasts. Actual Keychain authentication and funded testnet transfers should be checked on your device.
+
+See [WalletEngine/README.md](WalletEngine/README.md) for history coverage, persistence, and rebuilding the engine. The checked-in `WalletEngine.html` is already rebuilt; Xcode does not require Node to run it.

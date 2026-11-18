@@ -82,6 +82,11 @@ final class ZeniConnectController {
         present(session)
     }
     func walletLocked() { sessions.forEach { $0.walletLocked() } }
+    func accountChanged() {
+        let previous = sessions
+        previous.forEach { $0.invalidateAccount() }
+        sessions.removeAll(); selectedID = nil; isPresented = false
+    }
 }
 
 @MainActor
@@ -254,6 +259,7 @@ final class ZeniConnectSession: Identifiable {
         clear()
     }
     func walletLocked() { review = nil; reviewExpiresAt = nil }
+    func invalidateAccount() { clear(reason: "Account changed. Reconnect this app to continue.") }
     private func updateHistory(_ id: String, status: String, result: String? = nil) {
         guard let index = history.firstIndex(where: { $0.id == id }) else { return }
         history[index].status = status

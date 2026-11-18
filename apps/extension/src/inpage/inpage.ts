@@ -12,6 +12,16 @@ class ZeniInpageProvider {
   private requestId = 0;
   private pendingCallbacks = new Map<number, { resolve: (val: unknown) => void; reject: (err: Error) => void }>();
 
+  private accountListeners = new Set<(accounts: string[]) => void>();
+  public on(event: string, listener: (accounts: string[]) => void) {
+    if (event === "accountsChanged" && typeof listener === "function") this.accountListeners.add(listener);
+    return this;
+  }
+  public removeListener(event: string, listener: (accounts: string[]) => void) {
+    if (event === "accountsChanged") this.accountListeners.delete(listener);
+    return this;
+  }
+
   public isZeni = true;
   public isMetaMask = false;
 
@@ -25,6 +35,14 @@ class ZeniInpageProvider {
       return;
     }
 
+    if (event.data.event === "accountsChanged") {
+      const accounts = event.data.accounts;
+      if (!Array.isArray(accounts) || accounts.length > 1 || !accounts.every((address: unknown) => typeof address === "string" && /^0x[0-9a-fA-F]{40}$/.test(address))) return;
+      for (const listener of this.accountListeners) {
+        try { listener([...accounts]); } catch { /* One dApp listener must not block another. */ }
+      }
+      return;
+    }
     const { clientReqId, result, error } = event.data;
     const pending = this.pendingCallbacks.get(clientReqId);
     if (!pending) return;

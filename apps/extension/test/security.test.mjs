@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as ethers from 'ethers';
-import { validateDappRequest } from '../../../packages/core/dist/index.js';
+import { validateDappRequest, mergeAccountActivity } from '../../../packages/core/dist/index.js';
 
 const source = readFileSync(new URL('../src/background/service-worker.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
@@ -15,7 +15,8 @@ function fixture() {
   let now = 1000;
   const stored = {};
   const events = {};
-  let decryptGate, prepareGate, sendGate;
+  let decryptGate, prepareGate, sendGate, historyGate;
+  let chainItems = [], historyFailure = false, historyCalls = 0;
   const transfers = [];
   let prepared = 0;
   let accessLevel;
@@ -38,7 +39,9 @@ function fixture() {
   const core = {
     QORECHAIN_CONFIG: { rpcUrls: ['https://example.invalid'], chainId: 9800 },
     QoreChainClient: class { provider = {}; },
-    deriveAccountKeys: () => ({ ...keys }), isValidMnemonic: (value) => value === 'valid mnemonic',
+    deriveAccountKeys: (_mnemonic, _passphrase, index = 0) => index === 0 ? ({ ...keys }) : ({ ...keys,
+      classicalAddress: ethers.getAddress('0x' + String(index + 1).padStart(40, '0')), cosmosAddress: `qor-account-${index}`, pqcPublicKeyHash: `hash-${index}`,
+    }), isValidMnemonic: (value) => value === 'valid mnemonic',
     encryptVault: async (payload, password) => ({ payload, password }),
     decryptVault: async (envelope, password) => {
       if (decryptGate) await decryptGate;
@@ -46,8 +49,16 @@ function fixture() {
       return structuredClone(envelope.payload);
     },
     repairPqcPublicKeyHash: (value) => value,
-    AmmSwapClient: class {},
-    validateDappRequest,
+    AmmSwapClient: class { async balances() { return { QOR: "0", fUSD: "0", fETH: "0", fBTC: "0" }; } },
+    validateDappRequest, mergeAccountActivity,
+    AccountActivityClient: class {
+      async page() {
+        historyCalls++;
+        if (historyGate) await historyGate;
+        if (historyFailure) throw new Error('Network offline');
+        return { items: structuredClone(chainItems), nextCursor: null };
+      }
+    },
     QorTransferClient: class {
       async prepare(account, to, amount) {
         if (prepareGate) await prepareGate;
@@ -83,6 +94,8 @@ function fixture() {
   };
   return { stored, message, port, transfers, prepared: () => prepared, deferPrepare: gate => { prepareGate = gate; }, deferSend: gate => { sendGate = gate; }, now: (value) => { now = value; }, access: () => accessLevel,
     deferDecrypt: (gate) => { decryptGate = gate; },
+    history: (items, fail = false) => { chainItems = items; historyFailure = fail; },
+    deferHistory: gate => { historyGate = gate; }, historyCalls: () => historyCalls,
     create: () => message('CREATE_VAULT', { mnemonic: 'valid mnemonic', password: 'strong password' }),
   };
 }
@@ -327,4 +340,169 @@ test('legacy EVM transfer requests cannot fall back to classical signing', async
   assert.equal(p.messages.at(-1).error.code, 4200);
   assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 0);
   assert.equal(f.transfers.length, 0);
+});
+
+test('adds sequential accounts without exposing keys and preserves selection across unlock', async () => {
+  const f = fixture(); await f.create();
+  for (const index of [1, 2]) {
+    const result = await f.message('ADD_ACCOUNT', { password: 'strong password' });
+    assert.equal(result.success, true);
+    assert.equal(result.data.length, index + 1);
+    assert.equal(result.data[index].name, `Account ${index + 1}`);
+    assert.deepEqual(Object.keys(result.data[index]).sort(), ['address', 'cosmosAddress', 'index', 'name']);
+    assert.equal(new Set(result.data.map(account => account.address)).size, index + 1);
+    const status = (await f.message('GET_SESSION_STATUS')).data;
+    assert.equal(status.activeAccountIndex, index);
+    assert.equal(status.activeAddress, result.data[index].address);
+  }
+  assert.equal(f.stored.encryptedVault.payload.accounts.length, 3);
+  await f.message('SWITCH_ACCOUNT', { index: 0 });
+  await f.message('LOCK_VAULT');
+  assert.equal((await f.message('GET_SESSION_STATUS')).data.accounts.length, 0);
+  await f.message('UNLOCK_VAULT', { password: 'strong password' });
+  assert.equal((await f.message('GET_SESSION_STATUS')).data.activeAccountIndex, 0);
+  assert.equal((await f.message('GET_SESSION_STATUS')).data.accounts.length, 3);
+});
+
+test('wrong password, locked wallet, and invalid indices cannot change accounts', async () => {
+  const f = fixture(); await f.create();
+  assert.equal((await f.message('ADD_ACCOUNT', { password: 'wrong' })).success, false);
+  assert.equal(f.stored.encryptedVault.payload.accounts.length, 1);
+  for (const index of [-1, 1, 1.5, '0', null, 2147483648]) {
+    assert.equal((await f.message('SWITCH_ACCOUNT', { index })).success, false);
+  }
+  await f.message('LOCK_VAULT');
+  assert.equal((await f.message('ADD_ACCOUNT', { password: 'strong password' })).success, false);
+  assert.equal((await f.message('SWITCH_ACCOUNT', { index: 0 })).success, false);
+});
+
+test('account creation serializes mutations and aborts if locked during password verification', async () => {
+  const f = fixture(); await f.create();
+  let release;
+  f.deferDecrypt(new Promise(resolve => { release = resolve; }));
+  const adding = f.message('ADD_ACCOUNT', { password: 'strong password' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal((await f.message('ADD_ACCOUNT', { password: 'strong password' })).success, false);
+  assert.equal((await f.message('SWITCH_ACCOUNT', { index: 0 })).success, false);
+  await f.message('LOCK_VAULT'); release();
+  assert.equal((await adding).success, false);
+  assert.equal(f.stored.encryptedVault.payload.accounts.length, 1);
+  assert.equal((await f.message('GET_SESSION_STATUS')).data.isUnlocked, false);
+});
+
+test('changing accounts rejects old approvals, clears quotes, and requires website reconnection', async () => {
+  const { f, p } = await connected();
+  const quote = await f.message('PREPARE_QOR_TRANSFER', { to: transaction.to, amount: '1' });
+  assert.equal(quote.success, true);
+  await p.request('personal_sign', 60, [ethers.hexlify(ethers.toUtf8Bytes('Account 1 only')), keys.classicalAddress]);
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 1);
+  assert.equal((await f.message('ADD_ACCOUNT', { password: 'strong password' })).success, true);
+  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 0);
+  assert.ok(p.messages.some(message => message.clientReqId === 60 && message.error?.code === 4001));
+  assert.ok(p.messages.some(message => message.event === 'accountsChanged' && message.accounts.length === 0));
+  await p.request('eth_accounts', 61);
+  assert.equal(p.messages.at(-1).result.length, 0);
+  assert.equal((await f.message('EXECUTE_TRANSFER', { to: transaction.to, amount: '1', token: 'QOR', quoteId: quote.data.id })).success, false);
+  assert.equal(f.transfers.length, 0);
+  await p.request('eth_requestAccounts', 62);
+  const pending = await pendingRequest(f);
+  assert.equal((await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true })).success, true);
+  assert.equal(p.messages.at(-1).result[0], (await f.message('GET_SESSION_STATUS')).data.activeAddress);
+});
+
+test('account switches are blocked while a reviewed transfer is executing', async () => {
+  const { f, p } = await connected();
+  await p.request('zeni_sendQor', 1, [transaction]);
+  const pending = await pendingRequest(f);
+  const quote = await f.message('PREPARE_DAPP_APPROVAL', { internalId: pending.internalId });
+  let release;
+  f.deferSend(new Promise(resolve => { release = resolve; }));
+  const sending = f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true, quoteId: quote.data.id });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal((await f.message('ADD_ACCOUNT', { password: 'strong password' })).success, false);
+  assert.equal((await f.message('SWITCH_ACCOUNT', { index: 0 })).success, false);
+  release(); assert.equal((await sending).success, true);
+});
+
+test('activity and clearing history are scoped to the selected account; legacy entries stay with Account 1', async () => {
+  const f = fixture(); await f.create();
+  await f.message('ADD_ACCOUNT', { password: 'strong password' });
+  const second = (await f.message('GET_SESSION_STATUS')).data;
+  f.stored.activityHistory = [
+    { hash: 'legacy', status: 'CONFIRMED' },
+    { hash: 'first', account: keys.cosmosAddress, status: 'CONFIRMED' },
+    { hash: 'second', account: second.cosmosAddress, status: 'CONFIRMED' },
+  ];
+  assert.deepEqual(Array.from((await f.message('GET_ACTIVITY')).data, entry => entry.hash), ['second']);
+  await f.message('CLEAR_ACTIVITY');
+  assert.deepEqual(f.stored.activityHistory.map(entry => entry.hash), ['legacy', 'first']);
+  await f.message('SWITCH_ACCOUNT', { index: 0 });
+  assert.deepEqual(Array.from((await f.message('GET_ACTIVITY')).data, entry => entry.hash), ['legacy', 'first']);
+});
+
+test('untrusted content scripts cannot add or switch accounts', async () => {
+  const f = fixture(); await f.create();
+  for (const type of ['ADD_ACCOUNT', 'SWITCH_ACCOUNT']) {
+    const result = await f.message(type, { index: 0, password: 'strong password' }, { id: 'wallet-id', url: 'https://evil.example' });
+    assert.equal(result.success, false);
+  }
+});
+
+test('provider delivers validated account-change events and supports removing listeners', () => {
+  const providerSource = readFileSync(new URL('../src/inpage/inpage.ts', import.meta.url), 'utf8');
+  const providerCompiled = ts.transpileModule(providerSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  let messageListener;
+  const window = { location: { origin: 'https://dapp.example' }, addEventListener: (event, listener) => { if (event === 'message') messageListener = listener; }, dispatchEvent() {}, postMessage() {} };
+  vm.runInNewContext(providerCompiled, { window, CustomEvent: class {}, setTimeout, clearTimeout, console });
+  const seen = [];
+  const listener = accounts => seen.push([...accounts]);
+  assert.equal(window.zeni.on('accountsChanged', listener), window.zeni);
+  const emit = (accounts, origin = window.location.origin) => messageListener({ source: window, origin, data: { target: 'zeni-inpage-response', event: 'accountsChanged', accounts } });
+  emit([]); assert.equal(seen.length, 1);
+  emit(['secret-not-an-address']); emit([keys.classicalAddress], 'https://evil.example');
+  assert.equal(seen.length, 1);
+  emit([keys.classicalAddress]); assert.deepEqual(seen[1], [keys.classicalAddress]);
+  window.zeni.removeListener('accountsChanged', listener); emit([]);
+  assert.equal(seen.length, 2);
+});
+
+test('chain receipts merge incoming transfers with local activity and are not removed by clearing local history', async () => {
+  const f = fixture(); await f.create();
+  const item = { hash: 'CC'.repeat(32), type: 'RECEIVE', account: keys.cosmosAddress, amount: '7', token: 'QOR', timestamp: 5000, status: 'CONFIRMED', gasCost: '', source: 'chain', nativeChain: true };
+  f.history([item]);
+  f.stored.activityHistory = [{ ...item, source: 'local', status: 'PENDING' }];
+  let result = await f.message('GET_ACCOUNT_ACTIVITY');
+  assert.equal(result.success,true); assert.equal(result.data.items.length,1);
+  assert.equal(result.data.items[0].status,'CONFIRMED');
+  await f.message('CLEAR_ACTIVITY');
+  result=await f.message('GET_ACCOUNT_ACTIVITY');
+  assert.equal(result.data.items.length,1); assert.equal(result.data.items[0].type,'RECEIVE');
+  assert.equal(f.historyCalls(),1,'Fresh chain history should be cached');
+});
+test('history failure preserves cached incoming transfers and exposes an error', async () => {
+  const f = fixture(); await f.create();
+  const item = { hash:'DD'.repeat(32),type:'RECEIVE',account:keys.cosmosAddress,timestamp:10,status:'CONFIRMED',gasCost:'',source:'chain' };
+  f.history([item]); await f.message('GET_ACCOUNT_ACTIVITY');
+  f.history([],true);
+  const result=await f.message('GET_ACCOUNT_ACTIVITY',{force:true});
+  assert.equal(result.data.items.length,1); assert.match(result.data.error,/Could not refresh/);
+});
+test('an account switch prevents a delayed chain history response reaching the old popup request', async () => {
+  const f=fixture(); await f.create();
+  let release;f.deferHistory(new Promise(resolve=>{release=resolve;}));
+  const pending=f.message('GET_ACCOUNT_ACTIVITY');
+  await new Promise(resolve=>setImmediate(resolve));
+  await f.message('ADD_ACCOUNT',{password:'strong password'});
+  release(); assert.equal((await pending).success,false);
+});
+test('chain history stays separate for each account and is hidden while locked', async () => {
+  const f=fixture();await f.create();
+  f.history([{hash:'AA'.repeat(32),type:'RECEIVE',account:keys.cosmosAddress,timestamp:1,status:'CONFIRMED',gasCost:'',source:'chain'}]);
+  await f.message('GET_ACCOUNT_ACTIVITY');
+  await f.message('ADD_ACCOUNT',{password:'strong password'});f.history([]);
+  assert.equal((await f.message('GET_ACCOUNT_ACTIVITY')).data.items.length,0);
+  await f.message('SWITCH_ACCOUNT',{index:0});
+  assert.equal((await f.message('GET_ACCOUNT_ACTIVITY')).data.items.length,1);
+  await f.message('LOCK_VAULT');
+  assert.equal((await f.message('GET_ACCOUNT_ACTIVITY')).data.items.length,0);
 });

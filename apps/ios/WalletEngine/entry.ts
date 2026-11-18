@@ -1,3 +1,4 @@
+import { AccountActivityClient, mergeAccountActivity, type ActivityCursor } from '../../../packages/core/src/rpc/activity';
 import { resolveTransactionExplorerUrl } from '../../../packages/core/src/rpc/explorer';
 import { validateDappRequest } from '../../../packages/core/src/account/dapp';
 import { ethers } from 'ethers';
@@ -38,6 +39,40 @@ let busy = false;
 let history: any[] = [];
 const quotes = new Map<string, { kind: string; quote: any }>();
 let transferContext: any = null;
+const chainHistory = new Map<string, { items: any[]; nextCursor: ActivityCursor | null; updatedAt: number | null }>();
+const historyRequests = new Map<string, Promise<any>>();
+async function accountActivity(older: boolean) {
+  const active = watching(), version = epoch;
+  const address = active.classicalAddress;
+  let snapshot = chainHistory.get(address);
+  let error: string | null = null;
+  if (!older || !snapshot || snapshot.nextCursor) {
+    let request = historyRequests.get(address);
+    if (!request) {
+      request = new AccountActivityClient().page(address, older ? snapshot?.nextCursor : null);
+      historyRequests.set(address, request);
+    }
+    try {
+      const page = await request;
+      const combined = mergeAccountActivity(snapshot?.items || [], page.items);
+      snapshot = { items: combined.slice(0,500), nextCursor: combined.length >= 500 ? null : page.nextCursor, updatedAt: Date.now() };
+      chainHistory.set(address, snapshot);
+      while (chainHistory.size > 10) chainHistory.delete(chainHistory.keys().next().value!);
+    } catch { error = 'Could not refresh on-chain history. Available activity is shown below. Please retry.'; }
+    finally { if (historyRequests.get(address) === request) historyRequests.delete(address); }
+  }
+  if (version !== epoch || !samePublicAccount(publicAccount, active)) throw new Error('Account changed. Refresh activity.');
+  const local = history.filter(item => item.account === active.cosmosAddress || item.account?.toLowerCase() === address.toLowerCase()).map(item => ({
+    ...item, source: 'local', type: item.stage === 'swap' ? 'SWAP' : item.stage === 'registration' ? 'SETUP' : 'SEND',
+    amount: item.stage === 'transfer' ? item.amountIn : undefined, token: item.tokenIn, to: item.recipient,
+  }));
+  const items = mergeAccountActivity(local, snapshot?.items || []).map(item => ({
+    ...item, account: active.cosmosAddress, nativeChain: item.nativeChain === true,
+    stage: item.type === 'SETUP' ? 'registration' : item.type === 'SEND' ? 'transfer' : item.type.toLowerCase(),
+    amountIn: item.amount ?? item.amountIn, tokenIn: item.token ?? item.tokenIn, recipient: item.to,
+  }));
+  return { items, hasMore: !!snapshot?.nextCursor, updatedAt: snapshot?.updatedAt ?? null, error };
+}
 const messageReviews = new Map<string, { hex: string; expiresAt: number }>();
 
 function errorMessage(error: any): string {
@@ -144,22 +179,27 @@ async function invoke(method: string, payload: any) {
       return true;
     }
     if (method === 'lock') { epoch++; account = null; quotes.clear(); messageReviews.clear(); return true; }
-    if (method === 'unlock') {
+    if (method === 'unlock' || method === 'derivePublicAccount') {
       if (busy) throw new Error('A transaction is still in progress.');
       const mnemonic = normalizeMnemonic(payload.mnemonic);
       if (!isValidMnemonic(mnemonic)) throw new Error('Enter a valid BIP-39 recovery phrase.');
-      const next = deriveAccountKeys(mnemonic);
+      const index = payload.accountIndex ?? 0;
+      if (!Number.isSafeInteger(index) || index < 0 || index >= 100) throw new Error('Invalid account index.');
+      const next = deriveAccountKeys(mnemonic, '', index);
       const keypair = derivePqcKeypair(next);
       const pqcPublicKeyHex = ethers.hexlify(keypair.publicKey);
       keypair.secretKey.fill(0);
       const metadata: PublicAccount = { classicalAddress: next.classicalAddress, cosmosAddress: next.cosmosAddress,
         pqcPublicKeyHex, pqcPublicKeyHash: next.pqcPublicKeyHash };
+      const result = { evmAddress: next.classicalAddress, cosmosAddress: next.cosmosAddress, pqcPublicKeyHex, pqcPublicKeyHashHex: next.pqcPublicKeyHash };
+      if (method === 'derivePublicAccount') return result; // Derivation does not unlock or change the signing session.
       // Preserve canonical reviews only when authentication loads the exact reviewed public account.
       if (!samePublicAccount(publicAccount, metadata)) { quotes.clear(); messageReviews.clear(); }
       epoch++; publicAccount = metadata; account = next;
-      return { evmAddress: next.classicalAddress, cosmosAddress: next.cosmosAddress, pqcPublicKeyHex, pqcPublicKeyHashHex: next.pqcPublicKeyHash };
+      return result;
     }
     if (method === 'reconcile') return await reconcile();
+    if (method === 'accountActivity') return await accountActivity(payload.older === true);
     if (method === 'balances') {
       const active = watching();
       const [bank, evm] = await Promise.all([swaps.balances(active.cosmosAddress), provider.getBalance(active.classicalAddress, 'pending')]);

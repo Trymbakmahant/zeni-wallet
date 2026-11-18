@@ -349,4 +349,72 @@ struct ZeniTransactionTests {
         #expect(!engine.permitsBroadcast)
     }
 
+    @Test func additionalAccountsAreDistinctAndDerivationDoesNotChangeSelectedAccount() async throws {
+        let (engine, chain) = try await fixture()
+        defer { engine.lock() }
+        let second: PublicAccountInfo = try await engine.call("derivePublicAccount", payload: ["mnemonic": referencePhrase, "accountIndex": 1])
+        let third: PublicAccountInfo = try await engine.call("derivePublicAccount", payload: ["mnemonic": referencePhrase, "accountIndex": 2])
+        #expect(second.evmAddress != third.evmAddress)
+        #expect(second.pqcPublicKeyHashHex != third.pqcPublicKeyHashHex)
+        let current: WalletHistoryPage = try await engine.call("accountActivity")
+        #expect(current.items.first?.stage == "receive") // Mock receipt still belongs to Account 1.
+        let restored: PublicAccountInfo = try await engine.call("unlock", payload: ["mnemonic": referencePhrase, "accountIndex": 1])
+        #expect(restored == second)
+        let isolated: WalletHistoryPage = try await engine.call("accountActivity")
+        #expect(isolated.items.isEmpty)
+        #expect(chain.broadcastCount == 0)
+        do {
+            let _: PublicAccountInfo = try await engine.call("derivePublicAccount", payload: ["mnemonic": referencePhrase, "accountIndex": -1])
+            Issue.record("Invalid derivation index accepted")
+        } catch { #expect(!error.localizedDescription.isEmpty) }
+    }
+
+    @Test func activityReadsIncomingTransfersWithoutSigningAndRetainsCachedRowsOffline() async throws {
+        let (engine, chain) = try await fixture()
+        engine.lock()
+        let page: WalletHistoryPage = try await engine.call("accountActivity")
+        #expect(page.error == nil)
+        #expect(page.items.count == 1) // Same receipt from multiple search streams is deduplicated.
+        #expect(page.items.first?.stage == "receive")
+        #expect(page.items.first?.amountIn == "5.0")
+        #expect(page.items.first?.tokenIn == "QOR")
+        #expect(page.items.first?.source == "chain")
+        #expect(!page.hasMore)
+        chain.historyUnavailable = true
+        let offline: WalletHistoryPage = try await engine.call("accountActivity")
+        #expect(offline.error != nil)
+        #expect(offline.items == page.items)
+        #expect(chain.records.isEmpty) // Remote history never enters the broadcast journal.
+        #expect(chain.broadcastCount == 0)
+    }
+
+    @Test func legacyActivityJournalStillDecodes() throws {
+        let data = Data(#"{"hash":"ABC","account":"qor1fixture","nativeChain":true,"stage":"transfer","timestamp":1000,"status":"PENDING"}"#.utf8)
+        let item = try JSONDecoder().decode(WalletActivityItem.self, from: data)
+        #expect(item.source == nil)
+        #expect(item.transfers == nil)
+        #expect(item.id == "abc")
+        #expect(item.title == "Send")
+    }
+
+    @Test func switchingAccountsInvalidatesOldReviewAndNewAccountCanTransfer() async throws {
+        let (engine, chain) = try await fixture()
+        defer { engine.lock() }
+        let recipient = "0x4a6b5eed1b7f9ca98d3cb6b8aa593c3afe11b76a"
+        let oldQuote: TransferQuote = try await engine.call("prepareTransfer", payload: ["recipient": recipient, "amount": "1", "token": "QOR"])
+        let second: PublicAccountInfo = try await engine.call("unlock", payload: ["mnemonic": referencePhrase, "accountIndex": 1])
+        chain.configure(account: second)
+        engine.permitsBroadcast = true
+        do {
+            let _: TransactionResult = try await engine.call("executeTransfer", payload: ["quoteId": oldQuote.id])
+            Issue.record("Previous account's review remained usable")
+        } catch { #expect(chain.broadcastCount == 0) }
+        let quote: TransferQuote = try await engine.call("prepareTransfer", payload: ["recipient": recipient, "amount": "1", "token": "QOR"])
+        let result: TransactionResult = try await engine.call("executeTransfer", payload: ["quoteId": quote.id])
+        #expect(result.status == "CONFIRMED")
+        #expect(chain.records.allSatisfy { $0.account == second.cosmosAddress })
+        #expect(chain.broadcastCount == 2)
+        #expect(chain.savedBeforeBroadcast)
+    }
+
 }

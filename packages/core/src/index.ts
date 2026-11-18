@@ -10,3 +10,5 @@ export * from "./rpc/amm.js";
 export * from "./account/dapp.js";
 export * from "./rpc/explorer.js";
 export * from "./rpc/pqc-status.js";
+
+export * from "./rpc/activity.js";

@@ -5,8 +5,9 @@ import { UnlockView } from "./views/UnlockView";
 import { PortfolioView } from "./views/PortfolioView";
 import { ActivityView } from "./views/ActivityView";
 import { SettingsView } from "./views/SettingsView";
+import { AccountSwitcher } from "./components/AccountSwitcher";
 import { StartupScreen } from "./components/StartupScreen";
-import { Home, Clock, Settings, ShieldCheck, Lock, ChevronDown, Copy, Check } from "lucide-react";
+import { Home, Clock, Settings, ShieldCheck, Lock, Copy, Check } from "lucide-react";
 
 const MainLayout: React.FC = () => {
   const { isInitialized, isLocked, pendingApprovals, lock, activeAddress } = useWallet();
@@ -33,10 +34,7 @@ const MainLayout: React.FC = () => {
       {/* Extension Header - MetaMask Style */}
       <header className="flex items-center justify-between px-4 py-2.5 border-b border-[#18181B] bg-[#000000] select-none shrink-0">
         <div className="flex flex-col">
-          <div className="flex items-center gap-1 cursor-pointer group">
-            <span className="font-bold text-sm text-white group-hover:text-zinc-200">Account 1</span>
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
-          </div>
+          <AccountSwitcher />
           {/* Truncated address copy pill */}
           <button
             onClick={copyAddress}
@@ -65,7 +63,7 @@ const MainLayout: React.FC = () => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto px-4 py-3 bg-[#000000]">
+      <main key={activeAddress} className="flex-1 overflow-y-auto px-4 py-3 bg-[#000000]">
         {activeTab === "home" && <PortfolioView />}
         {activeTab === "activity" && <ActivityView />}
         {activeTab === "settings" && <SettingsView />}

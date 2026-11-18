@@ -17,13 +17,14 @@ public struct PortfolioView: View {
     let state: AppState
     @State private var destination: TransactionDestination?
     @State private var tab: WalletTab = .home
+    @State private var showingAccounts = false
 
     public init(state: AppState) { self.state = state }
 
     public var body: some View {
         @Bindable var connection = state.connect
         VStack(spacing: 0) {
-            WalletHeader(state: state, openWallet: { destination = .wallet }) {
+            WalletHeader(state: state, openWallet: { if state.hasWallet { showingAccounts = true } else { destination = .wallet } }) {
                 connection.openApps()
             }
             Rectangle().fill(Color.zeniBorder).frame(height: 1)
@@ -44,7 +45,10 @@ public struct PortfolioView: View {
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
-            .refreshable { await state.refresh() }
+            .refreshable {
+                await state.refresh()
+                if tab == .activity { await state.refreshActivity() }
+            }
             WalletBottomNavigation(selection: $tab)
         }
         .background(Color.zeniBackground.ignoresSafeArea())
@@ -52,16 +56,22 @@ public struct PortfolioView: View {
         .tint(.zeniAccent)
         .preferredColorScheme(.dark)
         .sheet(item: $destination, onDismiss: {
-            connection.presentationBlocked = false
+            connection.presentationBlocked = showingAccounts
             connection.presentNextPending()
         }) { selection in
             WalletTransactionSheet(state: state, destination: selection)
         }
+        .sheet(isPresented: $showingAccounts, onDismiss: {
+            connection.presentationBlocked = destination != nil
+            connection.presentNextPending()
+        }) { WalletAccountPicker(state: state) }
         .sheet(isPresented: $connection.isPresented) {
             ZeniConnectView(state: state, controller: connection)
         }
         .task { await state.refresh() }
-        .onChange(of: destination) { connection.presentationBlocked = destination != nil }
+        .onChange(of: destination) { connection.presentationBlocked = destination != nil || showingAccounts }
+        .onChange(of: showingAccounts) { connection.presentationBlocked = showingAccounts || destination != nil }
+        .onChange(of: state.activeAccount) { destination = nil }
         .onChange(of: state.isTransacting) {
             if !state.isTransacting { connection.presentNextPending() }
         }
@@ -81,7 +91,7 @@ private struct WalletHeader: View {
             VStack(alignment: .leading, spacing: 4) {
                 Button(action: openWallet) {
                     HStack(spacing: 6) {
-                        Text(state.hasWallet ? "Account 1" : "Your Wallet").font(.subheadline.bold())
+                        Text(state.hasWallet ? state.accountName : "Your Wallet").font(.subheadline.bold())
                         Image(systemName: "chevron.down").font(.caption2).foregroundStyle(Color.zeniMuted)
                     }
                 }.buttonStyle(.plain)
@@ -389,4 +399,63 @@ private struct WalletSettings: View {
 
 #Preview("Extension-style wallet") {
     PortfolioView(state: AppState())
+}
+
+private struct WalletAccountPicker: View {
+    let state: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var working = false
+    @State private var error: String?
+    private var blocked: Bool {
+        working || state.isTransacting || state.isAuthenticating || state.isRefreshing || state.connect.busy
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(state.accounts.indices, id: \.self) { index in
+                        Button {
+                            perform { try await state.switchAccount(to: index) }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Account \(index + 1)").font(.headline)
+                                    let address = state.accounts[index].evmAddress
+                                    Text("\(address.prefix(8))…\(address.suffix(6))")
+                                        .font(.system(.caption, design: .monospaced)).foregroundStyle(Color.zeniMuted)
+                                }
+                                Spacer()
+                                if index == state.activeAccountIndex { Image(systemName: "checkmark.circle.fill") }
+                            }.padding(.vertical, 6)
+                        }.disabled(blocked)
+                    }
+                } footer: {
+                    Text("Switching accounts disconnects connected apps. Each account has its own balances, history, and PQC registration.")
+                }
+                Section {
+                    Button { perform { try await state.addAccount() } } label: {
+                        Label("Add account", systemImage: "plus.circle")
+                    }.disabled(blocked || state.accounts.count >= 100)
+                    if working { ProgressView("Updating account…") }
+                    if let error { Text(error).font(.caption).foregroundStyle(.red) }
+                } footer: {
+                    Text("Uses the same recovery phrase and requires device authentication. To restore additional accounts, import your phrase and add them again in the same order. Fund each account with testnet QOR before its first transfer; PQC setup is included in the transaction review.")
+                }
+            }
+            .navigationTitle("Your accounts")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.disabled(working) } }
+        }
+        .tint(.zeniAccent).preferredColorScheme(.dark)
+        .interactiveDismissDisabled(working)
+    }
+
+    private func perform(_ action: @escaping @MainActor () async throws -> Void) {
+        working = true; error = nil
+        Task { @MainActor in
+            defer { working = false }
+            do { try await action(); dismiss() }
+            catch { self.error = error.localizedDescription }
+        }
+    }
 }

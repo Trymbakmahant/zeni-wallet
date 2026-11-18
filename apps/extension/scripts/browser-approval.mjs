@@ -77,9 +77,37 @@ try {
     window.setTimeout = (callback, milliseconds, ...args) => realTimeout(callback, milliseconds === 30000 ? 100 : milliseconds, ...args);
     window.pending = [{ internalId: 'transfer-1', origin: 'https://demo.example', title: 'Zeni Connect Demo', account: '0x2222222222222222222222222222222222222222', payload: { method: 'zeni_sendQor' }, intent: { kind: 'transfer', to: '0x3333333333333333333333333333333333333333', amount: '1.0' } }];
     const status = { isInitialized: true, isUnlocked: true, activeAddress: '0x2222222222222222222222222222222222222222', onChainBalance: '10', pqcPublicKeyHash: ${JSON.stringify(keccak256(testKey))} };
+    status.accounts = [{ index: 0, name: 'Account 1', address: status.activeAddress, cosmosAddress: 'qor1mock' }];
+    status.activeAccountIndex = 0;
+    window.walletStatus = status;
     window.chrome.runtime = { sendMessage(message, callback) {
-      if (message.type === 'GET_SESSION_STATUS' || message.type === 'GET_STATUS') return callback({ success: true, data: status });
+      if (message.type === 'ADD_ACCOUNT') {
+        if (message.password !== 'test wallet password') return callback({ success: false, error: 'Incorrect wallet password' });
+        const index = status.accounts.length;
+        status.accounts.push({ index, name: 'Account ' + (index + 1), address: '0x' + String(index + 3).repeat(40), cosmosAddress: 'qor1mock' + index });
+        status.activeAccountIndex = index; status.activeAddress = status.accounts[index].address; status.onChainBalance = String(index + 10);
+        return callback({ success: true, data: status.accounts });
+      }
+      if (message.type === 'SWITCH_ACCOUNT') {
+        status.activeAccountIndex = message.index; status.activeAddress = status.accounts[message.index].address; status.onChainBalance = String(message.index + 10);
+        return callback({ success: true, data: status.accounts });
+      }
+
+      if (message.type === 'GET_STATUS' && window.holdNextBalance) {
+        window.holdNextBalance = false;
+        const oldStatus = { ...structuredClone(status), onChainBalance: '999999' };
+        window.releaseOldBalance = () => callback({ success: true, data: oldStatus });
+        return;
+      }
+      if (message.type === 'GET_SESSION_STATUS' || message.type === 'GET_STATUS') return callback({ success: true, data: structuredClone(status) });
       if (message.type === 'GET_PENDING_APPROVALS') return callback({ success: true, data: structuredClone(window.pending) });
+      if (message.type === 'GET_ACCOUNT_ACTIVITY') {
+        const incoming = { hash: 'CC'.repeat(32), type: 'RECEIVE', amount: '5.0', token: 'QOR', timestamp: 1794996000000, status: 'CONFIRMED', gasCost: '', source: 'chain', nativeChain: true, from: 'qor1sender' };
+        const older = { ...incoming, hash: 'DD'.repeat(32), type: 'SEND', amount: '2.0', from: undefined, to: 'qor1recipient', timestamp: 1794909600000 };
+        if (message.older) window.historyOlder = true;
+        return callback({ success: true, data: { items: status.activeAccountIndex === 0 ? [incoming, ...(window.historyOlder ? [older] : [])] : [], hasMore: !window.historyOlder && status.activeAccountIndex === 0, updatedAt: Date.now(), error: window.historyOffline ? 'Could not refresh on-chain history. Available activity is shown below.' : null } });
+      }
+      if (message.type === 'CLEAR_ACTIVITY') return callback({ success: true, data: true });
       if (message.type === 'GET_ACTIVITY') return callback({ success: true, data: [] });
       if (message.type === 'PREPARE_DAPP_APPROVAL') {
         window.prepareCount++;
@@ -95,6 +123,7 @@ try {
     await until(`Array.from(document.querySelectorAll('button')).some(button => button.textContent.trim() === ${JSON.stringify(text)} && !button.disabled)`);
     const point = await evaluate(`(() => {
       const button = Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim() === ${JSON.stringify(text)});
+      button.scrollIntoView({ block: "center" });
       const rect = button.getBoundingClientRect();
       const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
       const target = document.elementFromPoint(x, y);
@@ -162,6 +191,66 @@ try {
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'));
   await screenshot('settings-final');
   console.log('PASS: Settings shows matching, mismatched, unregistered, error and loading states; retry recovers and leaving Settings cancels the request.');
+  async function openAccounts() {
+    await evaluate(`document.querySelector('button[aria-haspopup="dialog"]').click()`);
+    await until(`!!document.querySelector('dialog[open]')`);
+  }
+  async function fillPassword(value) {
+    await evaluate(`(() => {
+      const input = document.querySelector('#account-password');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(value)});
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`);
+  }
+  await clickText('Home');
+  await evaluate(`window.holdNextBalance = true; document.querySelector('button[title="Refresh balances"]').click()`);
+  await until(`typeof window.releaseOldBalance === 'function'`);
+  await openAccounts();
+  await clickText('Add account');
+  await until(`document.activeElement.id === 'account-password'`);
+  await fillPassword('wrong password');
+  await clickText('Create account');
+  await until(`document.body.textContent.includes('Incorrect wallet password')`);
+  assert.equal(await evaluate('window.walletStatus.accounts.length'), 1);
+  await fillPassword('test wallet password');
+  await clickText('Create account');
+  await until(`!document.querySelector('dialog') && document.querySelector('button[aria-haspopup="dialog"]').textContent.includes('Account 2')`);
+  await evaluate('window.releaseOldBalance()');
+  await delay(100);
+  assert.ok(await evaluate(`!document.body.textContent.includes('999')`), 'Late balances from Account 1 must not appear in Account 2');
+  await openAccounts();
+  await clickText('Add account');
+  await fillPassword('test wallet password');
+  await clickText('Create account');
+  await until(`!document.querySelector('dialog') && document.querySelector('button[aria-haspopup="dialog"]').textContent.includes('Account 3')`);
+  await openAccounts();
+  assert.equal(await evaluate(`document.querySelectorAll('dialog button[aria-pressed]').length`), 3);
+  assert.ok(await evaluate(`document.querySelector('dialog').getBoundingClientRect().width <= innerWidth`));
+  await screenshot('account-switcher');
+  await evaluate(`Array.from(document.querySelectorAll('dialog button[aria-pressed]')).find(button => button.textContent.startsWith('Account 1')).click()`);
+  await until(`!document.querySelector('dialog') && document.querySelector('button[aria-haspopup="dialog"]').textContent.includes('Account 1')`);
+  await clickText('Home');
+  await until(`document.body.textContent.includes('10')`);
+  await openAccounts();
+  console.log('PASS: account selector creates Account 2 and Account 3, rejects a wrong password, switches back to Account 1, fits the popup and focuses the password field.');
+  await evaluate(`document.querySelector('button[aria-label="Close account selector"]').click()`);
+  await clickText('Activity');
+  await until(`document.body.textContent.includes('Received 5.0 QOR')`);
+  assert.equal(await evaluate(`document.querySelectorAll('article').length`), 1);
+  await clickText('Load older activity');
+  await until(`document.body.textContent.includes('Sent 2.0 QOR')`);
+  await evaluate(`window.historyOffline = true; document.querySelector('button[aria-label="Refresh activity"]').click()`);
+  await until(`document.body.textContent.includes('Could not refresh on-chain history')`);
+  assert.ok(await evaluate(`document.body.textContent.includes('Received 5.0 QOR')`));
+  await evaluate(`window.historyOffline = false; document.querySelector('button[aria-label="Refresh activity"]').click()`);
+  await until(`!document.body.textContent.includes('Could not refresh on-chain history')`);
+  await evaluate(`document.querySelector('button[aria-label="Clear local activity"]').click()`);
+  await clickText('Clear local records');
+  await until(`!document.body.textContent.includes('Clear completed local records?')`);
+  assert.ok(await evaluate(`document.body.textContent.includes('Received 5.0 QOR')`), 'Clearing local history must preserve public incoming transfers');
+  assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'));
+  await screenshot('incoming-activity');
+  console.log('PASS: Activity shows incoming payments, loads older external sends, preserves receipts during network failures, retries successfully, and keeps chain history after clearing local records.');
   if (process.env.BROWSER_REVIEW_MS) {
     console.log(`Browser review: CDP ${port}; http://127.0.0.1:${server.address().port}/index.html`);
     await delay(Math.min(Number(process.env.BROWSER_REVIEW_MS), 60000));

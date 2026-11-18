@@ -15,6 +15,7 @@ final class MockChain: @unchecked Sendable {
     var loseBroadcastResponse = false
     var loseTransferResponse = false
     var quoteOutput = "81062"
+    var historyUnavailable = false
 
     func configure(account: PublicAccountInfo) { lock.withLock { self.account = account } }
     func persist(_ items: [WalletActivityItem]) { lock.withLock { history = items } }
@@ -104,6 +105,19 @@ final class MockChain: @unchecked Sendable {
                 return try json(["account": ["account_number": "1", "sequence": String(sequence)]])
             }
             if path.hasSuffix("/simulate") { return try json(["gas_info": ["gas_used": "100000"]]) }
+            if path.hasSuffix("/txs"), request.httpMethod == "GET" {
+                if historyUnavailable { throw URLError(.notConnectedToInternet) }
+                let sender = "qor1ff44amgm07w2nrfuk6u25kfu8tlprdm2yj52dp"
+                let recipient = account?.cosmosAddress ?? ""
+                let message: [String: Any] = ["@type": "/cosmos.bank.v1beta1.MsgSend",
+                    "from_address": sender, "to_address": recipient,
+                    "amount": [["denom": "uqor", "amount": "5000000"]]]
+                let tx: [String: Any] = ["body": ["messages": [message]],
+                    "auth_info": ["fee": ["amount": [["denom": "uqor", "amount": "1000"]]]]]
+                let receipt: [String: Any] = ["code": 0, "height": "128",
+                    "txhash": String(repeating: "C", count: 64), "timestamp": "2026-11-18T10:00:00Z", "events": []]
+                return try json(["txs": [tx], "tx_responses": [receipt], "total": "1"])
+            }
             if path.hasSuffix("/txs"), request.httpMethod == "POST" {
                 let payload = try JSONSerialization.jsonObject(with: body) as? [String: String] ?? [:]
                 guard let bytes = Data(base64Encoded: payload["tx_bytes"] ?? "") else { throw URLError(.cannotDecodeContentData) }

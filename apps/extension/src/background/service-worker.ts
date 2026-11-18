@@ -1,5 +1,9 @@
 import {
   QORECHAIN_CONFIG,
+  AccountActivityClient,
+  mergeAccountActivity,
+  type AccountActivity,
+  type ActivityCursor,
   validateDappRequest,
   DappIntent,
   QoreChainClient,
@@ -46,8 +50,18 @@ interface VaultData {
   activeAccountIndex: number;
 }
 
+interface HistorySnapshot {
+  items: AccountActivity[];
+  nextCursor: ActivityCursor | null;
+  updatedAt: number | null;
+  attemptedAt: number;
+  error: string | null;
+}
+
 class BackgroundController {
   private client: QoreChainClient;
+  private chainHistory = new Map<string, HistorySnapshot>();
+  private historyRequests = new Map<string, Promise<HistorySnapshot>>();
   private pendingRequests = new Map<string, PendingRequest>();
   private dAppPorts = new Map<string, chrome.runtime.Port>();
   private transferQuotes = new Map<string, QorTransferQuote>();
@@ -90,6 +104,7 @@ class BackgroundController {
     this.unlockDeadline = 0;
     clearTimeout(this.autoLockTimeout);
     this.unlockedVault = null;
+    this.notifyAccountsChanged();
     this.transferQuotes.clear();
     this.swapQuotes.clear();
     for (const id of this.pendingRequests.keys()) this.rejectApproval(id, "Wallet locked");
@@ -127,6 +142,8 @@ class BackgroundController {
     if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
     await chrome.storage.local.set({
       encryptedVault: envelope,
+      activeAccountIndex: 0,
+      connectedOrigins: [],
       activeAddress: keys.classicalAddress,
       cosmosAddress: keys.cosmosAddress,
       pqcPublicKeyHash: keys.pqcPublicKeyHash,
@@ -144,10 +161,16 @@ class BackgroundController {
     if (!envelope) throw new Error("No vault found");
 
     const decrypted = (await decryptVault(envelope, password)) as unknown as VaultData;
+    if (!Array.isArray(decrypted.accounts) || decrypted.accounts.length < 1 || decrypted.accounts.length > 100) throw new Error("Invalid wallet accounts.");
+    const selection = await chrome.storage.local.get(["activeAccountIndex"]);
+    const selected = selection.activeAccountIndex ?? decrypted.activeAccountIndex;
+    decrypted.activeAccountIndex = Number.isSafeInteger(selected) && selected >= 0 && selected < decrypted.accounts.length ? selected : 0;
     const accounts = decrypted.accounts.map(repairPqcPublicKeyHash);
     if (accounts.some((account, index) => account.pqcPublicKeyHash !== decrypted.accounts[index].pqcPublicKeyHash)) {
       decrypted.accounts = accounts;
-      await chrome.storage.local.set({ encryptedVault: await encryptVault(decrypted as any, password) });
+      const repaired = await encryptVault(decrypted as any, password);
+      if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
+      await chrome.storage.local.set({ encryptedVault: repaired });
     }
     if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
     this.unlockedVault = decrypted;
@@ -155,11 +178,115 @@ class BackgroundController {
 
     const active = decrypted.accounts[decrypted.activeAccountIndex];
     await chrome.storage.local.set({
+      activeAccountIndex: decrypted.activeAccountIndex,
       activeAddress: active.classicalAddress,
       cosmosAddress: active.cosmosAddress,
       pqcPublicKeyHash: active.pqcPublicKeyHash,
     });
     return active;
+  }
+
+  private publicAccounts() {
+    if (!this.isUnlocked() || !this.unlockedVault) return [];
+    return this.unlockedVault.accounts.map((account, index) => ({
+      index, name: `Account ${index + 1}`, address: account.classicalAddress, cosmosAddress: account.cosmosAddress,
+    }));
+  }
+
+  private notifyAccountsChanged(accounts: string[] = []) {
+    for (const port of this.dAppPorts.values()) {
+      try { port.postMessage({ event: "accountsChanged", accounts }); } catch { /* Disconnected tab. */ }
+    }
+  }
+
+  private async changeAccount(index: number, password?: string) {
+    if (this.vaultMutationInProgress || this.transferInProgress || this.approvalInProgress) {
+      throw new Error("Wait for the current wallet operation before changing accounts.");
+    }
+    if (!this.isUnlocked() || !this.unlockedVault) throw new Error("Unlock your wallet first.");
+    const previous = this.unlockedVault;
+    const adding = password !== undefined;
+    if (!Number.isSafeInteger(index) || index < 0 || index >= previous.accounts.length + (adding ? 1 : 0)
+      || (adding && index !== previous.accounts.length)) throw new Error("Invalid account selection.");
+    if (adding && previous.accounts.length >= 100) throw new Error("This wallet supports up to 100 accounts.");
+    if (!adding && index === previous.activeAccountIndex) return this.publicAccounts();
+    this.vaultMutationInProgress = true;
+    const generation = this.vaultGeneration;
+    const assertCurrent = () => {
+      if (this.vaultGeneration !== generation || !this.isUnlocked() || this.unlockedVault !== previous) {
+        throw new Error("Wallet locked or changed. Unlock it and try again.");
+      }
+    };
+    try {
+      const next: VaultData = { ...previous, accounts: [...previous.accounts], activeAccountIndex: index };
+      let encryptedVault: EncryptedVaultEnvelope | undefined;
+      if (adding) {
+        if (typeof password !== "string" || password.length > 1024) throw new Error("Invalid password.");
+        const envelope = await this.getEncryptedVault();
+        if (!envelope) throw new Error("No wallet found.");
+        const verified = await decryptVault(envelope, password) as unknown as VaultData;
+        assertCurrent();
+        if (verified.mnemonic !== previous.mnemonic || verified.accounts.length !== previous.accounts.length) {
+          throw new Error("Wallet changed. Lock and unlock before adding an account.");
+        }
+        next.accounts.push(deriveAccountKeys(previous.mnemonic, "", index));
+        encryptedVault = await encryptVault(next as any, password);
+      }
+      assertCurrent();
+      const active = next.accounts[index];
+      // Public selection metadata is separate from encrypted key material, so switching needs no password.
+      await chrome.storage.local.set({
+        ...(encryptedVault ? { encryptedVault } : {}), activeAccountIndex: index,
+        activeAddress: active.classicalAddress, cosmosAddress: active.cosmosAddress,
+        pqcPublicKeyHash: active.pqcPublicKeyHash, connectedOrigins: [],
+      });
+      assertCurrent();
+      this.vaultGeneration++;
+      this.unlockedVault = next;
+      this.transferQuotes.clear(); this.swapQuotes.clear();
+      for (const id of this.pendingRequests.keys()) this.rejectApproval(id, "Account changed. Reconnect and review a new request.");
+      this.notifyAccountsChanged();
+      this.resetAutoLock();
+      return this.publicAccounts();
+    } finally { this.vaultMutationInProgress = false; }
+  }
+
+  private activityBelongsTo(item: any, active: DerivedAccountKeys) {
+    if (!item.account) return active === this.unlockedVault?.accounts[0]; // Legacy single-account activity.
+    return item.account.toLowerCase() === active.cosmosAddress.toLowerCase()
+      || item.account.toLowerCase() === active.classicalAddress.toLowerCase();
+  }
+
+  private async getChainHistory(address: string, force: boolean, older: boolean): Promise<HistorySnapshot> {
+    const previous = this.chainHistory.get(address);
+    const running = this.historyRequests.get(address);
+    if (running) return running;
+    if (previous && ((older && !previous.nextCursor) || (!force && !older && Date.now() - previous.attemptedAt < 30_000))) return previous;
+    const work = (async () => {
+      try {
+        const page = await new AccountActivityClient().page(address, older ? previous?.nextCursor : null);
+        const combined = mergeAccountActivity(previous?.items || [],page.items);
+        const snapshot: HistorySnapshot = {
+          items: combined.slice(0,500), nextCursor: combined.length >= 500 ? null : page.nextCursor,
+          updatedAt: Date.now(), attemptedAt: Date.now(), error: null,
+        };
+        this.chainHistory.set(address,snapshot);
+        // Bound memory in the service worker; history is fetched again after a restart.
+        while (this.chainHistory.size > 10) this.chainHistory.delete(this.chainHistory.keys().next().value!);
+        return snapshot;
+      } catch {
+        const snapshot: HistorySnapshot = {
+          items: previous?.items || [], nextCursor: previous?.nextCursor || null,
+          updatedAt: previous?.updatedAt || null, attemptedAt: Date.now(),
+          error: "Could not refresh on-chain history. Available activity is shown below. Retry when the network is reachable.",
+        };
+        this.chainHistory.set(address,snapshot);
+        while (this.chainHistory.size > 10) this.chainHistory.delete(this.chainHistory.keys().next().value!);
+        return snapshot;
+      }
+    })();
+    this.historyRequests.set(address,work);
+    try { return await work; } finally { this.historyRequests.delete(address); }
   }
 
   // --- DApp Communication Bridge ---
@@ -210,6 +337,7 @@ class BackgroundController {
     origin: string,
     payload: { method: string; params?: any[] }
   ) {
+    if (this.vaultMutationInProgress) throw new Error("Wallet update in progress. Try again.");
     switch (payload.method) {
       case "eth_chainId":
         port.postMessage({ clientReqId, result: "0x" + QORECHAIN_CONFIG.chainId.toString(16) });
@@ -224,8 +352,8 @@ class BackgroundController {
         const stored = await chrome.storage.local.get(["connectedOrigins", "activeAddress"]);
         const connectedOrigins = stored.connectedOrigins || [];
 
-        if (active && connectedOrigins.includes(origin) && stored.activeAddress) {
-          port.postMessage({ clientReqId, result: [stored.activeAddress] });
+        if (active && this.getActiveAccount() === active && !this.vaultMutationInProgress && connectedOrigins.includes(origin)) {
+          port.postMessage({ clientReqId, result: [active!.classicalAddress] });
         } else {
           port.postMessage({ clientReqId, result: [] });
         }
@@ -233,11 +361,12 @@ class BackgroundController {
       }
 
       case "eth_requestAccounts": {
+        const active = this.getActiveAccount();
         const stored = await chrome.storage.local.get(["connectedOrigins", "activeAddress"]);
         const connectedOrigins = stored.connectedOrigins || [];
 
-        if (this.isUnlocked() && connectedOrigins.includes(origin) && stored.activeAddress) {
-          port.postMessage({ clientReqId, result: [stored.activeAddress] });
+        if (active && this.getActiveAccount() === active && !this.vaultMutationInProgress && connectedOrigins.includes(origin)) {
+          port.postMessage({ clientReqId, result: [active!.classicalAddress] });
           return;
         }
 
@@ -286,7 +415,7 @@ class BackgroundController {
     account?: string, intent?: DappIntent
   ) {
     this.expireApprovals();
-    if (this.approvalInProgress || this.pendingRequests.size >= 5 || Array.from(this.pendingRequests.values()).some((r) => r.origin === origin)) {
+    if (this.vaultMutationInProgress || this.approvalInProgress || this.pendingRequests.size >= 5 || Array.from(this.pendingRequests.values()).some((r) => r.origin === origin)) {
       port.postMessage({ clientReqId, error: { code: -32002, message: "An approval is already pending. Open Zeni to review it." } });
       return;
     }
@@ -404,6 +533,9 @@ class BackgroundController {
 
   private async handleInternalMessage(message: any, assertApproval: () => void = () => {}): Promise<any> {
     if (!message || typeof message.type !== "string") throw new Error("Invalid wallet request");
+    if (this.vaultMutationInProgress && ["PREPARE_QOR_TRANSFER", "EXECUTE_TRANSFER", "PREPARE_SWAP", "EXECUTE_SWAP", "PREPARE_DAPP_APPROVAL", "RESOLVE_APPROVAL"].includes(message.type)) {
+      throw new Error("Wallet update in progress. Try again.");
+    }
     switch (message.type) {
       case "GET_SESSION_STATUS": {
         // Route the popup from local vault state without waiting for network balances.
@@ -412,6 +544,8 @@ class BackgroundController {
         ]);
         const active = this.getActiveAccount();
         return {
+          accounts: this.publicAccounts(),
+          activeAccountIndex: this.unlockedVault?.activeAccountIndex ?? 0,
           isInitialized: !!stored.encryptedVault,
           isUnlocked: this.isUnlocked(),
           activeAddress: active?.classicalAddress || stored.activeAddress || null,
@@ -488,6 +622,14 @@ class BackgroundController {
         finally { this.vaultMutationInProgress = false; }
       }
 
+      case "ADD_ACCOUNT": {
+        if (typeof message.password !== "string") throw new Error("Enter your wallet password.");
+        return this.changeAccount(this.unlockedVault?.accounts.length ?? 0, message.password);
+      }
+      case "SWITCH_ACCOUNT": {
+        return this.changeAccount(message.index);
+      }
+
       case "LOCK_VAULT": {
         this.lockVault();
         return true;
@@ -496,6 +638,7 @@ class BackgroundController {
       case "RESET_WALLET": {
         if (this.vaultMutationInProgress || this.transferInProgress || this.approvalInProgress) throw new Error("Wait for the current wallet operation before resetting");
         this.lockVault();
+        this.chainHistory.clear();
         await chrome.storage.local.clear();
         return true;
       }
@@ -651,7 +794,7 @@ class BackgroundController {
         {
           try {
             const quote = this.transferQuotes.get(message.quoteId);
-            if (!quote || quote.to !== target || quote.value !== parseEther(amount.toString()).toString()) {
+            if (!quote || quote.from !== active.classicalAddress || quote.to !== target || quote.value !== parseEther(amount.toString()).toString()) {
               throw new Error("Review the native QOR transfer and its fee limits before confirming.");
             }
             if (this.transferInProgress) throw new Error("A transfer is already in progress.");
@@ -726,7 +869,9 @@ class BackgroundController {
       }
 
       case "CLEAR_ACTIVITY": {
-        await this.writeActivity((history) => history.filter((item: any) => (item.nativeChain || item.evmChain) && item.status === "PENDING"));
+        const active = this.getActiveAccount();
+        if (!active) throw new Error("Wallet is locked");
+        await this.writeActivity((history) => history.filter((item: any) => !this.activityBelongsTo(item, active) || ((item.nativeChain || item.evmChain) && item.status === "PENDING")));
         return true;
       }
 
@@ -770,10 +915,27 @@ class BackgroundController {
         } finally { this.transferInProgress = false; }
       }
 
+      case "GET_ACCOUNT_ACTIVITY": {
+        const active = this.getActiveAccount();
+        if (!active) return { items: [], hasMore: false, updatedAt: null, error: null };
+        const generation = this.vaultGeneration;
+        const snapshot = await this.getChainHistory(active.classicalAddress, message.force === true, message.older === true);
+        const stored = await chrome.storage.local.get(["activityHistory"]);
+        if (this.getActiveAccount() !== active || this.vaultGeneration !== generation) throw new Error("Account changed. Refresh activity.");
+        const local = (stored.activityHistory || []).filter((item: any) => this.activityBelongsTo(item, active));
+        return {
+          items: mergeAccountActivity(local,snapshot.items), hasMore: !!snapshot.nextCursor,
+          updatedAt: snapshot.updatedAt, error: snapshot.error,
+        };
+      }
+
       case "GET_ACTIVITY": {
+        const active = this.getActiveAccount();
+        if (!active) return [];
         await this.reconcileNativeActivity();
         const historyData = await chrome.storage.local.get(["activityHistory"]);
-        return historyData.activityHistory || [];
+        if (this.getActiveAccount() !== active) throw new Error("Account changed. Refresh activity.");
+        return (historyData.activityHistory || []).filter((item: any) => this.activityBelongsTo(item, active));
       }
 
       default:

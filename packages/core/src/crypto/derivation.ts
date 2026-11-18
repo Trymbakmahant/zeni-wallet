@@ -69,6 +69,9 @@ export function deriveAccountKeys(
   passphrase = "",
   accountIndex = 0
 ): DerivedAccountKeys {
+  if (!Number.isSafeInteger(accountIndex) || accountIndex < 0 || accountIndex >= 0x80000000) {
+    throw new Error("Invalid account derivation index.");
+  }
   const cleanMnemonic = normalizeMnemonic(mnemonic);
   const cleanPassphrase = passphrase.normalize("NFKD");
 

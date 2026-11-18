@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { QORECHAIN_CONFIG, isValidMnemonic, generateNewMnemonic, type AmmQuote, type SwapResult, type DappIntent } from "@zeni/core";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { QORECHAIN_CONFIG, isValidMnemonic, generateNewMnemonic, type AmmQuote, type SwapResult, type DappIntent, type AccountActivity } from "@zeni/core";
 
 export interface TokenItem {
   symbol: string;
@@ -9,25 +9,7 @@ export interface TokenItem {
   icon: string;
 }
 
-export interface ActivityItem {
-  hash: string;
-  type: "SEND" | "SWAP" | "SETUP";
-  to?: string;
-  token?: string;
-  tokenIn?: string;
-  tokenOut?: string;
-  amount?: string;
-  amountIn?: string;
-  amountOut?: string;
-  timestamp: number;
-  status: "CONFIRMED" | "PENDING" | "FAILED";
-  gasCost: string;
-  minAmountOut?: string;
-  nativeChain?: boolean;
-  evmChain?: boolean;
-  explorerUrl?: string;
-  error?: string;
-}
+export type ActivityItem = AccountActivity;
 
 export interface PendingApproval {
   internalId: string;
@@ -40,7 +22,13 @@ export interface PendingApproval {
   createdAt: number;
 }
 
+export interface WalletAccount { index: number; name: string; address: string; cosmosAddress: string; }
+
 interface WalletContextType {
+  accounts: WalletAccount[];
+  activeAccountIndex: number;
+  addAccount: (password: string) => Promise<void>;
+  switchAccount: (index: number) => Promise<void>;
   isBootstrapping: boolean;
   startupError: string | null;
   retryStartup: () => void;
@@ -51,6 +39,11 @@ interface WalletContextType {
   pqcPublicKeyHash: string | null;
   tokens: TokenItem[];
   activity: ActivityItem[];
+  activityLoading: boolean;
+  activityError: string | null;
+  activityHasMore: boolean;
+  activityUpdatedAt: number | null;
+  refreshActivity: (options?: { force?: boolean; older?: boolean }) => Promise<void>;
   pendingApprovals: PendingApproval[];
   activeModal: "send" | "receive" | "swap" | null;
   openModal: (modal: "send" | "receive" | "swap" | null) => void;
@@ -70,6 +63,10 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | null>(null);
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [accounts, setAccounts] = useState<WalletAccount[]>([]);
+  const [activeAccountIndex, setActiveAccountIndex] = useState(0);
+  const viewGeneration = useRef(0);
+  const addressRef = useRef<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupAttempt, setStartupAttempt] = useState(0);
@@ -80,6 +77,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [pqcPublicKeyHash, setPqcPublicKeyHash] = useState<string | null>(null);
   const [activeModal, setActiveModal] = useState<"send" | "receive" | "swap" | null>(null);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const [activityHasMore, setActivityHasMore] = useState(false);
+  const [activityUpdatedAt, setActivityUpdatedAt] = useState<number | null>(null);
+  const activityRequest = useRef(0);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
 
   const [tokens, setTokens] = useState<TokenItem[]>([
@@ -111,6 +113,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (typeof status?.isInitialized !== "boolean" || typeof status?.isUnlocked !== "boolean") {
       throw new Error("Could not verify wallet state. Please try again.");
     }
+    if (addressRef.current !== status.activeAddress || !status.isUnlocked) {
+      setTokens([]); setActivity([]); setPendingApprovals([]); setActiveModal(null);
+      activityRequest.current++; setActivityError(null); setActivityHasMore(false); setActivityUpdatedAt(null); setActivityLoading(false);
+    }
+    addressRef.current = status.activeAddress;
+    setAccounts(status.accounts || []);
+    setActiveAccountIndex(status.activeAccountIndex ?? 0);
     setIsInitialized(status.isInitialized);
     setIsLocked(!status.isUnlocked);
     setActiveAddress(status.activeAddress);
@@ -118,10 +127,33 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setPqcPublicKeyHash(status.pqcPublicKeyHash);
   };
 
-  const refreshState = async () => {
+  const refreshActivity = async (options: { force?: boolean; older?: boolean } = {}) => {
+    const address = addressRef.current;
+    if (!address) return;
+    const request = ++activityRequest.current;
+    const generation = viewGeneration.current;
+    const current = () => request === activityRequest.current && address === addressRef.current && generation === viewGeneration.current;
+    setActivityLoading(true);
     try {
-      applySession(await sendMessage("GET_SESSION_STATUS"));
+      const result = await sendMessage("GET_ACCOUNT_ACTIVITY", options);
+      if (!current()) return;
+      setActivity(result.items || []); setActivityError(result.error || null);
+      setActivityHasMore(result.hasMore === true); setActivityUpdatedAt(result.updatedAt ?? null);
+    } catch {
+      if (current()) setActivityError("Could not load activity. Please retry.");
+    } finally { if (current()) setActivityLoading(false); }
+  };
+
+  const refreshState = async () => {
+    const generation = viewGeneration.current;
+    try {
+      const session = await sendMessage("GET_SESSION_STATUS");
+      if (generation !== viewGeneration.current) return;
+      applySession(session);
+      if (!session.isUnlocked) return;
       const status = await sendMessage("GET_STATUS");
+      const stillCurrent = () => generation === viewGeneration.current && addressRef.current === session.activeAddress;
+      if (!stillCurrent() || status.activeAddress !== session.activeAddress) return;
 
       const rawNum = parseFloat(status.onChainBalance || "0") || 0;
       const qorFormatted = rawNum.toFixed(4);
@@ -164,10 +196,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ]);
 
       const approvals = await sendMessage("GET_PENDING_APPROVALS");
+      if (!stillCurrent()) return;
       setPendingApprovals(approvals || []);
 
-      const act = await sendMessage("GET_ACTIVITY");
-      setActivity(act || []);
+      if (stillCurrent()) void refreshActivity();
     } catch (e) {
       console.error("Failed to refresh wallet state", e);
     }
@@ -202,9 +234,14 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     // Poll pending approvals periodically
     const interval = setInterval(() => {
-      sendMessage("GET_SESSION_STATUS").then(applySession).catch(() => setIsLocked(true));
+      const generation = viewGeneration.current;
+      sendMessage("GET_SESSION_STATUS").then(status => { if (generation === viewGeneration.current) {
+        const changed = addressRef.current !== status.activeAddress;
+        applySession(status);
+        if (changed && status.isUnlocked) void refreshState();
+      } }).catch(() => { if (generation === viewGeneration.current) setIsLocked(true); });
       sendMessage("GET_PENDING_APPROVALS")
-        .then((res) => setPendingApprovals(res || []))
+        .then((res) => { if (generation === viewGeneration.current) setPendingApprovals(res || []); })
         .catch(() => {});
     }, 2500);
     return () => clearInterval(interval);
@@ -213,10 +250,23 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (!activity.some((item) => (item.nativeChain || item.evmChain) && item.status === "PENDING")) return;
     const interval = setInterval(() => {
-      sendMessage("GET_ACTIVITY").then((items) => setActivity(items || [])).catch(() => {});
+      void refreshActivity();
     }, 5000);
     return () => clearInterval(interval);
   }, [activity]);
+
+  const changeAccount = async (type: "ADD_ACCOUNT" | "SWITCH_ACCOUNT", payload: Record<string, unknown>) => {
+    viewGeneration.current++;
+    activityRequest.current++; setActivityLoading(false);
+    setActiveModal(null); setPendingApprovals([]);
+    try { await sendMessage(type, payload); }
+    finally {
+      viewGeneration.current++;
+      await refreshState();
+    }
+  };
+  const addAccount = (password: string) => changeAccount("ADD_ACCOUNT", { password });
+  const switchAccount = (index: number) => changeAccount("SWITCH_ACCOUNT", { index });
 
   const createWallet = async (password: string, customMnemonic?: string): Promise<{ mnemonic: string }> => {
     const mnemonic = customMnemonic ? customMnemonic.trim() : generateNewMnemonic(128);
@@ -252,7 +302,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const result = await sendMessage("EXECUTE_SWAP", { quoteId });
     // Real balances and receipts are authoritative; no optimistic token minting.
     void refreshState();
-    sendMessage("GET_ACTIVITY").then((history) => setActivity(history || [])).catch(() => {});
+
     return result;
   };
 
@@ -273,12 +323,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const clearActivity = async () => {
     await sendMessage("CLEAR_ACTIVITY");
-    setActivity(await sendMessage("GET_ACTIVITY"));
+    await refreshActivity();
   };
 
   return (
     <WalletContext.Provider
       value={{
+        accounts, activeAccountIndex, addAccount, switchAccount,
         isBootstrapping,
         startupError,
         retryStartup,
@@ -289,6 +340,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         pqcPublicKeyHash,
         tokens,
         activity,
+        activityLoading, activityError, activityHasMore, activityUpdatedAt, refreshActivity,
         pendingApprovals,
         activeModal,
         openModal: setActiveModal,

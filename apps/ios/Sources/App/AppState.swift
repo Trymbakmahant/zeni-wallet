@@ -44,10 +44,22 @@ public struct TokenItem: Identifiable, Equatable {
     }
 }
 
+private struct SavedWalletAccounts: Codable {
+    let accounts: [PublicAccountInfo]
+    let activeIndex: Int
+}
+
 @MainActor
 @Observable
 public final class AppState {
     public private(set) var activeAccount: PublicAccountInfo?
+    public private(set) var accounts: [PublicAccountInfo] = []
+    public private(set) var activeAccountIndex = 0
+    var accountName: String { "Account \(activeAccountIndex + 1)" }
+    private(set) var isRefreshingActivity = false
+    private(set) var activityHasMore = false
+    private(set) var activityUpdatedAt: Double?
+    private(set) var activityError: String?
     public private(set) var isUnlocked = false
     public private(set) var tokens: [TokenItem] = AppState.emptyTokens
     private(set) var hasWallet = false
@@ -73,6 +85,9 @@ public final class AppState {
     @ObservationIgnored private var engine: WalletTransactionEngine?
     @ObservationIgnored private var sessionVersion = 0
     @ObservationIgnored private var activityLoadError: Error?
+    @ObservationIgnored private var localActivity: [WalletActivityItem] = []
+    @ObservationIgnored private var activityRequest = 0
+    @ObservationIgnored private let accountsKey = "zeni.public-accounts.v2"
     @ObservationIgnored private let accountKey = "zeni.public-account.v1"
     @ObservationIgnored private let activityURL: URL?
     @ObservationIgnored private var signingKeyLoader: (String) async throws -> Data = { prompt in
@@ -92,10 +107,24 @@ public final class AppState {
         if let data = UserDefaults.standard.data(forKey: accountKey),
            let account = try? JSONDecoder().decode(PublicAccountInfo.self, from: data) {
             activeAccount = account
+            accounts = [account]
+            hasWallet = true
+        }
+        if let data = UserDefaults.standard.data(forKey: accountsKey),
+           let saved = try? JSONDecoder().decode(SavedWalletAccounts.self, from: data),
+           !saved.accounts.isEmpty, saved.accounts.count <= 100,
+           saved.accounts.indices.contains(saved.activeIndex),
+           Set(saved.accounts.map(\.evmAddress)).count == saved.accounts.count {
+            accounts = saved.accounts
+            activeAccountIndex = saved.activeIndex
+            activeAccount = saved.accounts[saved.activeIndex]
             hasWallet = true
         }
         if let activityURL, FileManager.default.fileExists(atPath: activityURL.path) {
-            do { activity = try JSONDecoder().decode([WalletActivityItem].self, from: Data(contentsOf: activityURL)) }
+            do {
+                localActivity = try JSONDecoder().decode([WalletActivityItem].self, from: Data(contentsOf: activityURL))
+                activity = localActivity.filter { $0.account == activeAccount?.cosmosAddress || $0.account.lowercased() == activeAccount?.evmAddress.lowercased() }
+            }
             catch { activityLoadError = error; walletError = "Transaction history could not be loaded. Sending is unavailable until it can be recovered." }
         }
     }
@@ -105,6 +134,7 @@ public final class AppState {
          signingKeyLoader: @escaping (String) async throws -> Data) {
         activityURL = nil
         activeAccount = account
+        accounts = [account]
         hasWallet = true
         self.engine = engine
         self.signingKeyLoader = signingKeyLoader
@@ -126,11 +156,12 @@ public final class AppState {
             try FileManager.default.createDirectory(at: activityURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             let data = try JSONEncoder().encode(items)
             try data.write(to: activityURL, options: .atomic)
-            self.activity = items
+            self.localActivity = items
+            self.mergeLocalActivity()
         }
         // Assign before suspension so concurrent readers share the same isolated engine.
         engine = new
-        do { try await new.restoreActivity(activity) }
+        do { try await new.restoreActivity(localActivity) }
         catch { engine = nil; throw error }
         return new
     }
@@ -162,7 +193,10 @@ public final class AppState {
             try await Task.detached { try KeychainManager.saveMasterEntropy(data: Data(normalized.utf8)) }.value
             let data = try JSONEncoder().encode(account)
             UserDefaults.standard.set(data, forKey: accountKey)
+            try saveAccounts([account], selected: 0)
             activeAccount = account
+            accounts = [account]
+            activeAccountIndex = 0
             hasWallet = true
             guard version == sessionVersion else { runtime.lock(); return }
             runtime.lock()
@@ -175,9 +209,86 @@ public final class AppState {
         }
     }
 
+    private func saveAccounts(_ values: [PublicAccountInfo], selected: Int) throws {
+        let data = try JSONEncoder().encode(SavedWalletAccounts(accounts: values, activeIndex: selected))
+        UserDefaults.standard.set(data, forKey: accountsKey)
+    }
+
+    private func activateAccount(_ index: Int) {
+        lock()
+        connect.accountChanged()
+        activeAccountIndex = index
+        activeAccount = accounts[index]
+        tokens = Self.emptyTokens
+        evmQorBalance = "0"; hasLoadedBalances = false
+        activityRequest += 1; isRefreshingActivity = false
+        activity = []; activityError = nil; activityHasMore = false; activityUpdatedAt = nil
+        mergeLocalActivity()
+    }
+
+    func switchAccount(to index: Int) async throws {
+        guard !isTransacting, !isAuthenticating, !isRefreshing, !connect.busy, accounts.indices.contains(index) else {
+            throw WalletEngineError.message("Wait for the current operation, then choose an account.")
+        }
+        guard index != activeAccountIndex else { return }
+        try saveAccounts(accounts, selected: index)
+        activateAccount(index)
+        await refresh()
+    }
+
+    func addAccount() async throws {
+        guard hasWallet, !isTransacting, !isAuthenticating, !isRefreshing, !connect.busy, accounts.count < 100 else {
+            throw WalletEngineError.message("Wait for the current operation. A wallet supports up to 100 accounts.")
+        }
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+        let version = sessionVersion
+        let runtime = try await transactionEngine()
+        let data = try await signingKeyLoader("Authenticate to add a Zeni account")
+        guard version == sessionVersion, let mnemonic = String(data: data, encoding: .utf8) else { throw CancellationError() }
+        let root: PublicAccountInfo = try await runtime.call("derivePublicAccount", payload: ["mnemonic": mnemonic, "accountIndex": 0])
+        guard version == sessionVersion, root == accounts.first else { throw WalletEngineError.message("Recovery phrase does not match this wallet.") }
+        let index = accounts.count
+        let added: PublicAccountInfo = try await runtime.call("derivePublicAccount", payload: ["mnemonic": mnemonic, "accountIndex": index])
+        guard version == sessionVersion, !accounts.contains(added) else { throw CancellationError() }
+        let updated = accounts + [added]
+        try saveAccounts(updated, selected: index)
+        accounts = updated
+        activateAccount(index)
+        await refresh()
+    }
+
+    private func mergeLocalActivity() {
+        guard let account = activeAccount else { activity = []; return }
+        var rows = Dictionary(activity.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for item in localActivity where item.account == account.cosmosAddress || item.account.lowercased() == account.evmAddress.lowercased() {
+            if let current = rows[item.id], (current.source == "chain" || current.source == "merged"), current.status != "PENDING" { continue }
+            rows[item.id] = item
+        }
+        activity = rows.values.sorted { $0.timestamp > $1.timestamp }
+    }
+
+    func refreshActivity(older: Bool = false) async {
+        guard hasWallet, let expected = activeAccount, !isRefreshingActivity else { return }
+        activityRequest += 1
+        let request = activityRequest, version = sessionVersion
+        isRefreshingActivity = true
+        defer { if request == activityRequest { isRefreshingActivity = false } }
+        do {
+            let runtime = try await publicEngine()
+            let page: WalletHistoryPage = try await runtime.call("accountActivity", payload: ["older": older])
+            guard !Task.isCancelled, request == activityRequest, version == sessionVersion, activeAccount == expected else { return }
+            activity = page.items; activityHasMore = page.hasMore
+            activityUpdatedAt = page.updatedAt; activityError = page.error
+        } catch {
+            if request == activityRequest, activeAccount == expected { activityError = "Could not load on-chain activity. Please retry." }
+        }
+    }
+
     private func publicEngine() async throws -> WalletTransactionEngine {
         guard let account = activeAccount else { throw WalletEngineError.message("Import a wallet first.") }
         let runtime = try await transactionEngine()
+        guard activeAccount == account else { throw CancellationError() }
         let _: Bool = try await runtime.call("watchAccount", payload: [
             "evmAddress": account.evmAddress, "cosmosAddress": account.cosmosAddress,
             "pqcPublicKeyHex": account.pqcPublicKeyHex, "pqcPublicKeyHashHex": account.pqcPublicKeyHashHex
@@ -205,7 +316,7 @@ public final class AppState {
         guard let mnemonic = String(data: data, encoding: .utf8) else {
             throw WalletEngineError.message("The saved wallet could not be read.")
         }
-        let signer: PublicAccountInfo = try await runtime.call("unlock", payload: ["mnemonic": mnemonic])
+        let signer: PublicAccountInfo = try await runtime.call("unlock", payload: ["mnemonic": mnemonic, "accountIndex": activeAccountIndex])
         guard version == sessionVersion, signer == expectedAccount else {
             throw WalletEngineError.message("Wallet changed or authorization was cancelled. Review again.")
         }

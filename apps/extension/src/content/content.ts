@@ -30,6 +30,8 @@ function getBackgroundPort(): chrome.runtime.Port {
       window.postMessage(
         {
           target: "zeni-inpage-response",
+          event: message.event,
+          accounts: message.accounts,
           clientReqId: message.clientReqId,
           result: message.result,
           error: message.error,
