@@ -15,6 +15,9 @@ import {
 const REPO = "https://github.com/Trymbakmahant/zeni-wallet";
 const INSTALL = `${REPO}#chrome-extension-qor-transfers`;
 const FAUCET = "https://dashboard.qorechain.io/faucet";
+const EXTENSION_VERSION = "0.1.1";
+const EXTENSION_FILENAME = `zeni-wallet-extension-${EXTENSION_VERSION}.zip`;
+const EXTENSION_DOWNLOAD = `/downloads/${EXTENSION_FILENAME}`;
 
 type PreviewAction = "Wallet" | "Send" | "Receive" | "Swap" | "Activity" | "Settings";
 const actionDetails: Record<PreviewAction, { title: string; description: string }> = {
@@ -222,7 +225,7 @@ export const App: React.FC = () => {
           <span className="eyebrow">Developer Preview · QoreChain Testnet</span>
           <h2 className="section-title mt-3 text-white relative">Try Zeni in Chrome Today</h2>
           <p className="text-white/70 mt-4 max-w-2xl mx-auto leading-relaxed relative text-sm sm:text-base">
-            Experience post-quantum smart account security on QoreChain Diana Testnet. Install the extension in under 60 seconds with developer mode.
+            Manage testnet assets and review hybrid-signed QOR transfers on QoreChain Diana. Install the extension with developer mode using the steps below.
           </p>
 
           <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/10 max-w-2xl mx-auto relative backdrop-blur-sm">
@@ -230,25 +233,16 @@ export const App: React.FC = () => {
               <div className="text-left">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-mono font-bold text-white tracking-wide">Zeni Extension v0.1.1</span>
+                  <span className="text-xs font-mono font-bold text-white tracking-wide">Zeni Extension v{EXTENSION_VERSION}</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/60">Manifest V3</span>
                 </div>
                 <div className="text-xs text-white/50 font-mono mt-1">Direct zip package · Chrome, Brave & Edge</div>
               </div>
 
               <a
-                href="/zeni-wallet-extension.zip"
-                download="zeni-wallet-extension.zip"
+                href={EXTENSION_DOWNLOAD}
+                download={EXTENSION_FILENAME}
                 className="framer-btn-orange w-full sm:w-auto px-6 py-3.5 font-semibold text-white inline-flex items-center justify-center gap-2.5 text-sm shrink-0"
-                onClick={(e) => {
-                  fetch("/zeni-wallet-extension.zip", { method: "HEAD" })
-                    .then(res => {
-                      if (!res.ok) {
-                        alert("The release package zip will be attached here soon! You can also build it locally with 'pnpm zip:ext' or follow the steps below.");
-                      }
-                    })
-                    .catch(() => {});
-                }}
               >
                 <Download size={18} />
                 Download Zip
@@ -257,6 +251,9 @@ export const App: React.FC = () => {
 
             <p className="text-[11px] font-mono text-white/40 mt-4 text-center">
               Pre-compiled distribution bundle. Download, unzip, and load directly into Chrome.
+            </p>
+            <p className="text-[11px] text-white/60 mt-2 text-center">
+              This beta supports website connections on the Zeni demo and docs playground.
             </p>
           </div>
 
