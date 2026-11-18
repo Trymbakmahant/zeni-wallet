@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { ShieldCheck, KeyRound, Lock, ExternalLink, Copy, Check, Eye, EyeOff, Trash2, AlertTriangle, X } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ShieldCheck, KeyRound, Lock, ExternalLink, Copy, Check, Trash2, AlertTriangle, X, Layers } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
-import { QORECHAIN_CONFIG } from "@zeni/core";
+import { QORECHAIN_CONFIG, evmToBech32Address, readPqcKeyStatus, type PqcKeyStatus } from "@zeni/core";
 
 export const SettingsView: React.FC = () => {
   const { lock, pqcPublicKeyHash, activeAddress, exportMnemonic, resetWallet } = useWallet();
@@ -12,6 +12,21 @@ export const SettingsView: React.FC = () => {
   const [revealedMnemonic, setRevealedMnemonic] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [statusRequest, setStatusRequest] = useState(0);
+  const [pqcStatus, setPqcStatus] = useState<{ address: string; keyHash: string | null; request: number; value?: PqcKeyStatus; error?: string } | null>(null);
+  // Never display a result for a different account, key, or refresh request.
+  const currentStatus = pqcStatus?.address === activeAddress && pqcStatus?.keyHash === pqcPublicKeyHash
+    && pqcStatus?.request === statusRequest ? pqcStatus : null;
+  useEffect(() => {
+    if (!activeAddress) return;
+    const controller = new AbortController();
+    readPqcKeyStatus(activeAddress, pqcPublicKeyHash, { signal: controller.signal }).then(
+      value => { if (!controller.signal.aborted) setPqcStatus({ address: activeAddress, keyHash: pqcPublicKeyHash, request: statusRequest, value }); },
+      () => { if (!controller.signal.aborted) setPqcStatus({ address: activeAddress, keyHash: pqcPublicKeyHash, request: statusRequest, error: "Could not verify registration. Check your connection and retry." }); },
+    );
+    return () => controller.abort();
+  }, [activeAddress, pqcPublicKeyHash, statusRequest]);
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -46,21 +61,60 @@ export const SettingsView: React.FC = () => {
     <div className="flex flex-col h-full space-y-4 overflow-y-auto pr-1">
       <h2 className="text-base font-bold text-white">Wallet & Security Settings</h2>
 
-      {/* Post-Quantum Contract Status */}
-      <div className="p-4 rounded-2xl bg-[#0D0D10] border border-[#222226] space-y-2">
+      <div className="p-4 rounded-2xl bg-[#0D0D10] border border-[#222226] space-y-2.5">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#E06341]">
-          <ShieldCheck className="w-4 h-4 text-[#E06341]" />
-          <span>Post-Quantum Contract Defense</span>
+          <ShieldCheck className="w-4 h-4" />
+          <span>Post-Quantum Key Registration</span>
         </div>
-        <p className="text-[11px] text-zinc-400 leading-relaxed">
-          Sensitive operations are protected on-chain by the native QoreChain precompile:
+        <div role="status" aria-live="polite" className="text-xs text-zinc-300">
+          {!activeAddress ? "Unlock your wallet to check registration."
+            : currentStatus?.error ? currentStatus.error
+            : !currentStatus?.value ? "Checking Diana testnet…"
+            : !currentStatus.value.registered ? "No PQC key registered on chain."
+            : currentStatus.value.matchesLocalKey === false ? "Registered key differs from this wallet. Transfers require the original PQC key."
+            : currentStatus.value.matchesLocalKey === true ? "ML-DSA-87 registered · Matches this wallet"
+            : "ML-DSA-87 registered · Local key match unavailable"}
+        </div>
+        {currentStatus?.value && <p className="text-[10px] text-zinc-400">
+          Checked at block {BigInt(currentStatus.value.blockNumber).toString()}. Registration does not confirm proof of possession; transfers check that separately.
+        </p>}
+        {currentStatus?.value?.publicKeyHash && <div className="text-[10px] font-mono break-all text-zinc-400">
+          On-chain key hash: {currentStatus.value.publicKeyHash}
+        </div>}
+        <button type="button" disabled={!activeAddress || !currentStatus}
+          onClick={() => setStatusRequest(value => value + 1)}
+          className="px-3 py-2 rounded-xl bg-[#18181C] border border-[#222226] text-xs text-white disabled:opacity-50">
+          Refresh registration
+        </button>
+      </div>
+
+      {/* Cross-VM & Dual Identity */}
+      <div className="p-4 rounded-2xl bg-[#0D0D10] border border-[#222226] space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold text-white">
+          <Layers className="w-4 h-4 text-[#E06341]" />
+          <span>Your Account Addresses</span>
+        </div>
+        <p className="text-[11px] text-zinc-400">
+          Two address formats identify the same account on QoreChain:
         </p>
-        <div className="p-2 rounded-xl bg-black border border-[#222226] text-[10px] font-mono break-all text-zinc-300">
-          Precompile: {QORECHAIN_CONFIG.contracts.pqcPrecompile}
+        <div className="space-y-1.5 text-[10px] font-mono">
+          <div className="p-2 rounded-xl bg-black border border-[#222226] flex flex-col gap-0.5">
+            <span className="text-zinc-500 font-sans text-[9px]">EVM Address (0x)</span>
+            <span className="break-all text-zinc-300">{activeAddress || "0x..."}</span>
+          </div>
+          <div className="p-2 rounded-xl bg-black border border-[#222226] flex flex-col gap-0.5">
+            <span className="text-zinc-500 font-sans text-[9px]">Native Bank Address (qor1)</span>
+            <span className="break-all text-[#E06341]">
+              {activeAddress ? evmToBech32Address(activeAddress) : "qor1..."}
+            </span>
+          </div>
         </div>
-        <div className="p-2 rounded-xl bg-black border border-[#222226] text-[10px] font-mono break-all text-zinc-300">
-          PQC PubKey Hash: {pqcPublicKeyHash || "0x9f83e201..."}
-        </div>
+      </div>
+
+      <div className="p-4 rounded-2xl bg-[#0D0D10] border border-[#222226] space-y-2 text-[11px] text-zinc-400">
+        <span className="text-xs font-semibold text-white block">Wallet Protection</span>
+        <p>Native QOR transfers and AMM swaps use classical and ML-DSA-87 signatures. Website message signing uses ECDSA.</p>
+        <p>This wallet does not enforce daily or per-transaction spending limits. Hybrid website sign-in and Cross-VM bridge operations are not available here.</p>
       </div>
 
       {/* Network Config */}

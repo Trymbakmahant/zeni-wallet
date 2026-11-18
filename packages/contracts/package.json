@@ -5,7 +5,12 @@
   "description": "Smart contracts for Zeni Smart Account and Paymaster on QoreChain",
   "scripts": {
     "build": "forge build",
-    "test": "forge test",
-    "clean": "forge clean"
+    "test": "forge test && node --test test/*.test.mjs",
+    "clean": "forge clean",
+    "prove": "node script/prove-features.mjs"
+  },
+  "dependencies": {
+    "@qorechain/pqc": "^0.2.3",
+    "ethers": "^6.13.0"
   }
 }

@@ -55,6 +55,7 @@ ellevenlab.md
 *.zip
 # The verified extension release is a required landing-page download asset.
 !apps/web/public/downloads/zeni-wallet-extension-0.1.1.zip
+!apps/web/public/downloads/zeni-wallet-extension-0.1.2.zip
 output/research/native-fee-grant-feasibility.md
 output/branding/zeni-project-cover.html
 

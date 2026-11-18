@@ -15,7 +15,7 @@ import {
 const REPO = "https://github.com/Trymbakmahant/zeni-wallet";
 const INSTALL = `${REPO}#chrome-extension-qor-transfers`;
 const FAUCET = "https://dashboard.qorechain.io/faucet";
-const EXTENSION_VERSION = "0.1.1";
+const EXTENSION_VERSION = "0.1.2";
 const EXTENSION_FILENAME = `zeni-wallet-extension-${EXTENSION_VERSION}.zip`;
 const EXTENSION_DOWNLOAD = `/downloads/${EXTENSION_FILENAME}`;
 

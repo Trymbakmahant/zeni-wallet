@@ -2,6 +2,7 @@
 pragma solidity >=0.8.24 <0.9.0;
 
 import "./IAccount.sol";
+import {IQorePQC} from "./IQorePQC.sol";
 import "./UserOperation.sol";
 
 /**
@@ -190,13 +191,15 @@ contract ZeniSmartAccount is IAccount {
         bytes memory signature,
         bytes memory publicKey
     ) internal view returns (bool) {
+        if (publicKey.length != 2592 || signature.length != 4627) return false;
         (bool ok, bytes memory res) = PQC_PRECOMPILE.staticcall(
-            abi.encode(digest, signature, publicKey)
+            abi.encodeCall(IQorePQC.pqcVerify, (publicKey, signature, abi.encodePacked(digest)))
         );
-        if (!ok || res.length < 32) {
+        if (!ok || res.length != 32) {
             return false;
         }
-        return abi.decode(res, (bool));
+        // A malformed/non-canonical boolean must fail closed, not revert decoding.
+        return abi.decode(res, (uint256)) == 1;
     }
 
     /**

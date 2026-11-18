@@ -6,6 +6,10 @@ import { join, resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
+import { Interface, keccak256 } from 'ethers';
+const statusAbi = new Interface(['function pqcKeyStatus(address) view returns (bool, uint8, bytes)']);
+const testKey = '0x' + '42'.repeat(2592);
+const statusResults = { match: statusAbi.encodeFunctionResult('pqcKeyStatus', [true, 1, testKey]), mismatch: statusAbi.encodeFunctionResult('pqcKeyStatus', [true, 1, '0x' + '43'.repeat(2592)]), unregistered: statusAbi.encodeFunctionResult('pqcKeyStatus', [false, 0, '0x']) };
 const root = fileURLToPath(new URL('../dist/', import.meta.url));
 const server = createServer((req, res) => {
   const path = resolve(root, '.' + new URL(req.url, 'http://localhost').pathname);
@@ -51,13 +55,28 @@ try {
 
   await call('Page.enable');
   await call('Page.addScriptToEvaluateOnNewDocument', { source: `
+    window.pqcMode = 'match';
+    window.statusResults = ${JSON.stringify(statusResults)};
+    const realFetch = window.fetch;
+    window.fetch = async (url, options) => {
+      if (url !== 'https://evm-testnet.qore.host') return realFetch(url, options);
+      const request = JSON.parse(options.body);
+      if (!['eth_chainId', 'eth_blockNumber', 'eth_call'].includes(request.method)) throw new Error('Unexpected RPC method');
+      if (window.pqcMode === 'error') return new Response('', { status: 503 });
+      if (window.pqcMode === 'pending') await new Promise((resolve, reject) => {
+        window.finishStatus = resolve;
+        options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+      });
+      const result = request.method === 'eth_chainId' ? '0x2648' : request.method === 'eth_blockNumber' ? '0x123' : window.statusResults[window.pqcMode];
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }));
+    };
     window.decisions = [];
     window.prepareCount = 0;
     window.rejectReviewOnce = true;
     const realTimeout = window.setTimeout;
     window.setTimeout = (callback, milliseconds, ...args) => realTimeout(callback, milliseconds === 30000 ? 100 : milliseconds, ...args);
     window.pending = [{ internalId: 'transfer-1', origin: 'https://demo.example', title: 'Zeni Connect Demo', account: '0x2222222222222222222222222222222222222222', payload: { method: 'zeni_sendQor' }, intent: { kind: 'transfer', to: '0x3333333333333333333333333333333333333333', amount: '1.0' } }];
-    const status = { isInitialized: true, isUnlocked: true, activeAddress: '0x2222222222222222222222222222222222222222', onChainBalance: '10' };
+    const status = { isInitialized: true, isUnlocked: true, activeAddress: '0x2222222222222222222222222222222222222222', onChainBalance: '10', pqcPublicKeyHash: ${JSON.stringify(keccak256(testKey))} };
     window.chrome.runtime = { sendMessage(message, callback) {
       if (message.type === 'GET_SESSION_STATUS' || message.type === 'GET_STATUS') return callback({ success: true, data: status });
       if (message.type === 'GET_PENDING_APPROVALS') return callback({ success: true, data: structuredClone(window.pending) });
@@ -123,6 +142,30 @@ try {
   await clickText('Approve');
   await until('window.decisions.length === 3');
   assert.equal(await evaluate('window.decisions[2].approved'), true);
+  await clickText('Settings');
+  await until(`document.body.textContent.includes('Matches this wallet')`);
+  assert.ok(await evaluate(`!document.body.textContent.includes('50 QOR / day') && !document.body.textContent.includes('Hybrid dApp Authentication Active')`));
+  await screenshot('settings-registered');
+  for (const [mode, text] of [['unregistered', 'No PQC key registered'], ['mismatch', 'Registered key differs'], ['error', 'Could not verify registration']]) {
+    await evaluate(`window.pqcMode = ${JSON.stringify(mode)}`);
+    await clickText('Refresh registration');
+    await until(`document.body.textContent.includes(${JSON.stringify(text)})`);
+  }
+  await evaluate(`window.pqcMode = 'pending'`);
+  await clickText('Refresh registration');
+  await until(`document.body.textContent.includes('Checking Diana testnet')`);
+  assert.ok(await evaluate(`!document.body.textContent.includes('Registered key differs') && !document.body.textContent.includes('Matches this wallet')`));
+  await clickText('Home'); // Aborts the pending request on unmount.
+  await evaluate(`window.pqcMode = 'match'`);
+  await clickText('Settings');
+  await until(`document.body.textContent.includes('Matches this wallet')`);
+  assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth + 1'));
+  await screenshot('settings-final');
+  console.log('PASS: Settings shows matching, mismatched, unregistered, error and loading states; retry recovers and leaving Settings cancels the request.');
+  if (process.env.BROWSER_REVIEW_MS) {
+    console.log(`Browser review: CDP ${port}; http://127.0.0.1:${server.address().port}/index.html`);
+    await delay(Math.min(Number(process.env.BROWSER_REVIEW_MS), 60000));
+  }
   assert.equal(errors.length, 0, JSON.stringify(errors));
   console.log('PASS: real mouse clicks approve connections, messages, and reviewed transfers at 360x600; stalled/failed/stale fee reviews show visible errors and recover through retry.');
 } finally {

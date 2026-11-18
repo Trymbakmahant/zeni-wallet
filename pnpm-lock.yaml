@@ -198,7 +198,14 @@ importers:
         specifier: ^5.4.5
         version: 5.9.3
 
-  packages/contracts: {}
+  packages/contracts:
+    dependencies:
+      '@qorechain/pqc':
+        specifier: ^0.2.3
+        version: 0.2.3
+      ethers:
+        specifier: ^6.13.0
+        version: 6.17.0
 
   packages/core:
     dependencies:

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Zeni Wallet — QoreChain Testnet",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Self-custody wallet for QoreChain Diana Testnet with hybrid-signed QOR transfers, native swaps and app connections.",
   "icons": {
     "16": "icons/icon-16.png",

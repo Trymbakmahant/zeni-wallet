@@ -9,3 +9,4 @@ export * from "./rpc/native-transaction.js";
 export * from "./rpc/amm.js";
 export * from "./account/dapp.js";
 export * from "./rpc/explorer.js";
+export * from "./rpc/pqc-status.js";

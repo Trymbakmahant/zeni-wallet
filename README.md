@@ -1,14 +1,18 @@
-# Zeni (銭) — Quantum-Proof Smart Wallet
+# Zeni (銭) — QoreChain Testnet Wallet
 
 Zeni is a dual-platform Web3 wallet (Chrome Extension & Native iOS Swift App) built specifically for **QoreChain** (EVM Chain ID `9800`).
 
 ## Key Features
 
 - **Hybrid Cryptography**: Dual-key authorization combining classical `secp256k1` with post-quantum `ML-DSA-87` (NIST FIPS 204 Dilithium-5).
-- **ERC-4337 Smart Accounts**: On-chain quantum protection through custom smart account verification using QoreChain's native `pqcVerify` precompile (`0x0000000000000000000000000000000000000A01`).
-- **Gasless Onboarding**: Paymaster sponsorship for zero-cost initial transactions.
+- **Live PQC Registration Status**: Reads Diana’s key-status precompile and compares the registered ML-DSA-87 key with the unlocked wallet.
+- **PQC Diagnostics**: Read-only signature/precompile checks requiring no wallet secrets or gas. Regular transactions still require QOR for fees.
 - **In-Wallet Swaps**: Automated liquidity routing across QoreChain testnet assets (`QOR`, `fUSD`, `fETH`, `fBTC`).
 - **Multi-Platform**: Manifest V3 browser extension and native iOS application with Secure Enclave & FaceID protection.
+
+The ERC-4337 account/factory/paymaster sources are experimental and are not used by the extension’s live transaction path. Daily spending limits, gas sponsorship, hybrid SIWQ login, and a Cross-VM bridge flow are not shipped features.
+
+See [PQC verification and testing](docs/PQC-VERIFICATION.md) for extension 0.1.2, the read-only diagnostic, supported behavior, and limitations.
 
 ## Monorepo Architecture
 
