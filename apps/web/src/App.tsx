@@ -8,13 +8,14 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { FloatingBadge, ParallaxShowcase, Reveal, ScrollProgress } from "./components/Motion";
 import {
   ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Check, ChevronRight,
-  Clock, Download, Droplets, ExternalLink, FileCheck2, FolderArchive,
-  Home, KeyRound, LockKeyhole, Menu, Play, RotateCw, Settings,
+  Clock, Download, Droplets, ExternalLink, FileCheck2,
+  Home, KeyRound, LockKeyhole, Menu, RotateCw, Settings,
   ShieldCheck, Wifi, X,
 } from "lucide-react";
 
 const REPO = "https://github.com/Trymbakmahant/zeni-wallet";
 const INSTALL = `${REPO}#chrome-extension-qor-transfers`;
+const CHROME_WEB_STORE = "https://chromewebstore.google.com/detail/zeni-wallet-%E2%80%94-qorechain-t/aobipbcjmngbpdhocfdgbcpgfdphlikc";
 const FAUCET = "https://dashboard.qorechain.io/faucet";
 const EXTENSION_VERSION = extensionRelease.version;
 const EXTENSION_FILENAME = extensionRelease.filename;
@@ -191,17 +192,17 @@ export const App: React.FC = () => {
   return <div className="site-landing min-h-screen bg-framer-cream text-framer-dark1">
     <ScrollProgress />
     <a href="#main" className="skip-link">Skip to content</a>
-    <div className="testnet-banner"><div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-3 gap-y-1"><span className="testnet-pill"><span className="status-dot" />QoreChain Testnet · 9800</span><span className="hidden sm:inline"><strong>Zeni Chrome Extension Demo</strong> · Send. Swap. Claim. Create.</span></div></div>
-    <header className="floating-header"><motion.div {...intro(0)} className="nav-capsule"><a href="#hero" className="flex items-center gap-2.5" aria-label="Zeni home"><Logo /><span className="font-bold tracking-tight text-white text-lg">ZENI</span><span className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/65">PQC VAULT</span></a><nav aria-label="Main navigation" className="hidden md:flex items-center gap-6 text-sm font-medium text-white/65">{navigation.map(link => <a key={link.href} className="hover:text-white transition-colors" href={link.href}>{link.label}</a>)}</nav><div className="flex gap-2 items-center"><a href="#try-now" className="framer-btn-orange px-3 sm:px-4 py-2 text-xs font-semibold text-white inline-flex gap-2 items-center"><Play size={14} />Try Now</a><button className="md:hidden p-2 text-white/80" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button></div></motion.div>
+    <div className="testnet-banner"><div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-3 gap-y-1"><span className="testnet-pill"><span className="status-dot" />QoreChain Testnet · 9800</span><span className="hidden sm:inline"><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer" className="hover:underline"><strong>Now live on the Chrome Web Store</strong> <span aria-hidden="true">↗</span></a></span></div></div>
+    <header className="floating-header"><motion.div {...intro(0)} className="nav-capsule"><a href="#hero" className="flex items-center gap-2.5" aria-label="Zeni home"><Logo /><span className="font-bold tracking-tight text-white text-lg">ZENI</span><span className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/65">PQC VAULT</span></a><nav aria-label="Main navigation" className="hidden md:flex items-center gap-6 text-sm font-medium text-white/65">{navigation.map(link => <a key={link.href} className="hover:text-white transition-colors" href={link.href}>{link.label}</a>)}</nav><div className="flex gap-2 items-center"><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer" className="framer-btn-orange px-3 sm:px-4 py-2 text-xs font-semibold text-white inline-flex gap-2 items-center"><Chrome size={14} />Add to Chrome</a><button className="md:hidden p-2 text-white/80" aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={20} /> : <Menu size={20} />}</button></div></motion.div>
       {menuOpen && <motion.nav {...intro(0)} id="mobile-menu" aria-label="Mobile navigation" className="md:hidden rounded-2xl bg-framer-dark2 border border-white/10 p-3 mt-2 shadow-xl">{navigation.map(link => <a key={link.href} href={link.href} onClick={() => setMenuOpen(false)} className="block p-3 rounded-xl text-sm text-white/80 hover:bg-white/10">{link.label}</a>)}</motion.nav>}
     </header>
     <main id="main">
       <section id="hero" className="relative pt-32 sm:pt-36 pb-16 sm:pb-20 px-5 sm:px-6 overflow-hidden bg-grid-lines"><div className="hero-glow" aria-hidden="true" />
         <div className="max-w-5xl mx-auto text-center flex flex-col items-center relative">
-          <motion.div {...intro(0.1)} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-framer-dark1/10 bg-white/80 shadow-sm text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-6"><span className="w-1.5 h-1.5 rounded-full bg-framer-orange animate-pulse" />Chrome Extension · QoreChain Testnet</motion.div>
+          <motion.div {...intro(0.1)} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-framer-dark1/10 bg-white/80 shadow-sm text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-6"><span className="w-1.5 h-1.5 rounded-full bg-framer-orange animate-pulse" />Now live on the Chrome Web Store</motion.div>
           <motion.h1 {...intro(0.2)} className="text-[44px] sm:text-6xl md:text-7xl font-semibold tracking-[-0.04em] leading-[0.98] max-w-4xl">Your wallet.<br />A more connected web.</motion.h1>
           <motion.p {...intro(0.32)} className="mt-6 text-lg sm:text-xl text-framer-dark1/75 max-w-2xl leading-relaxed">Send QOR and swap on QoreChain. Connect your mobile wallet to web apps with a scan. Your keys stay yours, with <strong>every request in view.</strong></motion.p>
-          <motion.div {...intro(0.42)} className="mt-8 flex flex-wrap justify-center gap-4"><a href="#try-now" className="framer-btn-orange text-white px-7 py-3.5 font-semibold inline-flex gap-2.5 items-center"><Chrome size={20} />Try Now — Get Extension</a><a href={CONNECT_DEMO} target="_blank" rel="noreferrer" className="framer-btn-dark text-white px-7 py-3.5 font-semibold inline-flex gap-2 items-center">Try Connect Demo <ArrowUpRight size={17} className="text-white/60" /></a></motion.div>
+          <motion.div {...intro(0.42)} className="mt-8 flex flex-wrap justify-center gap-4"><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer" className="framer-btn-orange text-white px-7 py-3.5 font-semibold inline-flex gap-2.5 items-center"><Chrome size={20} />Add to Chrome</a><a href="/docs#playground" className="framer-btn-dark text-white px-7 py-3.5 font-semibold inline-flex gap-2 items-center">Try Connect Demo <ArrowUpRight size={17} className="text-white/60" /></a></motion.div>
           <div className="mt-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-[11px] sm:text-xs text-framer-dark1/60 font-medium"><span className="flex items-center gap-1.5"><Chrome size={15} className="text-framer-orange" />Chrome Extension MV3</span><span aria-hidden="true">•</span><span>ML-DSA-87 authorization</span><span aria-hidden="true">•</span><span className="font-mono font-semibold text-framer-dark1">Chain ID 9800</span></div>
           <ParallaxShowcase badges={badges.map(({ icon: Icon, ...badge }, i) => <FloatingBadge index={i} href={badge.href} key={badge.title} className={`dashed-badge feature-badge ${["feature-badge-0", "feature-badge-1", "feature-badge-2", "feature-badge-3", "feature-badge-4", "feature-badge-5"][i]}`}><div className={`w-9 h-9 rounded-xl shrink-0 grid place-items-center ${badge.color}`}><Icon size={19} /></div><div className="text-left"><div className="text-[9px] lg:text-[10px] font-mono uppercase tracking-wider text-framer-dark1/50">{badge.eyebrow}</div><div className="text-xs lg:text-sm font-bold mt-0.5">{badge.title}</div></div></FloatingBadge>)}><PhonePreview /></ParallaxShowcase>
           <p className="mt-7 max-w-full text-[11px] text-framer-dark1/50 font-mono">Wallet preview · sample balances · QoreChain testnet</p>
@@ -217,105 +218,88 @@ export const App: React.FC = () => {
         { mark: "AMM", name: "Native swaps", detail: "QoreChain DEX", href: "https://docs.qorechain.io", color: "bg-purple-50 text-purple-600" },
         { mark: "QOR", name: "Diana Faucet", detail: "Testnet tokens", href: FAUCET, color: "bg-amber-50 text-amber-600" },
         { mark: "TX", name: "Explorer", detail: "On-chain receipts", href: "https://explore.qore.network", color: "bg-blue-50 text-blue-600" },
-        { mark: "SRC", name: "Chrome wallet", detail: "Extension source", href: `${REPO}/tree/main/apps/extension`, color: "bg-emerald-50 text-emerald-600" },
+        { mark: "SRC", name: "Chrome wallet", detail: "Chrome Web Store", href: CHROME_WEB_STORE, color: "bg-emerald-50 text-emerald-600" },
         { mark: "PQC", name: "ML-DSA", detail: "NIST FIPS 204", href: "https://csrc.nist.gov/pubs/fips/204/final", color: "bg-rose-50 text-rose-600" },
         { mark: "EIP", name: "EIP-6963", detail: "Wallet discovery", href: "https://eips.ethereum.org/EIPS/eip-6963", color: "bg-indigo-50 text-indigo-600" },
       ].map((item, i) => <motion.a initial={reduced ? false : { opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: reduced ? 0 : 0.45, delay: reduced ? 0 : i * 0.05 }} whileHover={reduced ? undefined : { y: -5 }} whileTap={reduced ? undefined : { scale: 0.97 }} onFocus={event => { event.currentTarget.style.opacity = "1"; }} key={item.mark} href={item.href} target="_blank" rel="noreferrer" className="ecosystem-card"><span className={`w-10 h-10 rounded-xl grid place-items-center font-bold text-xs ${item.color}`}>{item.mark}</span><span className="text-xs font-bold mt-1">{item.name}</span><span className="text-[9px] font-mono text-framer-dark1/50">{item.detail}</span></motion.a>)}</div></div></section>
       <section id="try-now" className="section-space max-w-5xl mx-auto">
         <Reveal id="download" className="download-card text-left sm:text-center relative">
-          <span className="eyebrow">Developer Preview · QoreChain Testnet</span>
-          <h2 className="section-title mt-3 text-white relative">Try Zeni in Chrome Today</h2>
+          <span className="eyebrow">Now live · Chrome Web Store</span>
+          <h2 className="section-title mt-3 text-white relative">Your QoreChain wallet is ready.</h2>
           <p className="text-white/70 mt-4 max-w-2xl mx-auto leading-relaxed relative text-sm sm:text-base">
-            Manage testnet assets and review hybrid-signed QOR transfers on QoreChain Diana. Install the extension with developer mode using the steps below.
+            Get Zeni from the Chrome Web Store. Create your wallet, claim testnet tokens, and start exploring QoreChain Diana.
           </p>
 
           <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/10 max-w-2xl mx-auto relative backdrop-blur-sm">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-left">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-mono font-bold text-white tracking-wide">Zeni Extension v{EXTENSION_VERSION}</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/60">Manifest V3</span>
+              <div className="text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-sm font-bold text-white tracking-wide">Zeni Wallet for Chrome</span>
                 </div>
-                <div className="text-xs text-white/50 font-mono mt-1">Direct zip package · Chrome, Brave & Edge</div>
+                <div className="text-xs text-white/60 mt-2">Available now · QoreChain Testnet</div>
               </div>
-
               <a
-                href={EXTENSION_DOWNLOAD}
-                download={EXTENSION_FILENAME}
+                href={CHROME_WEB_STORE}
+                target="_blank"
+                rel="noreferrer"
                 className="framer-btn-orange w-full sm:w-auto px-6 py-3.5 font-semibold text-white inline-flex items-center justify-center gap-2.5 text-sm shrink-0"
               >
-                <Download size={18} />
-                Download Zip
+                <Chrome size={18} />
+                Add to Chrome
+                <ArrowUpRight size={16} />
               </a>
             </div>
-
-            <p className="text-[11px] font-mono text-white/40 mt-4 text-center">
-              Account switching · On-chain activity · Automatic approval windows
-            </p>
-            <p className="text-[11px] text-white/60 mt-2 text-center">
-              This beta supports website connections on the Zeni demo and docs playground.
-            </p>
-            <p className="text-xs text-white/60 mt-3 text-center leading-relaxed">
-              Already installed? Replace the files in your existing unpacked folder, reload Zeni in chrome://extensions, then refresh your connected app.
+            <p className="text-xs text-white/60 mt-5 text-center leading-relaxed">
+              This testnet release supports website connections on the Zeni demo and docs playground.
             </p>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left relative">
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col">
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left relative">
+            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
               <div className="flex items-center justify-between mb-3">
                 <span className="w-8 h-8 rounded-xl bg-framer-orange/20 text-framer-orange grid place-items-center font-mono font-bold text-xs">01</span>
-                <FolderArchive size={16} className="text-white/40" />
-              </div>
-              <h4 className="text-sm font-bold text-white">1. Download & Unpack</h4>
-              <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Click <strong>Download Zip</strong> above and extract the <code className="text-[11px] text-framer-orange bg-black/40 px-1 py-0.5 rounded">.zip</code> package to a folder on your computer.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col">
-              <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 grid place-items-center font-mono font-bold text-xs">02</span>
                 <Chrome size={16} className="text-white/40" />
               </div>
-              <h4 className="text-sm font-bold text-white">2. Open Extensions</h4>
+              <h3 className="text-sm font-bold text-white">Add to Chrome</h3>
               <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Open Chrome, Brave, or Edge and navigate to <code className="text-[11px] text-white/80 bg-black/40 px-1 py-0.5 rounded">chrome://extensions</code> in a new tab.
+                Open the store listing, select <strong>Add to Chrome</strong>, and confirm <strong>Add extension</strong>.
               </p>
             </div>
-
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col">
+            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
               <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 grid place-items-center font-mono font-bold text-xs">03</span>
-                <Settings size={16} className="text-white/40" />
+                <span className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 grid place-items-center font-mono font-bold text-xs">02</span>
+                <KeyRound size={16} className="text-white/40" />
               </div>
-              <h4 className="text-sm font-bold text-white">3. Developer Mode</h4>
+              <h3 className="text-sm font-bold text-white">Set up your wallet</h3>
               <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Toggle the <strong>Developer mode</strong> switch in the top-right corner of the Extensions dashboard.
+                Pin Zeni from Chrome’s Extensions menu, then open it to create or import a wallet. Keep your recovery phrase private.
               </p>
             </div>
-
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col">
+            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
               <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 grid place-items-center font-mono font-bold text-xs">04</span>
-                <Check size={16} className="text-white/40" />
+                <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 grid place-items-center font-mono font-bold text-xs">03</span>
+                <Droplets size={16} className="text-white/40" />
               </div>
-              <h4 className="text-sm font-bold text-white">4. Load Unpacked</h4>
+              <h3 className="text-sm font-bold text-white">Explore QoreChain</h3>
               <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Click <strong>Load unpacked</strong> and select the unzipped directory. Zeni is now pinned and ready to use!
+                Claim testnet QOR from the <a href={FAUCET} target="_blank" rel="noreferrer" className="text-framer-orange hover:underline">official faucet</a>, then send, swap, or try the Connect demo.
               </p>
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap justify-center items-center gap-4 text-xs font-mono text-white/50 relative">
-            <span>Prefer building from repository source?</span>
+          <div className="mt-8 flex flex-wrap justify-center items-center gap-4 text-xs text-white/60 relative">
+            <span>Developer resources</span>
+            <a href={EXTENSION_DOWNLOAD} download={EXTENSION_FILENAME} className="text-framer-orange hover:underline inline-flex items-center gap-1">
+              <Download size={13} /> ZIP v{EXTENSION_VERSION}
+            </a>
             <a href={INSTALL} target="_blank" rel="noreferrer" className="text-framer-orange hover:underline inline-flex items-center gap-1">
-              <Github size={13} /> View Build Guide on GitHub <ArrowUpRight size={12} />
+              <Github size={13} /> Manual install guide <ArrowUpRight size={12} />
             </a>
           </div>
         </Reveal>
       </section>
     </main>
-    <footer className="border-t border-framer-dark1/10 py-10 sm:py-12 px-6 text-xs text-framer-dark1/60"><div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-6"><div className="flex flex-wrap justify-center items-center gap-2"><Logo small /><span className="font-bold text-framer-dark1 text-sm">ZENI WALLET</span><span className="text-[10px] font-mono ml-1">© {new Date().getFullYear()} Zeni · Open source, MIT licensed.</span></div><nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[11px] font-mono"><a href="#hero">Home</a><a href="/docs">Documentation</a><a href="/privacy.html">Privacy policy</a><a href={CONNECT_DEMO} target="_blank" rel="noreferrer">Connect Demo</a><a href="#extension-preview-section">Extension UI</a><a href="#pqc">NIST ML-DSA-87</a><a href="#ecosystem">QoreChain 9800</a></nav></div></footer>
+    <footer className="border-t border-framer-dark1/10 py-10 sm:py-12 px-6 text-xs text-framer-dark1/60"><div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-6"><div className="flex flex-wrap justify-center items-center gap-2"><Logo small /><span className="font-bold text-framer-dark1 text-sm">ZENI WALLET</span><span className="text-[10px] font-mono ml-1">© {new Date().getFullYear()} Zeni · Open source, MIT licensed.</span></div><nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[11px] font-mono"><a href="#hero">Home</a><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer">Chrome Web Store</a><a href="/docs">Documentation</a><a href="/privacy.html">Privacy policy</a><a href={CONNECT_DEMO} target="_blank" rel="noreferrer">Connect Demo</a><a href="#extension-preview-section">Extension UI</a><a href="#pqc">NIST ML-DSA-87</a><a href="#ecosystem">QoreChain 9800</a></nav></div></footer>
   </div>;
 };
