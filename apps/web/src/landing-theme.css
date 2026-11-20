@@ -1,0 +1,15 @@
+.site-landing { background: #fffaf5; }
+.site-landing .testnet-banner { background: #fff0e3; color: #674735; border-bottom-color: #ecd7c6; font-size: 12px; }
+.site-landing .testnet-pill { color: #357052; background: #edf6ed; border-color: #c5ddc8; font-size: 12px; }
+.site-landing .nav-capsule { background: #fffdf9f5; border-color: #e8d8c9; box-shadow: 0 8px 28px #7043210d; }
+.site-landing .nav-capsule nav { font-size: 15px; }
+.site-landing .nav-capsule .framer-btn-orange { font-size: 14px; }
+.site-landing .eyebrow { font-size: 12px; }
+.site-landing footer { background: #fffaf5; color: #705e51; }
+.site-landing footer nav { font-size: 14px; line-height: 1.7; }
+.site-landing .feature-badge > div:last-child > div:last-child { font-size: 15px; }
+.site-landing .phone-action { font-size: 12px; }
+@media (max-width: 760px) {
+  .site-landing .nav-capsule .framer-btn-orange { font-size: 12px; }
+  .site-landing .feature-badge > div:last-child > div:first-child { font-size: 11px; letter-spacing: .4px; }
+}

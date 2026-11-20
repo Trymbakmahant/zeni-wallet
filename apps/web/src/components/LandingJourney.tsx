@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
-import { ArrowDown, ArrowUpRight, BookOpen, Check, Download, Droplets, Fingerprint, KeyRound, LockKeyhole, Plus, ScanLine, ShieldCheck } from 'lucide-react';
-import { Chrome, Github } from './BrandIcons';
-import { Reveal } from './Motion';
+import { motion, useMotionValueEvent, useScroll, useTransform, type MotionValue } from 'framer-motion';
+import { ArrowDown, ArrowUpRight, Check, Download, Fingerprint, KeyRound, LockKeyhole, Plus, ShieldCheck } from 'lucide-react';
+import { Chrome } from './BrandIcons';
 import extensionRelease from '../extension-release.json';
 import './landing-journey.css';
 
@@ -48,30 +47,20 @@ function SecurityStory({ animated }: { animated: boolean }) {
   </section>;
 }
 
-function EcosystemLinks() {
-  const reduced = useReducedMotion();
-  return <section id="ecosystem" className="journey-ecosystem" aria-labelledby="journey-ecosystem-title"><div className="journey-ecosystem-inner"><div className="journey-ecosystem-heading"><span className="eyebrow">YOUR NEXT STOP</span><h2 id="journey-ecosystem-title">Go a little further.</h2><p>The essentials for exploring QoreChain Diana.</p></div><div className="journey-resource-grid">{[
-    { icon: Droplets, number: '01', title: 'Get testnet QOR', description: 'Start exploring with tokens from the official Diana faucet.', label: 'Open faucet', href: 'https://dashboard.qorechain.io/faucet' },
-    { icon: ScanLine, number: '02', title: 'Follow your transaction', description: 'Look up receipts and account activity. Select Testnet in the explorer.', label: 'Open explorer', href: 'https://explore.qore.network' },
-    { icon: BookOpen, number: '03', title: 'Build on QoreChain', description: 'Explore native swaps, network tools and developer documentation.', label: 'Read the docs', href: 'https://docs.qorechain.io' },
-  ].map(({ icon: Icon, ...item }, index) => <motion.a key={item.number} href={item.href} target="_blank" rel="noreferrer" initial={reduced ? false : { opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} onFocus={event => { event.currentTarget.style.opacity = '1'; event.currentTarget.style.transform = 'none'; }} viewport={{ once: true, amount: .2 }} transition={{ duration: .5, delay: reduced ? 0 : index * .08 }} className="journey-resource"><div><span className="journey-resource-icon"><Icon size={24} strokeWidth={1.4} /></span><span>{item.number}</span></div><h3>{item.title}</h3><p>{item.description}</p><span className="journey-resource-link">{item.label}<ArrowUpRight size={17} /></span></motion.a>)}</div><div className="journey-standards"><span>Built with open standards</span><a href="https://csrc.nist.gov/pubs/fips/204/final" target="_blank" rel="noreferrer">ML-DSA-87 / FIPS 204<ArrowUpRight size={12} /></a><a href="https://eips.ethereum.org/EIPS/eip-6963" target="_blank" rel="noreferrer">EIP-6963 wallet discovery<ArrowUpRight size={12} /></a><a href={REPO} target="_blank" rel="noreferrer">Open-source code<Github size={13} /></a></div></div></section>;
-}
-
-function InstallSection() {
-  const reduced = useReducedMotion();
-  return <section id="try-now" className="journey-install" aria-labelledby="journey-install-title"><div id="download" className="journey-install-inner"><Reveal className="journey-install-copy"><span className="journey-eyebrow">AVAILABLE ON THE CHROME WEB STORE</span><h2 id="journey-install-title">Your next move.<br /><em>Make it Zeni.</em></h2><p>A wallet for QoreChain Diana, with your keys on your device and your approval at every step.</p><a href={STORE} target="_blank" rel="noreferrer" className="journey-install-button"><Chrome size={20} />Add Zeni to Chrome<ArrowUpRight size={18} /></a><span className="journey-install-meta"><i />Chrome extension · Diana testnet</span></Reveal>
-    <Reveal delay={.12} className="journey-install-steps"><span className="journey-install-kicker">FROM INSTALL TO YOUR FIRST TRANSACTION</span><ol>{[{ title: 'Add Zeni', text: 'Install from the Chrome Web Store and pin the extension.' }, { title: 'Make it yours', text: 'Create or restore your wallet. Keep your recovery phrase private.' }, { title: 'Take your first step', text: 'Get testnet QOR, then send, swap or connect to an app.' }].map((step, index) => <li key={step.title}><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div>{index === 2 ? <ArrowUpRight size={19} /> : <Check size={17} />}</li>)}</ol><div className="journey-install-version"><span className="journey-version-tag">FOR DEVELOPERS</span><p>Contract calls require v0.1.4 or later. Check your installed version, or use the test build.</p><div><a href={`/downloads/${extensionRelease.filename}`} download={extensionRelease.filename}><Download size={14} />ZIP v{extensionRelease.version}</a><a href={`${REPO}#chrome-extension-qor-transfers`} target="_blank" rel="noreferrer">Install guide<ArrowUpRight size={14} /></a></div></div></Reveal>
-    <motion.div className="journey-install-wordmark" aria-hidden="true" initial={reduced ? false : { y: 60, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ duration: reduced ? 0 : .8 }}>zeni<span>↗</span></motion.div>
+export function InstallSection() {
+  return <section id="try-now" className="journey-install" aria-labelledby="journey-install-title"><div id="download" className="journey-install-inner"><div className="journey-install-copy"><span className="journey-eyebrow">AVAILABLE ON THE CHROME WEB STORE</span><h2 id="journey-install-title">Your next move.<br /><em>Make it Zeni.</em></h2><p>A wallet for QoreChain Diana, with your keys on your device and your approval at every step.</p><a href={STORE} target="_blank" rel="noreferrer" className="journey-install-button"><Chrome size={20} />Add Zeni to Chrome<ArrowUpRight size={18} /></a><span className="journey-install-meta"><i />Chrome extension · Diana testnet</span></div>
+    <div className="journey-install-steps"><span className="journey-install-kicker">FROM INSTALL TO YOUR FIRST TRANSACTION</span><ol>{[{ title: 'Add Zeni', text: 'Install from the Chrome Web Store and pin the extension.' }, { title: 'Make it yours', text: 'Create or restore your wallet. Keep your recovery phrase private.' }, { title: 'Take your first step', text: 'Get testnet QOR, then send, swap or connect to an app.' }].map((step, index) => <li key={step.title}><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div>{index === 2 ? <ArrowUpRight size={19} /> : <Check size={17} />}</li>)}</ol><div className="journey-install-version"><span className="journey-version-tag">FOR DEVELOPERS</span><p>Contract calls require v0.1.4 or later. Check your installed version, or use the test build.</p><div><a href={`/downloads/${extensionRelease.filename}`} download={extensionRelease.filename}><Download size={14} />ZIP v{extensionRelease.version}</a><a href={`${REPO}#chrome-extension-qor-transfers`} target="_blank" rel="noreferrer">Install guide<ArrowUpRight size={14} /></a></div></div></div>
+    <div className="journey-install-wordmark" aria-hidden="true">zeni<span>↗</span></div>
   </div></section>;
 }
 
-export function LandingJourney() {
+export function SecurityJourney() {
   const [desktop, setDesktop] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia('(min-width: 1000px) and (min-height: 760px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
+    const query = window.matchMedia('(min-width: 1000px) and (min-height: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)');
     const update = () => setDesktop(query.matches);
     update(); query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
-  return <><SecurityStory animated={desktop} /><EcosystemLinks /><InstallSection /></>;
+  return <SecurityStory animated={desktop} />;
 }

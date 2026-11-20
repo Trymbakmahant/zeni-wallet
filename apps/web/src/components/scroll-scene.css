@@ -1,0 +1,9 @@
+.scroll-scene { position: relative; overflow: clip; }
+.scroll-scene-surface { display: flow-root; transform-origin: center center; overflow: clip; }
+.scroll-scene-hero .scroll-scene-surface { transform-origin: center top; }
+.scroll-scene-footer .scroll-scene-surface { transform-origin: center bottom; }
+/* Keyboard users always get a stable, fully visible target. */
+.scroll-scene-surface:has(:focus-visible) { transform: none !important; opacity: 1 !important; border-radius: 0 !important; }
+@media (prefers-reduced-motion: reduce) {
+  .scroll-scene-surface { transform: none !important; opacity: 1 !important; border-radius: 0 !important; }
+}
