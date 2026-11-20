@@ -1,25 +1,22 @@
-import extensionRelease from './extension-release.json';
-import { Chrome, Github } from './components/BrandIcons';
+import { WalletComparison } from './components/WalletComparison';
+import { ExtensionShowcase } from './components/ExtensionShowcase';
+import { LandingJourney } from './components/LandingJourney';
+import { Chrome } from './components/BrandIcons';
 import { ConnectShowcase } from './docs/ConnectShowcase';
 import { CONNECT_DEMO } from './docs/content';
 import './docs/connect-landing.css';
 import React, { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { FloatingBadge, ParallaxShowcase, Reveal, ScrollProgress } from "./components/Motion";
+import { FloatingBadge, ParallaxShowcase, ScrollProgress } from "./components/Motion";
 import {
-  ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Check, ChevronRight,
-  Clock, Download, Droplets, ExternalLink, FileCheck2,
-  Home, KeyRound, LockKeyhole, Menu, RotateCw, Settings,
+  ArrowDownLeft, ArrowUpRight, ArrowLeftRight,
+  Clock, Droplets, ExternalLink, FileCheck2,
+  Home, KeyRound, LockKeyhole, Menu, Settings,
   ShieldCheck, Wifi, X,
 } from "lucide-react";
 
-const REPO = "https://github.com/Trymbakmahant/zeni-wallet";
-const INSTALL = `${REPO}#chrome-extension-qor-transfers`;
 const CHROME_WEB_STORE = "https://chromewebstore.google.com/detail/zeni-wallet-%E2%80%94-qorechain-t/aobipbcjmngbpdhocfdgbcpgfdphlikc";
 const FAUCET = "https://dashboard.qorechain.io/faucet";
-const EXTENSION_VERSION = extensionRelease.version;
-const EXTENSION_FILENAME = extensionRelease.filename;
-const EXTENSION_DOWNLOAD = `/downloads/${EXTENSION_FILENAME}`;
 
 type PreviewAction = "Wallet" | "Send" | "Receive" | "Swap" | "Activity" | "Settings";
 const actionDetails: Record<PreviewAction, { title: string; description: string }> = {
@@ -33,14 +30,6 @@ const actionDetails: Record<PreviewAction, { title: string; description: string 
 
 function Logo({ small = false }: { small?: boolean }) {
   return <span className={`zeni-logo ${small ? "zeni-logo-small" : ""}`} aria-hidden="true"><svg width={small ? 17 : 22} height={small ? 17 : 22} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="16" cy="16" r="13" /><path d="M12 12h8v8h-8z" /></svg></span>;
-}
-
-function SectionHeading({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
-  return <Reveal className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-    <span className="eyebrow">{eyebrow}</span>
-    <h2 className="section-title mt-2">{title}</h2>
-    <p className="mt-4 text-base sm:text-lg text-framer-dark1/70 leading-relaxed">{children}</p>
-  </Reveal>;
 }
 
 function AssetList() {
@@ -99,12 +88,12 @@ function PhonePreview() {
 }
 
 const badges = [
-  { icon: ArrowUpRight, eyebrow: "Review & authorize", title: "Send QOR on-chain", href: "#demo-send", color: "bg-orange-100 text-framer-orange" },
-  { icon: ArrowLeftRight, eyebrow: "Native QoreChain AMM", title: "Swap with live quotes", href: "#demo-swap", color: "bg-blue-100 text-blue-600" },
+  { icon: ArrowUpRight, eyebrow: "Review & authorize", title: "Send QOR on-chain", href: "#extension-preview-section", color: "bg-orange-100 text-framer-orange" },
+  { icon: ArrowLeftRight, eyebrow: "Native QoreChain AMM", title: "Swap with live quotes", href: "#extension-preview-section", color: "bg-blue-100 text-blue-600" },
   { icon: LockKeyhole, eyebrow: "Encrypted on your device", title: "Your keys. Your wallet.", href: "#pqc", color: "bg-purple-100 text-purple-600" },
-  { icon: Droplets, eyebrow: "Official testnet faucet", title: "Claim QOR & tokens", href: "#demo-faucet", color: "bg-emerald-100 text-emerald-600" },
-  { icon: KeyRound, eyebrow: "Create or restore", title: "Bring your existing wallet", href: "#demo-wallet", color: "bg-amber-100 text-amber-600" },
-  { icon: FileCheck2, eyebrow: "Activity & explorer", title: "See your on-chain receipt", href: "#receipts", color: "bg-rose-100 text-rose-600" },
+  { icon: Droplets, eyebrow: "Official testnet faucet", title: "Claim QOR & tokens", href: FAUCET, color: "bg-emerald-100 text-emerald-600" },
+  { icon: KeyRound, eyebrow: "Create or restore", title: "Bring your existing wallet", href: "#download", color: "bg-amber-100 text-amber-600" },
+  { icon: FileCheck2, eyebrow: "Activity & explorer", title: "See your on-chain receipt", href: "https://explore.qore.network", color: "bg-rose-100 text-rose-600" },
 ];
 
 function FaucetCard() {
@@ -114,72 +103,6 @@ function FaucetCard() {
   </div>;
 }
 
-const demoSteps = [
-  { id: "demo-send", icon: ArrowUpRight, title: "Send QOR", description: "Enter a recipient and amount, review the fee, then authorize your transfer.", detail: "Review Transfer → Authorize & Send", color: "bg-orange-50 text-framer-orange" },
-  { id: "demo-swap", icon: ArrowLeftRight, title: "Swap tokens", description: "Choose a supported pair, get a live AMM quote, and check the minimum received before confirming.", detail: "QOR · fUSD · fETH · fBTC", color: "bg-blue-50 text-blue-600" },
-  { id: "demo-faucet", icon: Droplets, title: "Claim testnet tokens", description: "Click Claim in the wallet to open the official faucet. Request tokens for your wallet address.", detail: "Diana Faucet · QoreChain testnet", color: "bg-emerald-50 text-emerald-600" },
-  { id: "demo-wallet", icon: KeyRound, title: "Create or import", description: "Start fresh, or restore your existing wallet with its 12-word recovery phrase inside the extension.", detail: "Set a password. Keep your phrase private.", color: "bg-purple-50 text-purple-600" },
-];
-
-function DemoFlow() {
-  const reduced = useReducedMotion();
-  return <section id="demo-flow" className="section-space max-w-7xl mx-auto">
-    <SectionHeading eyebrow="Inside the Chrome extension" title="One wallet. Four simple moves.">Send, swap, claim, and get started. Here’s what you’ll see in the Zeni testnet demo.</SectionHeading>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-      {demoSteps.map(({ icon: Icon, ...step }, i) => <Reveal delay={i * 0.08} whileHover={reduced ? undefined : { y: -6 }} id={step.id} key={step.id} className="rounded-3xl bg-white border border-framer-dark1/10 p-6 flex flex-col shadow-sm">
-        <div className="flex items-center justify-between mb-6"><span className={`w-11 h-11 rounded-2xl grid place-items-center ${step.color}`}><Icon size={21} /></span><span className="text-xs font-mono text-framer-dark1/35">0{i + 1}</span></div>
-        <h3 className="text-xl font-bold tracking-tight">{step.title}</h3><p className="mt-3 text-sm leading-relaxed text-framer-dark1/65 flex-1">{step.description}</p><p className="mt-6 pt-4 border-t border-framer-dark1/10 text-[10px] leading-relaxed font-mono text-framer-dark1/55">{step.detail}</p>
-      </Reveal>)}
-    </div>
-    <Reveal id="receipts" className="mt-6 rounded-3xl bg-framer-dark1 text-white p-6 sm:p-8 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
-      <div className="flex items-start gap-4"><span className="rounded-2xl bg-emerald-500/10 text-emerald-400 p-3"><FileCheck2 size={23} /></span><div><h3 className="text-xl font-semibold">The transaction doesn’t end at Confirm.</h3><p className="mt-2 text-sm text-white/60 leading-relaxed max-w-xl">Follow its status in Activity, then open the transaction in the explorer. Select Testnet to see your QoreChain receipt.</p></div></div>
-      <a href="https://explore.qore.network" target="_blank" rel="noreferrer" className="framer-btn-dark shrink-0 px-5 py-3 inline-flex justify-center items-center gap-2 text-sm font-semibold">Open explorer <ExternalLink size={15} /></a>
-    </Reveal>
-  </section>;
-}
-
-function WindowBar({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-center gap-2 px-2 sm:px-4 py-3 mb-4 border-b border-white/10 text-[10px] sm:text-xs text-white/50 font-mono"><span className="w-2.5 h-2.5 rounded-full bg-red-400 shrink-0" /><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 shrink-0" /><span className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0" /><span className="ml-1 truncate">{children}</span></div>;
-}
-
-function ExtensionPreview() {
-  const reduced = useReducedMotion();
-  const [action, setAction] = useState<PreviewAction>("Wallet");
-  const [approval, setApproval] = useState<"approved" | "rejected" | null>(null);
-  return <section id="extension-preview-section" className="section-space max-w-7xl mx-auto">
-    <SectionHeading eyebrow="A closer look" title="Your wallet. Every step in view.">A preview of balances, actions, and swap review in Zeni. Try the controls below; this website uses sample data and sends no transactions.</SectionHeading>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-      <Reveal className="browser-window">
-        <WindowBar>chrome-extension://zeni-vault/index.html</WindowBar>
-        <div className="dark-panel flex justify-between gap-2 items-center mb-4"><div className="flex gap-2.5 items-center"><Logo /><div><div className="text-sm font-bold">Zeni Account #1</div><div className="text-[10px] font-mono text-white/45 mt-1">0x8F3b...9B2a · Preview account</div></div></div><span className="hidden sm:block text-[10px] font-mono text-white/70 border border-white/10 rounded-lg p-2">QoreChain (9800)</span></div>
-        <div className="dark-panel text-center !p-6 mb-4 bg-gradient-to-b from-[#1a1a1a] to-[#141414]"><div className="text-xs font-mono text-white/45">Sample testnet balance</div><div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight mt-2">100.00 <span className="text-base text-white/50">QOR</span></div><span className="inline-block mt-3 text-[10px] text-emerald-400 bg-emerald-500/10 rounded-full px-3 py-1 font-mono">Native transfers + on-chain swaps</span>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">{(["Send", "Receive", "Swap"] as const).map((label, i) => <button key={label} onClick={() => setAction(label)} aria-pressed={action === label} className={`${i === 0 ? "framer-btn-orange" : "framer-btn-dark"} py-3 text-xs font-bold`}>{label}</button>)}</div>
-        </div>
-        <div className="mb-4"><FaucetCard /></div>
-        <div className="dark-panel space-y-3"><div className="flex justify-between text-xs font-mono text-white/50"><span>Wallet protection</span><span className="text-framer-orange">Local vault</span></div><div className="grid grid-cols-2 gap-2 font-mono"><div className="mini-panel"><div className="text-[10px] text-white/40">Classical key</div><div className="text-xs mt-1">secp256k1 (BIP-44)</div></div><div className="mini-panel"><div className="text-[10px] text-white/40">Post-quantum key</div><div className="text-xs mt-1">ML-DSA-87</div></div></div><div className="mini-panel text-xs flex justify-between gap-2"><span className="text-white/50">Network fees</span><span className="text-emerald-400">Reviewed before signing</span></div>
-          <div className="text-xs leading-relaxed min-h-[72px]" aria-live="polite"><strong>{actionDetails[action].title}</strong><p className="text-white/55 mt-1">{actionDetails[action].description}</p>{action === "Receive" && <a href={FAUCET} target="_blank" rel="noreferrer" className="text-framer-orange inline-flex gap-1 mt-2 items-center">Claim testnet tokens <ExternalLink size={12} /></a>}</div>
-        </div>
-      </Reveal>
-      <Reveal delay={0.14} className="browser-window relative !border-framer-orange !border-2">
-        <span className="absolute -top-3 right-6 bg-framer-orange text-[10px] font-mono font-bold text-white px-3 py-1 rounded-full uppercase tracking-wider">Approval preview</span>
-        <WindowBar>Zeni · Review swap request</WindowBar>
-        <div className="dark-panel flex items-center gap-3 mb-4"><span className="w-10 h-10 rounded-xl bg-framer-orange/15 text-framer-orange grid place-items-center shrink-0"><ArrowLeftRight size={21} /></span><div><div className="text-sm font-bold">QoreChain native AMM</div><div className="text-[10px] font-mono text-white/45 mt-1">Built-in swap · Sample request</div></div><span className="ml-auto text-[9px] font-mono text-blue-300 bg-blue-500/10 rounded border border-blue-500/20 px-2 py-1">DEMO</span></div>
-        <div className="dark-panel mb-4 space-y-4"><div className="detail-row"><span>Requested action</span><strong className="text-framer-orange">SwapExactIn</strong></div><div className="detail-row"><span>Route</span><strong>QOR → fUSD</strong></div><div className="rounded-xl bg-framer-dark3 p-4 border border-white/5 space-y-3"><div className="detail-row"><span>You pay</span><strong>1.00 QOR</strong></div><div className="detail-row"><span>Estimated receive</span><strong className="text-emerald-400">0.081062 fUSD</strong></div><div className="detail-row"><span>Minimum received</span><strong>0.080656 fUSD</strong></div><div className="detail-row border-t border-white/5 pt-3"><span>Network fee</span><strong>Quoted in extension</strong></div></div></div>
-        <div className="mini-panel mb-5 space-y-2"><div className="detail-row"><span>Authorization</span><strong>secp256k1 + ML-DSA-87</strong></div><div className="detail-row"><span>Slippage tolerance</span><strong className="text-framer-orange">0.5%</strong></div></div>
-        <div className="grid grid-cols-2 gap-3"><button className="framer-btn-orange py-3.5 text-xs sm:text-sm font-bold inline-flex gap-2 items-center justify-center" onClick={() => setApproval("approved")}><Check size={16} /> Preview approval</button><button className="framer-btn-dark py-3.5 text-xs sm:text-sm font-semibold" onClick={() => setApproval("rejected")}>Reject request</button></div>
-        <motion.div key={approval ?? "ready"} initial={reduced ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : 0.25 }} className="mt-4 text-xs text-white/55 leading-relaxed min-h-[40px]" role="status">{approval === "approved" ? "Approval preview complete. In the extension, confirmation signs and broadcasts your transaction. This demo sent nothing." : approval === "rejected" ? "Request rejected. No signature was created and no funds moved." : "Try either action to explore the approval flow. These amounts are illustrative, not a live quote."}</motion.div>
-        {approval && <button className="mt-2 text-xs text-framer-orange flex items-center gap-1" onClick={() => setApproval(null)}><RotateCw size={12} /> Reset preview</button>}
-      </Reveal>
-    </div>
-  </section>;
-}
-
-const securityCards = [
-  { title: "An encrypted local vault", color: "bg-orange-50 text-framer-orange", description: "Create a wallet or import an existing recovery phrase in the extension. Your password encrypts the vault on your device and unlocks it when you return.", footer: "AES-256-GCM · 600,000 PBKDF2 iterations" },
-  { title: "Hybrid-signed transfers", color: "bg-blue-50 text-blue-600", description: "Zeni registers your post-quantum key when needed. Native QOR transfers and swaps carry both classical and post-quantum signatures.", footer: "ML-DSA-87 + classical secp256k1" },
-  { title: "Review before you confirm", color: "bg-emerald-50 text-emerald-600", description: "See transfer fees before sending. For swaps, review the quote, price impact, and minimum received. The signed swap enforces your reviewed minimum output.", footer: "Live quotes · Slippage protection" },
-];
-
 export const App: React.FC = () => {
   const reduced = useReducedMotion();
   const intro = (delay: number) => ({
@@ -188,7 +111,7 @@ export const App: React.FC = () => {
     transition: { duration: reduced ? 0 : 0.8, delay: reduced ? 0 : delay, ease: [0.22, 1, 0.36, 1] as const },
   });
   const [menuOpen, setMenuOpen] = useState(false);
-  const navigation = [{ label: "Wallet", href: "#demo-flow" }, { label: "Connect SDK", href: "#connect" }, { label: "Docs", href: "/docs" }, { label: "Security", href: "#pqc" }];
+  const navigation = [{ label: "Wallet", href: "#extension-preview-section" }, { label: "Connect SDK", href: "#connect" }, { label: "Docs", href: "/docs" }, { label: "Security", href: "#pqc" }];
   return <div className="site-landing min-h-screen bg-framer-cream text-framer-dark1">
     <ScrollProgress />
     <a href="#main" className="skip-link">Skip to content</a>
@@ -209,97 +132,10 @@ export const App: React.FC = () => {
         </div>
       </section>
       <ConnectShowcase />
-      <DemoFlow />
-      <ExtensionPreview />
-      <section id="pqc" className="section-space border-t border-framer-dark1/10"><div className="max-w-5xl mx-auto"><SectionHeading eyebrow="Built into the extension" title="Simple to use. Thoughtful about security.">An encrypted vault, post-quantum authorization, and clear transaction reviews support every step of your testnet experience.</SectionHeading><div className="grid grid-cols-1 md:grid-cols-3 gap-6">{securityCards.map((card, i) => <Reveal delay={i * 0.09} whileHover={reduced ? undefined : { y: -6 }} key={card.title} className="p-6 rounded-3xl bg-white border border-framer-dark1/10 shadow-sm flex flex-col"><span className={`w-10 h-10 rounded-2xl grid place-items-center font-mono font-bold text-sm mb-4 ${card.color}`}>0{i + 1}</span><h3 className="text-xl font-bold tracking-tight break-words">{card.title}</h3><p className="mt-3 text-sm text-framer-dark1/70 leading-relaxed flex-1">{card.description}</p><div className="mt-6 pt-4 border-t border-framer-dark1/10 font-mono text-xs text-framer-dark1/60">{card.footer}</div></Reveal>)}</div>
-
-      </div></section>
-      <section id="ecosystem" className="section-space bg-[#f7f3ee] border-t border-framer-dark1/10"><div className="max-w-5xl mx-auto"><SectionHeading eyebrow="The QoreChain ecosystem" title="Built for a Connected Web3">Explore the network, get testnet tokens, and follow the open-source tools and standards behind the wallet.</SectionHeading><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">{[
-        { mark: "AMM", name: "Native swaps", detail: "QoreChain DEX", href: "https://docs.qorechain.io", color: "bg-purple-50 text-purple-600" },
-        { mark: "QOR", name: "Diana Faucet", detail: "Testnet tokens", href: FAUCET, color: "bg-amber-50 text-amber-600" },
-        { mark: "TX", name: "Explorer", detail: "On-chain receipts", href: "https://explore.qore.network", color: "bg-blue-50 text-blue-600" },
-        { mark: "SRC", name: "Chrome wallet", detail: "Chrome Web Store", href: CHROME_WEB_STORE, color: "bg-emerald-50 text-emerald-600" },
-        { mark: "PQC", name: "ML-DSA", detail: "NIST FIPS 204", href: "https://csrc.nist.gov/pubs/fips/204/final", color: "bg-rose-50 text-rose-600" },
-        { mark: "EIP", name: "EIP-6963", detail: "Wallet discovery", href: "https://eips.ethereum.org/EIPS/eip-6963", color: "bg-indigo-50 text-indigo-600" },
-      ].map((item, i) => <motion.a initial={reduced ? false : { opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: reduced ? 0 : 0.45, delay: reduced ? 0 : i * 0.05 }} whileHover={reduced ? undefined : { y: -5 }} whileTap={reduced ? undefined : { scale: 0.97 }} onFocus={event => { event.currentTarget.style.opacity = "1"; }} key={item.mark} href={item.href} target="_blank" rel="noreferrer" className="ecosystem-card"><span className={`w-10 h-10 rounded-xl grid place-items-center font-bold text-xs ${item.color}`}>{item.mark}</span><span className="text-xs font-bold mt-1">{item.name}</span><span className="text-[9px] font-mono text-framer-dark1/50">{item.detail}</span></motion.a>)}</div></div></section>
-      <section id="try-now" className="section-space max-w-5xl mx-auto">
-        <Reveal id="download" className="download-card text-left sm:text-center relative">
-          <span className="eyebrow">Now live · Chrome Web Store</span>
-          <h2 className="section-title mt-3 text-white relative">Your QoreChain wallet is ready.</h2>
-          <p className="text-white/70 mt-4 max-w-2xl mx-auto leading-relaxed relative text-sm sm:text-base">
-            Get Zeni from the Chrome Web Store. Create your wallet, claim testnet tokens, and start exploring QoreChain Diana.
-          </p>
-
-          <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-white/[0.04] border border-white/10 max-w-2xl mx-auto relative backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="text-sm font-bold text-white tracking-wide">Zeni Wallet for Chrome</span>
-                </div>
-                <div className="text-xs text-white/60 mt-2">Available now · QoreChain Testnet</div>
-              </div>
-              <a
-                href={CHROME_WEB_STORE}
-                target="_blank"
-                rel="noreferrer"
-                className="framer-btn-orange w-full sm:w-auto px-6 py-3.5 font-semibold text-white inline-flex items-center justify-center gap-2.5 text-sm shrink-0"
-              >
-                <Chrome size={18} />
-                Add to Chrome
-                <ArrowUpRight size={16} />
-              </a>
-            </div>
-            <p className="text-xs text-white/60 mt-5 text-center leading-relaxed">
-              This testnet release supports website connections on the Zeni demo and docs playground.
-            </p>
-          </div>
-
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left relative">
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-framer-orange/20 text-framer-orange grid place-items-center font-mono font-bold text-xs">01</span>
-                <Chrome size={16} className="text-white/40" />
-              </div>
-              <h3 className="text-sm font-bold text-white">Add to Chrome</h3>
-              <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Open the store listing, select <strong>Add to Chrome</strong>, and confirm <strong>Add extension</strong>.
-              </p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 grid place-items-center font-mono font-bold text-xs">02</span>
-                <KeyRound size={16} className="text-white/40" />
-              </div>
-              <h3 className="text-sm font-bold text-white">Set up your wallet</h3>
-              <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Pin Zeni from Chrome’s Extensions menu, then open it to create or import a wallet. Keep your recovery phrase private.
-              </p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <span className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 grid place-items-center font-mono font-bold text-xs">03</span>
-                <Droplets size={16} className="text-white/40" />
-              </div>
-              <h3 className="text-sm font-bold text-white">Explore QoreChain</h3>
-              <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Claim testnet QOR from the <a href={FAUCET} target="_blank" rel="noreferrer" className="text-framer-orange hover:underline">official faucet</a>, then send, swap, or try the Connect demo.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 flex flex-wrap justify-center items-center gap-4 text-xs text-white/60 relative">
-            <span>Developer resources</span>
-            <a href={EXTENSION_DOWNLOAD} download={EXTENSION_FILENAME} className="text-framer-orange hover:underline inline-flex items-center gap-1">
-              <Download size={13} /> ZIP v{EXTENSION_VERSION}
-            </a>
-            <a href={INSTALL} target="_blank" rel="noreferrer" className="text-framer-orange hover:underline inline-flex items-center gap-1">
-              <Github size={13} /> Manual install guide <ArrowUpRight size={12} />
-            </a>
-          </div>
-        </Reveal>
-      </section>
+      <WalletComparison />
+      <ExtensionShowcase />
+      <LandingJourney />
     </main>
-    <footer className="border-t border-framer-dark1/10 py-10 sm:py-12 px-6 text-xs text-framer-dark1/60"><div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-6"><div className="flex flex-wrap justify-center items-center gap-2"><Logo small /><span className="font-bold text-framer-dark1 text-sm">ZENI WALLET</span><span className="text-[10px] font-mono ml-1">© {new Date().getFullYear()} Zeni · Open source, MIT licensed.</span></div><nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[11px] font-mono"><a href="#hero">Home</a><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer">Chrome Web Store</a><a href="/docs">Documentation</a><a href="/privacy.html">Privacy policy</a><a href={CONNECT_DEMO} target="_blank" rel="noreferrer">Connect Demo</a><a href="#extension-preview-section">Extension UI</a><a href="#pqc">NIST ML-DSA-87</a><a href="#ecosystem">QoreChain 9800</a></nav></div></footer>
+    <footer className="border-t border-framer-dark1/10 py-10 sm:py-12 px-6 text-xs text-framer-dark1/60"><div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-6"><div className="flex flex-wrap justify-center items-center gap-2"><Logo small /><span className="font-bold text-framer-dark1 text-sm">ZENI WALLET</span><span className="text-[10px] font-mono ml-1">© {new Date().getFullYear()} Zeni · Open source, MIT licensed.</span></div><nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[11px] font-mono"><a href="#hero">Home</a><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer">Chrome Web Store</a><a href="/docs">Documentation</a><a href="/privacy.html">Privacy policy</a><a href={CONNECT_DEMO} target="_blank" rel="noreferrer">Connect Demo</a><a href="#extension-preview-section">Extension UI</a><a href="#why-zeni">Why Zeni?</a><a href="#pqc">NIST ML-DSA-87</a><a href="#ecosystem">QoreChain 9800</a></nav></div></footer>
   </div>;
 };
