@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- Source artwork for public/social/zeni-wallet-og-v1.png.
+     Open /scripts/social-preview.html on the Vite dev server, wait for
+     document.fonts.ready, then capture a 1200 × 630 viewport at 1× scale. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zeni social preview artwork</title>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;650;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+    body { font-family: 'Figtree', Arial, sans-serif; background: #fffaf5; color: #30251e; }
+    .canvas { position: relative; height: 100%; padding: 48px 60px; isolation: isolate; border-top: 8px solid #f45124; }
+    .canvas::before { content: ''; position: absolute; inset: 0; z-index: -2; background-image: linear-gradient(#aa795909 1px, transparent 1px), linear-gradient(90deg, #aa795909 1px, transparent 1px); background-size: 40px 40px; }
+    .brand { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 800; letter-spacing: -.7px; }
+    .mark { display: grid; place-items: center; width: 46px; height: 46px; color: white; background: #f45124; border-radius: 50%; }
+    .network { position: absolute; top: 62px; right: 60px; display: flex; align-items: center; gap: 9px; color: #79533b; font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+    .network i { width: 7px; height: 7px; background: #d76838; border-radius: 50%; }
+    h1 { font-size: 64px; font-weight: 650; line-height: 1.02; letter-spacing: -3px; margin: 38px 0 20px; }
+    h1 span { color: #d65329; }
+    .description { font-size: 24px; line-height: 1.4; color: #775d4c; margin: 0; }
+    .proof { margin-top: 20px; color: #a14c27; font-size: 18px; font-weight: 600; letter-spacing: .3px; }
+    .bottom { position: absolute; bottom: 42px; left: 60px; right: 60px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #e8d7c8; padding-top: 22px; }
+    .availability { display: flex; align-items: center; gap: 11px; font-size: 18px; font-weight: 600; }
+    .availability svg { color: #c94d24; }
+    .domain { color: #87664f; font-size: 18px; }
+    .art { position: absolute; top: 145px; right: 72px; width: 415px; height: 355px; }
+    .halo { position: absolute; inset: -55px -40px; background: radial-gradient(ellipse, #f4d4b8 0, #fbe5d066 49%, transparent 70%); z-index: -1; }
+    .ring { position: absolute; width: 365px; height: 365px; border: 1px solid #e6bd9870; border-radius: 50%; top: -28px; left: 24px; box-shadow: 0 0 0 25px #f3d3b325; }
+    .card { position: absolute; width: 282px; height: 181px; top: 15px; left: 44px; padding: 23px; border-radius: 23px; background: linear-gradient(135deg, #fffdf8, #e7ccb7 65%, #fff0e5); border: 2px solid #fffdf9; transform: rotate(-14deg); box-shadow: 6px 8px 0 #ccac93, 8px 18px 20px #81503018; color: #8c6246; }
+    .card strong { font-size: 22px; letter-spacing: 3px; }
+    .chip { margin-top: 20px; width: 45px; height: 34px; border-radius: 7px; border: 1px solid #bd9761; background: repeating-linear-gradient(90deg, transparent 0 13px, #c6a36b 13px 14px), linear-gradient(135deg, #fff1c6, #d7b175); }
+    .wallet { position: absolute; top: 108px; left: 22px; width: 340px; height: 203px; border-radius: 29px; background: linear-gradient(135deg, #ffbb8c, #ed8b50 47%, #cc5327); border: 1px solid #ffd8bf; transform: rotate(-7deg); box-shadow: inset 0 4px 5px #ffecd4b0, inset -5px -5px 8px #914b2d50, 6px 9px 0 #a86c49, 14px 28px 25px #70412330; }
+    .stitch { position: absolute; inset: 12px; border: 1px dashed #fff0d6b0; border-radius: 20px; }
+    .wordmark { position: absolute; top: 48px; left: 33px; font-size: 72px; font-weight: 700; letter-spacing: -4px; color: #fff9ed; text-shadow: 0 2px 1px #a96846; }
+    .clasp { position: absolute; top: 69px; right: -12px; width: 91px; height: 59px; display: grid; place-items: center; border-radius: 15px 5px 5px 15px; background: linear-gradient(130deg, #f8e2cc, #cba182); border: 1px solid #ffeed9; box-shadow: -3px 5px 7px #79432f40; }
+    .clasp i { width: 27px; height: 27px; border-radius: 50%; border: 1px solid #fff4dc; background: radial-gradient(circle at 35% 30%, white, #e4c6a8 55%, #ab7e5b); }
+    .seal { position: absolute; right: 0; bottom: 5px; width: 108px; height: 114px; border-radius: 28px; display: grid; place-items: center; background: linear-gradient(135deg, #fff4d5, #e9c17b); border: 2px solid #fff7e0; color: #956129; transform: rotate(10deg); box-shadow: 4px 6px 0 #c39a59, 10px 16px 20px #80512e26; }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <div class="brand"><span class="mark"><svg width="33" height="33" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="13"/><path d="M12 12h8v8h-8z"/></svg></span>ZENI WALLET</div>
+    <div class="network"><i></i>QORECHAIN DIANA · TESTNET</div>
+    <h1><span>Post-quantum keys.</span><br />One familiar<br />wallet.</h1>
+    <p class="description">Hybrid-signed native transfers.<br />Built-in PQ authorization for contract calls.</p>
+    <p class="proof">secp256k1 + ML-DSA-87</p>
+    <div class="art" aria-hidden="true"><div class="halo"></div><div class="ring"></div><div class="card"><strong>ZENI</strong><div class="chip"></div></div><div class="wallet"><div class="stitch"></div><span class="wordmark">zeni</span><span class="clasp"><i></i></span></div><div class="seal"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 7v5c0 5 9 10 9 10s9-5 9-10V7l-9-4Z"/><path d="m8 12 3 3 5-6"/></svg></div></div>
+    <div class="bottom"><span class="availability"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M12 8h9M8.5 14 4 6m10 9-4 7"/></svg>Chrome extension + Connect SDK</span><span class="domain">zeni-wallet.vercel.app</span></div>
+  </main>
+</body>
+</html>
