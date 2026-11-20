@@ -1,5 +1,7 @@
 # Zeni (銭) — QoreChain Testnet Wallet
 
+[![Built on QoreChain](https://build.qorechain.io/badge/zeni-wallet.svg)](https://build.qorechain.io/p/zeni-wallet)
+
 Zeni is a dual-platform Web3 wallet (Chrome Extension & Native iOS Swift App) built specifically for **QoreChain** (EVM Chain ID `9800`).
 
 ## Key Features
