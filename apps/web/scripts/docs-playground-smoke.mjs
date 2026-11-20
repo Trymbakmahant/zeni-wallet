@@ -130,7 +130,7 @@ try {
   await click('#ai-prompt .docs-code-bar button');
   await until(`window.copiedText?.includes('Acme Store')`);
   assert.equal(await evaluate('window.copiedText'), await evaluate(`document.querySelector('#ai-prompt pre').textContent`));
-  assert.ok(await evaluate(`window.copiedText.includes('zeni_sendQor') && window.copiedText.includes('not published on npm') && window.copiedText.includes('useBrowserWallet')`));
+  assert.ok(await evaluate(`window.copiedText.includes('zeni_sendQor') && window.copiedText.includes('npm install @zeni-wallet/react') && window.copiedText.includes('useBrowserWallet')`));
   await evaluate(`document.querySelector('#prompt-framework').value = 'JavaScript / TypeScript'; document.querySelector('#prompt-framework').dispatchEvent(new Event('change', {bubbles:true}))`);
   await until(`document.querySelector('#ai-prompt pre').textContent.includes('use EIP-6963')`);
   await evaluate(`document.querySelector('#ai-prompt').scrollIntoView({behavior:'instant'})`);

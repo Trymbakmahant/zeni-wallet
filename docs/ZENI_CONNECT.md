@@ -65,7 +65,15 @@ Approve the connection, then request a signature or transfer from the website. K
 
 ## Integrate/distribute the SDK
 
-See `packages/connect/README.md` for plain JavaScript/TypeScript and `packages/react/README.md` for React examples. The packages are not published to npm. They work through workspace dependencies in this repository. To distribute local tarballs:
+See `packages/connect/README.md` for plain JavaScript/TypeScript and `packages/react/README.md` for React examples. The SDK is published on npm:
+
+- [@zeni-wallet/react](https://www.npmjs.com/package/@zeni-wallet/react): React 18/19 hooks and components. Install with `npm install @zeni-wallet/react`.
+- [@zeni-wallet/connect](https://www.npmjs.com/package/@zeni-wallet/connect): JavaScript / TypeScript provider. Install with `npm install @zeni-wallet/connect`.
+- [@zeni-wallet/connect-protocol](https://www.npmjs.com/package/@zeni-wallet/connect-protocol): shared protocol, installed automatically with Connect.
+
+Use version 0.1.0 or newer; `0.0.0-stage` is a temporary npm holding package, not an operational SDK. For an AI-assisted integration, use the [prompt builder](https://zeni-wallet.vercel.app/docs#ai-prompt): select your stack, connection path and features, then copy the prompt or download a `.md` brief.
+
+To distribute local tarballs:
 
 ```sh
 pnpm build:connect
@@ -74,7 +82,7 @@ pnpm --dir packages/connect pack --pack-destination ../../artifacts/connect-sdk
 pnpm --dir packages/react pack --pack-destination ../../artifacts/connect-sdk
 ```
 
-Install the protocol and provider tarballs together in a consuming app; include the React tarball for React bindings. `pnpm pack` converts workspace ranges into version ranges. Publishing the scoped packages to a registry and configuring a public relay/domain are separate owner actions; neither has been performed here.
+Install the protocol and provider tarballs together in a consuming app; include the React tarball for React bindings. `pnpm pack` converts workspace ranges into version ranges. The hosted relay still requires your exact application origin to be allowlisted, or you can deploy your own relay.
 
 For npm release preparation, run `pnpm check:sdk-release`. It checks the actual archives and installs them into an isolated consumer using React 18 and 19. See [the npm release guide](NPM_RELEASE.md) for scope access, publication order, and registry verification.
 

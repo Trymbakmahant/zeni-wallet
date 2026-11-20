@@ -77,3 +77,8 @@
 @media (max-width: 380px) {
   .docs-brand-divider, .docs-brand-label { display: none; }
 }
+
+.prompt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
+.prompt-fields > label { min-width: 0; }
+.prompt-fields select { width: 100%; min-width: 0; }
+#quickstart summary { cursor: pointer; color: var(--docs-ink); padding: 12px 0; }

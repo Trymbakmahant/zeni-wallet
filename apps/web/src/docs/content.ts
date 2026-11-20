@@ -137,16 +137,15 @@ pnpm build:connect`;
 export const packageExample = `pnpm --dir packages/connect-protocol pack --pack-destination ../../artifacts/connect-sdk
 pnpm --dir packages/connect pack --pack-destination ../../artifacts/connect-sdk
 pnpm --dir packages/react pack --pack-destination ../../artifacts/connect-sdk`;
-export const installExample = `# Install from npm:
-npm install @zeni-wallet/react @zeni-wallet/connect
+export const installExample = `# React 18 / 19:
+npm install @zeni-wallet/react
 
-# Or install from local built tarballs:
-# npm install ./zeni-wallet-connect-protocol-0.1.0.tgz \\
-#   ./zeni-wallet-connect-0.1.0.tgz ./zeni-wallet-react-0.1.0.tgz
+# JavaScript / TypeScript (without React):
+npm install @zeni-wallet/connect
 
-# For the vanilla JavaScript QR example:
-npm install qrcode
-# For TypeScript projects:
+# If your code imports these directly:
+npm install ethers qrcode
+# TypeScript projects using qrcode:
 npm install --save-dev @types/qrcode`;
 export const relayExample = `cd apps/relay
 export RELAY_DOMAIN=relay.your-domain.com
