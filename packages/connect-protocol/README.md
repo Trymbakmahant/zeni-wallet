@@ -1,6 +1,6 @@
-# @zeni/connect-protocol
+# @zeni-wallet/connect-protocol
 
-Wire types and WebCrypto AES-256-GCM primitives shared by the Zeni Connect SDK. Most web apps should use `@zeni/connect` or `@zeni/react`.
+Wire types and WebCrypto AES-256-GCM primitives shared by the Zeni Connect SDK. Most web apps should use `@zeni-wallet/connect` or `@zeni-wallet/react`.
 
 ## Installation
 

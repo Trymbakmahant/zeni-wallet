@@ -1,1 +1,1 @@
-export { useBrowserWallet } from '@zeni/react';
+export { useBrowserWallet } from '@zeni-wallet/react';

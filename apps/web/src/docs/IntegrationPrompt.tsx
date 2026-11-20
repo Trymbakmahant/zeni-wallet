@@ -17,11 +17,13 @@ Read the actual SDK APIs before writing code:
 - Working integration: apps/connect-demo; docs playground: apps/web/src/docs/ConnectPlayground.tsx
 
 Installation:
-The @zeni/connect-protocol, @zeni/connect, and @zeni/react packages are not published on npm. Build them from this repository with pnpm build:connect and install local tarballs together (protocol + connect, plus react for React apps), or use workspace dependencies inside the monorepo. Install ethers for encoding and signature verification, and qrcode for custom QR rendering. Do not invent an npm release.
+Install @zeni-wallet/react and @zeni-wallet/connect from npm:
+npm install @zeni-wallet/react @zeni-wallet/connect
+Or build them from this repository with pnpm build:connect. Install ethers for encoding and signature verification, and qrcode for custom QR rendering.
 
 Connection:
 Offer Browser extension and Mobile wallet choices.
-${framework === 'React + TypeScript' ? 'Use useBrowserWallet from @zeni/react for extension discovery, connection, account/network changes, and local disconnect. Use ZeniConnectProvider, useZeni, and ZeniConnectButton (or a custom local QR UI) for mobile.' : 'For extension discovery, use EIP-6963 (rdns io.qorechain.zeni) or window.zeni, check isZeni, and call eth_requestAccounts only after a user click. For mobile, use ZeniProvider from @zeni/connect, listen to display_uri, accountsChanged and disconnect, render the QR locally, and call connect() on user action.'}
+${framework === 'React + TypeScript' ? 'Use useBrowserWallet from @zeni-wallet/react for extension discovery, connection, account/network changes, and local disconnect. Use ZeniConnectProvider, useZeni, and ZeniConnectButton (or a custom local QR UI) for mobile.' : 'For extension discovery, use EIP-6963 (rdns io.qorechain.zeni) or window.zeni, check isZeni, and call eth_requestAccounts only after a user click. For mobile, use ZeniProvider from @zeni-wallet/connect, listen to display_uri, accountsChanged and disconnect, render the QR locally, and call connect() on user action.'}
 The extension connects directly without a relay. The downloadable extension beta (v${extensionRelease.version}) only injects on https://zeni-connect-demo.vercel.app and https://zeni-wallet.vercel.app. On another origin, offer mobile connection or explain that an explicitly scoped development extension build is required; do not claim installing the store extension enables every website. For mobile use relayUrl ${ZENI_RELAY} and my app name; the app's exact origin must be allowlisted by the hosted relay operator, or use my own HTTPS relay. Never proxy requests to pretend my app is the demo origin. QR links contain secrets: never log, persist, or send them to remote QR services. Clean up providers, polling, and event listeners on unmount.
 
 Network and requests:

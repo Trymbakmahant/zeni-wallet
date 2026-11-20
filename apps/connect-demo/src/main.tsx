@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ZeniConnectProvider, useZeni } from '@zeni/react';
+import { ZeniConnectProvider, useZeni } from '@zeni-wallet/react';
 import { Tabs, TabsList, TabsTab, TabsPanel } from '@ui-sdk/react/tabs';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@ui-sdk/react/dialog';
 import { ArrowUpRight, ArrowRight, CheckCheck, ChevronRight, Copy, ExternalLink, Fingerprint, LoaderCircle, LockKeyhole, LogOut, QrCode, Monitor, ArrowLeft, ShieldCheck, Smartphone, X, AlertCircle, Signature } from 'lucide-react';

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ZeniProvider, ZeniWalletSession, ZeniError } from '../dist/index.js';
-import { secret, seal, open, parsePairing } from '@zeni/connect-protocol';
+import { secret, seal, open, parsePairing } from '@zeni-wallet/connect-protocol';
 import { createRelay } from '../../../apps/relay/src/server.mjs';
 import { Wallet, hexlify, toUtf8Bytes, verifyMessage } from 'ethers';
 import { validateDappRequest } from '@zeni/core';

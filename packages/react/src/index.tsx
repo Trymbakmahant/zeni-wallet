@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import QRCode from 'qrcode';
-import { ZeniProvider, type ZeniProviderOptions } from '@zeni/connect';
-export { ZeniProvider, ZeniError, CHAIN_ID } from '@zeni/connect';
+import { ZeniProvider, type ZeniProviderOptions } from '@zeni-wallet/connect';
+export { ZeniProvider, ZeniError, CHAIN_ID } from '@zeni-wallet/connect';
 interface ConnectState {
   provider: ZeniProvider; account: string | null; uri: string | null; connecting: boolean; error: string | null;
   connect: () => Promise<void>; disconnect: () => Promise<void>;

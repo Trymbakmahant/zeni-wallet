@@ -28,9 +28,9 @@ for (const directory of ['connect-protocol', 'connect', 'react']) {
   assert.ok(!manifestText.includes('workspace:'), 'Use pnpm pack to replace workspace dependencies');
   for (const [name, version] of Object.entries(manifest.dependencies || {})) {
     assert.ok(!/^(?:file:|link:)/.test(version), `Local dependency: ${name}`);
-    if (name.startsWith('@zeni/')) {
-      assert.ok(['@zeni/connect', '@zeni/connect-protocol'].includes(name), `Private runtime dependency: ${name}`);
-      const dependency = JSON.parse(readFileSync(resolve(root, 'packages', name.slice(6), 'package.json'), 'utf8'));
+    if (name.startsWith('@zeni-wallet/')) {
+      assert.ok(['@zeni-wallet/connect', '@zeni-wallet/connect-protocol'].includes(name), `Private runtime dependency: ${name}`);
+      const dependency = JSON.parse(readFileSync(resolve(root, 'packages', name.slice(13), 'package.json'), 'utf8'));
       assert.equal(version, `^${dependency.version}`);
     }
   }

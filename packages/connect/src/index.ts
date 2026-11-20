@@ -1,6 +1,6 @@
-import { CHAIN_ID, METHODS, ZeniError, relayURL, secret, pairingURI, parsePairing, open, seal, type Message, type Role, type Pairing, type SessionInfo, type RpcRequest } from '@zeni/connect-protocol';
-export { ZeniError, CHAIN_ID, METHODS, parsePairing } from '@zeni/connect-protocol';
-export type { SessionInfo, RpcRequest } from '@zeni/connect-protocol';
+import { CHAIN_ID, METHODS, ZeniError, relayURL, secret, pairingURI, parsePairing, open, seal, type Message, type Role, type Pairing, type SessionInfo, type RpcRequest } from '@zeni-wallet/connect-protocol';
+export { ZeniError, CHAIN_ID, METHODS, parsePairing } from '@zeni-wallet/connect-protocol';
+export type { SessionInfo, RpcRequest } from '@zeni-wallet/connect-protocol';
 
 type Listener = (...args: any[]) => void;
 class Events {

@@ -15,9 +15,9 @@ try {
   writeFileSync(join(cwd, 'package.json'), JSON.stringify({ name: 'zeni-sdk-consumer-check', private: true, type: 'module' }));
   writeFileSync(join(cwd, 'check.mjs'), `
 import assert from 'node:assert/strict';
-import { secret, seal, open } from '@zeni/connect-protocol';
-import { ZeniProvider } from '@zeni/connect';
-import { useBrowserWallet, ZeniConnectButton, ZeniConnectProvider, useZeni } from '@zeni/react';
+import { secret, seal, open } from '@zeni-wallet/connect-protocol';
+import { ZeniProvider } from '@zeni-wallet/connect';
+import { useBrowserWallet, ZeniConnectButton, ZeniConnectProvider, useZeni } from '@zeni-wallet/react';
 const key = secret(), session = 'a'.repeat(32), message = { type: 'disconnect' };
 assert.deepEqual(await open(key, session, 'dapp', await seal(key, session, 'dapp', message)), message);
 const provider = new ZeniProvider({ name: 'Install check', relayUrl: 'https://relay.example' });
@@ -26,8 +26,8 @@ assert.deepEqual(await provider.request({ method: 'eth_accounts' }), []);
 for (const exported of [useBrowserWallet, ZeniConnectButton, ZeniConnectProvider, useZeni]) assert.equal(typeof exported, 'function');
 `);
   writeFileSync(join(cwd, 'check.tsx'), `
-import { ZeniProvider, type ZeniProviderOptions } from '@zeni/connect';
-import { ZeniConnectButton, ZeniConnectProvider, useBrowserWallet, useZeni, type BrowserProvider } from '@zeni/react';
+import { ZeniProvider, type ZeniProviderOptions } from '@zeni-wallet/connect';
+import { ZeniConnectButton, ZeniConnectProvider, useBrowserWallet, useZeni, type BrowserProvider } from '@zeni-wallet/react';
 const options: ZeniProviderOptions = { name: 'Types check', relayUrl: 'https://relay.example' };
 const provider = new ZeniProvider(options);
 void provider.request({ method: 'eth_accounts' });

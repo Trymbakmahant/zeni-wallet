@@ -1,15 +1,17 @@
-# @zeni/react
+# @zeni-wallet/react
 
 React 18/19 bindings and a locally rendered QR connect button for Zeni's mobile wallet.
 
 ## Installation
 
-The first npm release is being prepared; these packages are not published yet. Use the local tarballs described in the [SDK guide](https://github.com/Trymbakmahant/zeni-wallet/blob/main/docs/ZENI_CONNECT.md) until publication is confirmed. Release maintainers should follow the [npm release guide](https://github.com/Trymbakmahant/zeni-wallet/blob/main/docs/NPM_RELEASE.md).
+```bash
+npm install @zeni-wallet/react @zeni-wallet/connect
+```
 
 This package is ESM and includes TypeScript declarations. React 18 and 19 are supported. In Next.js, import hooks and wallet components from a client component (`"use client"`).
 
 ```tsx
-import { ZeniConnectProvider, ZeniConnectButton, useZeni } from '@zeni/react';
+import { ZeniConnectProvider, ZeniConnectButton, useZeni } from '@zeni-wallet/react';
 
 export function App() {
   return (
@@ -38,9 +40,9 @@ function WalletActions() {
 
 `useZeni()` exposes `provider`, `account`, `uri`, `connecting`, `error`, `connect()` and `disconnect()`. Use the hook for custom UI or `ZeniConnectButton` for the QR panel and same-device deep link. `connect()` reports errors through hook state; direct `provider.request()` calls reject with wallet error codes.
 
-Follow the method and security limits in `@zeni/connect`: Diana testnet only, reviewed QOR transfers and readable message signing. This package uses Zeni Connect, not WalletConnect. The QR renderer is local and never uploads pairing secrets.
+Follow the method and security limits in `@zeni-wallet/connect`: Diana testnet only, reviewed QOR transfers and readable message signing. This package uses Zeni Connect, not WalletConnect. The QR renderer is local and never uploads pairing secrets.
 
 The examples use Zeni’s hosted relay. Your web app’s exact origin must be added to its allowlist, or you can supply your own public HTTPS relay URL.
 
 
-Browser extension connections use `useBrowserWallet()` from `@zeni/react`. It discovers Zeni through EIP-6963 or `window.zeni`, requests accounts only when `connect()` is called, checks Diana (9800), and follows account/network changes. It returns `account`, `provider`, `detected`, `connecting`, `error`, `connect`, and `disconnect`. Call `provider.request(...)` for approved requests. This hook does not use a relay; its disconnect clears the local connection, not stored extension website permissions. Mobile connections continue to use `ZeniConnectProvider` and `useZeni`.
+Browser extension connections use `useBrowserWallet()` from `@zeni-wallet/react`. It discovers Zeni through EIP-6963 or `window.zeni`, requests accounts only when `connect()` is called, checks Diana (9800), and follows account/network changes. It returns `account`, `provider`, `detected`, `connecting`, `error`, `connect`, and `disconnect`. Call `provider.request(...)` for approved requests. This hook does not use a relay; its disconnect clears the local connection, not stored extension website permissions. Mobile connections continue to use `ZeniConnectProvider` and `useZeni`.

@@ -12,12 +12,13 @@
     "test:contracts": "cd packages/contracts && forge test",
     "zip:ext": "pnpm --filter @zeni/core build && pnpm --filter @zeni/extension build && node apps/extension/scripts/package.mjs",
     "lint": "pnpm -r run lint",
-    "build:connect": "pnpm --filter @zeni/connect-protocol build && pnpm --filter @zeni/connect build && pnpm --filter @zeni/react build && pnpm --filter @zeni/connect-demo build",
+    "build:connect": "pnpm --filter @zeni-wallet/connect-protocol build && pnpm --filter @zeni-wallet/connect build && pnpm --filter @zeni-wallet/react build && pnpm --filter @zeni/connect-demo build",
     "dev:relay": "pnpm --filter @zeni/relay start",
     "dev:connect": "pnpm --filter @zeni/connect-demo dev",
-    "test:connect": "pnpm --filter @zeni/core test && pnpm --filter @zeni/connect-protocol build && pnpm --filter @zeni/connect build && pnpm --filter @zeni/relay test && pnpm --filter @zeni/connect test",
-    "build:sdk": "pnpm --filter @zeni/connect-protocol --filter @zeni/connect --filter @zeni/react build",
+    "test:connect": "pnpm --filter @zeni/core test && pnpm --filter @zeni-wallet/connect-protocol build && pnpm --filter @zeni-wallet/connect build && pnpm --filter @zeni/relay test && pnpm --filter @zeni-wallet/connect test",
+    "build:sdk": "pnpm --filter @zeni-wallet/connect-protocol --filter @zeni-wallet/connect --filter @zeni-wallet/react build",
     "pack:sdk": "pnpm build:sdk && node scripts/pack-connect-sdk.mjs",
+    "publish:sdk": "node scripts/publish-connect-sdk.mjs",
     "check:sdk-release": "pnpm test:connect && pnpm pack:sdk && node scripts/check-sdk-install.mjs"
   },
   "devDependencies": {

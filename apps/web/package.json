@@ -6,7 +6,7 @@
   "description": "Zeni Wallet Marketing Landing Page & Web Demo",
   "scripts": {
     "dev": "vite",
-    "build": "node ../extension/scripts/verify-web-release.mjs && pnpm --filter @zeni/core --filter @zeni/react... build && vite build && cp dist/index.html dist/docs.html",
+    "build": "node ../extension/scripts/verify-web-release.mjs && pnpm --filter @zeni/core --filter @zeni-wallet/react... build && vite build && cp dist/index.html dist/docs.html",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:browser": "node scripts/docs-playground-smoke.mjs"
@@ -19,7 +19,7 @@
     "lucide-react": "^1.73.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "@zeni/react": "workspace:*",
+    "@zeni-wallet/react": "workspace:*",
     "ethers": "^6.13.0",
     "qrcode": "^1.5.4"
   },

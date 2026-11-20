@@ -23,12 +23,12 @@ importers:
       '@ui-sdk/react':
         specifier: 0.1.0-beta.6
         version: 0.1.0-beta.6(@types/react@19.3.0)(@ui-sdk/core@0.1.0-beta.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@zeni-wallet/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@zeni/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@zeni/react':
-        specifier: workspace:*
-        version: link:../../packages/react
       ethers:
         specifier: ^6.13.0
         version: 6.17.0
@@ -123,12 +123,12 @@ importers:
       '@ui-sdk/react':
         specifier: 0.1.0-beta.6
         version: 0.1.0-beta.6(@types/react@19.3.0)(@ui-sdk/core@0.1.0-beta.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@zeni-wallet/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       '@zeni/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@zeni/react':
-        specifier: workspace:*
-        version: link:../../packages/react
       ethers:
         specifier: ^6.13.0
         version: 6.17.0
@@ -178,7 +178,7 @@ importers:
 
   packages/connect:
     dependencies:
-      '@zeni/connect-protocol':
+      '@zeni-wallet/connect-protocol':
         specifier: workspace:^
         version: link:../connect-protocol
     devDependencies:
@@ -252,7 +252,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@zeni/connect':
+      '@zeni-wallet/connect':
         specifier: workspace:^
         version: link:../connect
       ethers:

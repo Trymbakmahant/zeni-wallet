@@ -1,0 +1,79 @@
+/* Both scopes carry the palette so portaled search dialogs match the page. */
+[data-docs-theme='dark'] {
+  color-scheme: dark;
+}
+
+[data-docs-theme='light'] {
+  color-scheme: light;
+  --docs-bg: #fffaf5;
+  --docs-panel: #ffffff;
+  --docs-panel-soft: #f3f1e9;
+  --docs-panel-hover: #eaece3;
+  --docs-header: #fffaf5f5;
+  --docs-line: #d9dbd1;
+  --docs-border: #cbd0c1;
+  --docs-border-hover: #7f8b72;
+  --docs-ink: #20251c;
+  --docs-text: #303b28;
+  --docs-secondary: #4f5d44;
+  --docs-muted: #626c58;
+  --docs-accent: #ff7547;
+  --docs-link: #a53c1a;
+  --docs-active-bg: #ffede2;
+  --docs-active-border: #c65b32;
+  --docs-active-text: #923c1d;
+  --docs-code-bg: #f3f4ed;
+  --docs-input-bg: #ffffff;
+  --docs-note-bg: #fbefdb;
+  --docs-note-text: #665036;
+  --docs-note-accent: #946021;
+  --docs-success-bg: #edf4e5;
+  --docs-success-border: #8aab70;
+  --docs-success-text: #36571e;
+  --docs-status: #427627;
+  --docs-error-bg: #fff0e9;
+  --docs-error-border: #c17a62;
+  --docs-error-text: #a1361c;
+  --docs-syntax-comment: #606f54;
+  --docs-syntax-string: #3f6528;
+  --docs-syntax-keyword: #a13d24;
+}
+
+.docs-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--docs-border, #41443f);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--docs-ink);
+}
+
+.docs-theme-toggle:hover {
+  background: var(--docs-panel-hover, #272a25);
+  border-color: var(--docs-border-hover, #72776b);
+}
+
+.docs-search-dialog[data-docs-theme] {
+  --docs-ink: var(--docs-text, #ededdf);
+  --docs-accent: #ff7547;
+}
+
+.docs-search-dialog[data-docs-theme] button:focus-visible,
+.docs-search-dialog[data-docs-theme] a:focus-visible {
+  outline: 2px solid var(--docs-link, #ff7547);
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .docs-header-actions { gap: 8px; }
+  .docs-header { padding-inline: 14px; gap: 8px; }
+  .docs-theme-toggle { width: 36px; height: 36px; }
+}
+
+@media (max-width: 380px) {
+  .docs-brand-divider, .docs-brand-label { display: none; }
+}

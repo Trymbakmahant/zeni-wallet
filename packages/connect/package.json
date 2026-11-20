@@ -1,5 +1,5 @@
 {
-  "name": "@zeni/connect",
+  "name": "@zeni-wallet/connect",
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
@@ -23,7 +23,7 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@zeni/connect-protocol": "workspace:^"
+    "@zeni-wallet/connect-protocol": "workspace:^"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
