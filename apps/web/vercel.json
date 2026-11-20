@@ -1,9 +1,29 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/privacy", "destination": "/privacy.html" },
-    { "source": "/privacy/", "destination": "/privacy.html" },
-    { "source": "/docs", "destination": "/" },
-    { "source": "/docs/", "destination": "/" }
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/privacy/",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/"
+    },
+    {
+      "source": "/docs/",
+      "destination": "/"
+    },
+    {
+      "source": "/vault",
+      "destination": "/"
+    },
+    {
+      "source": "/vault/",
+      "destination": "/"
+    }
   ]
 }

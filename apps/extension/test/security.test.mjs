@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as ethers from 'ethers';
-import { validateDappRequest, mergeAccountActivity } from '../../../packages/core/dist/index.js';
+import { validateDappRequest, mergeAccountActivity, EVM_READ_METHODS, validateEvmRead, MAX_DAPP_REQUEST_BYTES } from '../../../packages/core/dist/index.js';
 
 const source = readFileSync(new URL('../src/background/service-worker.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
@@ -66,13 +66,27 @@ function fixture() {
     },
     repairPqcPublicKeyHash: (value) => value,
     AmmSwapClient: class { async balances() { return { QOR: "0", fUSD: "0", fETH: "0", fBTC: "0" }; } },
-    validateDappRequest, mergeAccountActivity,
+    validateDappRequest, mergeAccountActivity, EVM_READ_METHODS, validateEvmRead, MAX_DAPP_REQUEST_BYTES,
     AccountActivityClient: class {
       async page() {
         historyCalls++;
         if (historyGate) await historyGate;
         if (historyFailure) throw new Error('Network offline');
         return { items: structuredClone(chainItems), nextCursor: null };
+      }
+    },
+    EvmTransactionClient: class {
+      async prepare(account, intent) {
+        if (prepareGate) await prepareGate;
+        return { id: `evm-${++prepared}`, kind: 'evm', from: account.classicalAddress, intent, expiresAt: now + 120000 };
+      }
+      async send(account, quote, guard, observeSetup, observeEvm) {
+        if (sendGate) await sendGate;
+        guard();
+        const hash = '0x' + 'EF'.repeat(32);
+        transfers.push({ account: account.classicalAddress, quote });
+        await observeEvm({ hash, status: 'PENDING' });
+        return hash;
       }
     },
     QorTransferClient: class {
@@ -329,7 +343,7 @@ test('content bridge forwards bounded signing parameters only for same-page requ
   assert.deepEqual(JSON.parse(JSON.stringify(forwarded[0].payload.params)), [transaction]);
   listener({ ...request([transaction]), origin: 'https://evil.example' });
   assert.equal(forwarded.length, 1);
-  listener(request(['x'.repeat(12001)]));
+  listener(request(['x'.repeat(110001)]));
   const cyclic = []; cyclic.push(cyclic); listener(request(cyclic));
   assert.equal(responses.length, 2);
   assert.ok(responses.every(response => response.error.code === -32602));
@@ -353,11 +367,12 @@ test('a late fee response cannot replace the newer review the user sees', async 
   assert.equal(f.transfers.length, 1);
 });
 
-test('legacy EVM transfer requests cannot fall back to classical signing', async () => {
+test('EVM requests require explicit review and cannot bypass fees', async () => {
   const { f, p } = await connected();
   await p.request('eth_sendTransaction', 1, [transaction]);
-  assert.equal(p.messages.at(-1).error.code, 4200);
-  assert.equal((await f.message('GET_PENDING_APPROVALS')).data.length, 0);
+  const pending = (await f.message('GET_PENDING_APPROVALS')).data[0];
+  assert.equal(pending.intent.kind, 'evm');
+  assert.equal((await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true })).success, false);
   assert.equal(f.transfers.length, 0);
 });
 
@@ -584,4 +599,38 @@ test('unauthorized and malformed requests never open review windows', async () =
   await p.request('zeni_sendQor', 2, [transaction]);
   await p.malformed(null);
   assert.equal(f.createdWindows.length, 0);
+});
+
+for (const mode of ['approve', 'reject', 'lock', 'disconnect', 'expired', 'wrong-quote']) test(`contract approval flow: ${mode}`, async () => {
+  const { f, p } = await connected();
+  await p.request('eth_sendTransaction', 200, [{ ...transaction, data: '0xd0e30db0' }]);
+  const pending = await pendingRequest(f);
+  const review = await f.message('PREPARE_DAPP_APPROVAL', { internalId: pending.internalId });
+  assert.equal(review.success, true);
+  assert.equal(review.data.kind, 'evm');
+  assert.equal(f.transfers.length, 0);
+  if (mode === 'expired') f.now(122000);
+  if (mode === 'lock' || mode === 'disconnect') {
+    let release; f.deferSend(new Promise(resolve => { release = resolve; }));
+    const sending = f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: true, quoteId: review.data.id });
+    await new Promise(resolve => setImmediate(resolve));
+    if (mode === 'lock') await f.message('LOCK_VAULT'); else p.p.disconnect();
+    release(); assert.equal((await sending).success, false);
+  } else {
+    const result = await f.message('RESOLVE_APPROVAL', { internalId: pending.internalId, approved: mode !== 'reject', quoteId: mode === 'wrong-quote' ? 'other' : review.data.id });
+    assert.equal(result.success, mode === 'approve' || mode === 'reject');
+  }
+  assert.equal(f.transfers.length, mode === 'approve' ? 1 : 0);
+  if (mode === 'approve') {
+    assert.equal(p.messages.at(-1).result, '0x' + 'EF'.repeat(32));
+    assert.equal(f.stored.activityHistory[0].evmChain, true);
+    assert.equal(f.stored.activityHistory[0].status, 'PENDING');
+  }
+});
+
+test('insecure remote origins are rejected while loopback origins work', () => {
+  const f = fixture();
+  assert.equal(f.port('http://dapp.example').p.disconnected, true);
+  assert.equal(f.port('http://localhost:5173').p.disconnected, false);
+  assert.equal(f.port('http://127.0.0.1:3000').p.disconnected, false);
 });

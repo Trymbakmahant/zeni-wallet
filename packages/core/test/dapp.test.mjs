@@ -40,7 +40,6 @@ test('message signing rejects binary, hidden controls, wrong signer and excessiv
   }
 });
 
-test('rejects sub-uqor amounts without rounding and refuses the classical EVM method', () => {
+test('rejects sub-uqor amounts without rounding on the native lane', () => {
   assert.throws(() => validateDappRequest('zeni_sendQor', [{ from: account, to: recipient, value: '0x1' }], account), /6 decimal/);
-  assert.throws(() => validateDappRequest('eth_sendTransaction', [{ from: account, to: recipient, value: '0xde0b6b3a7640000' }], account), /EVM sends are disabled/);
 });

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Zeni Wallet — QoreChain Testnet",
-  "version": "0.1.3",
+  "name": "Zeni Wallet \u2014 QoreChain Testnet",
+  "version": "0.1.4",
   "description": "Self-custody wallet for QoreChain Diana Testnet with hybrid-signed QOR transfers, native swaps and app connections.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -24,27 +24,31 @@
   "content_scripts": [
     {
       "matches": [
-        "https://zeni-connect-demo.vercel.app/*",
-        "https://zeni-wallet.vercel.app/*"
+        "https://*/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
       ],
       "js": [
         "content.js"
       ],
       "run_at": "document_start",
       "all_frames": false
-    }
-  ],
-  "web_accessible_resources": [
+    },
     {
-      "resources": [
+      "matches": [
+        "https://*/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
         "inpage.js"
       ],
-      "matches": [
-        "https://zeni-connect-demo.vercel.app/*",
-        "https://zeni-wallet.vercel.app/*"
-      ]
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": false
     }
   ],
+  "web_accessible_resources": [],
   "permissions": [
     "storage"
   ],

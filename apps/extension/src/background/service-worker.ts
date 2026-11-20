@@ -7,6 +7,11 @@ import {
   validateDappRequest,
   DappIntent,
   QoreChainClient,
+  EvmTransactionClient,
+  type EvmQuote,
+  EVM_READ_METHODS,
+  validateEvmRead,
+  MAX_DAPP_REQUEST_BYTES,
   DerivedAccountKeys,
   EncryptedVaultEnvelope,
   deriveAccountKeys,
@@ -36,7 +41,7 @@ interface PendingRequest {
   payload: { method: string; params?: any[] };
   account?: string;
   intent?: DappIntent;
-  quote?: QorTransferQuote;
+  quote?: QorTransferQuote | EvmQuote;
   quoteVersion?: number;
   state: "PENDING" | "APPROVED" | "SIGNING" | "SUBMITTED" | "CONFIRMED" | "FAILED";
   createdAt: number;
@@ -308,7 +313,7 @@ class BackgroundController {
       try {
         const url = new URL(sender?.url || "");
         if (sender?.id !== chrome.runtime.id || sender.tab?.id === undefined || sender.frameId !== 0
-          || !["https:", "http:"].includes(url.protocol) || sender.origin !== url.origin) throw new Error("Invalid sender");
+          || !(url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) || sender.origin !== url.origin) throw new Error("Invalid sender");
         origin = url.origin;
       } catch { port.disconnect(); return; }
       const portKey = crypto.randomUUID();
@@ -321,6 +326,7 @@ class BackgroundController {
         }
       });
 
+      let inFlight = 0, requestCount = 0, rateWindow = Date.now();
       port.onMessage.addListener(async (msg: { clientReqId: number; payload: { method: string; params?: any[] } }) => {
         try {
           await this.storageReady;
@@ -329,7 +335,11 @@ class BackgroundController {
             port.postMessage({ clientReqId: msg?.clientReqId, error: { code: -32600, message: "Invalid RPC request" } });
             return;
           }
-          await this.handleDappRequest(port, msg.clientReqId, origin, msg.payload);
+          if (Date.now() - rateWindow >= 1000) { rateWindow = Date.now(); requestCount = 0; }
+          if (++requestCount > 30 || inFlight >= 8) throw Object.assign(new Error("Too many wallet requests. Wait before retrying."), { code: -32005 });
+          inFlight++;
+          try { await this.handleDappRequest(port, msg.clientReqId, origin, msg.payload); }
+          finally { inFlight--; }
         } catch (err: any) {
           try { port.postMessage({
             clientReqId: msg?.clientReqId,
@@ -347,6 +357,14 @@ class BackgroundController {
     payload: { method: string; params?: any[] }
   ) {
     if (this.vaultMutationInProgress) throw new Error("Wallet update in progress. Try again.");
+    if (EVM_READ_METHODS.has(payload.method)) {
+      let params: unknown[];
+      try { params = validateEvmRead(payload.method, payload.params); }
+      catch (error) { throw Object.assign(error as Error, { code: -32602 }); }
+      const result = await this.client.provider.send(payload.method, params);
+      port.postMessage({ clientReqId, result });
+      return;
+    }
     switch (payload.method) {
       case "eth_chainId":
         port.postMessage({ clientReqId, result: "0x" + QORECHAIN_CONFIG.chainId.toString(16) });
@@ -384,9 +402,14 @@ class BackgroundController {
         break;
       }
 
-      case "eth_sendTransaction":
-        port.postMessage({ clientReqId, error: { code: 4200, message: "Use zeni_sendQor for hybrid-signed native transfers. EVM sends are disabled." } });
+      case "wallet_switchEthereumChain": {
+        const params = payload.params;
+        if (!Array.isArray(params) || params.length !== 1 || !params[0] || Object.keys(params[0]).length !== 1 || !/^0x[0-9a-f]+$/i.test(params[0].chainId ?? "")) throw Object.assign(new Error("Invalid chain request."), { code: -32602 });
+        if (BigInt(params[0].chainId) !== BigInt(QORECHAIN_CONFIG.chainId)) throw Object.assign(new Error("Zeni supports QoreChain Diana testnet (9800) only."), { code: 4902 });
+        port.postMessage({ clientReqId, result: null });
         break;
+      }
+      case "eth_sendTransaction":
       case "zeni_sendQor":
       case "personal_sign": {
         const active = this.getActiveAccount();
@@ -397,7 +420,7 @@ class BackgroundController {
         }
         let intent: DappIntent;
         try {
-          if (JSON.stringify(payload.params)?.length > 12000) throw new Error("Request parameters are too large.");
+          if (JSON.stringify(payload.params)?.length > MAX_DAPP_REQUEST_BYTES) throw new Error("Request parameters are too large.");
           intent = validateDappRequest(payload.method, payload.params, active.classicalAddress);
         } catch (error: any) {
           port.postMessage({ clientReqId, error: { code: -32602, message: error.message } });
@@ -710,11 +733,13 @@ class BackgroundController {
         this.expireApprovals();
         const pending = this.pendingRequests.get(message.internalId);
         const active = this.getActiveAccount();
-        if (!pending || pending.intent?.kind !== "transfer" || !active || active.classicalAddress !== pending.account) throw new Error("Request expired or account changed.");
+        if (!pending || (pending.intent?.kind !== "transfer" && pending.intent?.kind !== "evm") || !active || active.classicalAddress !== pending.account) throw new Error("Request expired or account changed.");
         if (this.transferInProgress || this.approvalInProgress) throw new Error("Wait for the current wallet operation.");
         const version = pending.quoteVersion = (pending.quoteVersion || 0) + 1;
         pending.quote = undefined;
-        const quote = await new QorTransferClient(this.client.provider).prepare(active, pending.intent.to, pending.intent.amount);
+        const quote = pending.intent.kind === "evm"
+          ? await new EvmTransactionClient(this.client.provider).prepare(active, pending.intent)
+          : await new QorTransferClient(this.client.provider).prepare(active, pending.intent.to, pending.intent.amount);
         if (pending.quoteVersion !== version) throw new Error("A newer fee review replaced this request.");
         if (this.getActiveAccount() !== active || this.pendingRequests.get(pending.internalId) !== pending || pending.expiresAt <= Date.now()) throw new Error("Request expired or wallet changed.");
         pending.quote = quote;
@@ -733,7 +758,7 @@ class BackgroundController {
 
         if (approved && pending.intent) {
           if (active!.classicalAddress !== pending.account) throw new Error("Account changed. Reject this request and reconnect.");
-          if (pending.intent.kind === "transfer" && (!pending.quote || pending.quote.id !== message.quoteId || pending.quote.expiresAt <= Date.now())) throw new Error("Review a fresh fee quote before approving.");
+          if ((pending.intent.kind === "transfer" || pending.intent.kind === "evm") && (!pending.quote || pending.quote.id !== message.quoteId || pending.quote.expiresAt <= Date.now())) throw new Error("Review a fresh fee quote before approving.");
         }
         this.pendingRequests.delete(internalId);
         chrome.action.setBadgeText({
@@ -762,8 +787,31 @@ class BackgroundController {
             if (pending.intent.kind === "message") {
               result = await new ethers.Wallet(active!.classicalPrivateKey).signMessage(ethers.getBytes(pending.intent.hex));
               assertCurrent();
+            } else if (pending.intent.kind === "evm") {
+              if (this.transferInProgress) throw new Error("A transaction is already in progress.");
+              const quote = pending.quote;
+              if (quote?.kind !== "evm") throw new Error("Review this contract transaction before approving.");
+              this.transferInProgress = true;
+              try {
+                await this.assertNoPendingNative(active!);
+                result = await new EvmTransactionClient(this.client.provider).send(active!, quote, assertCurrent, async update => {
+                  await this.writeActivity(history => [{
+                    hash: update.hash, type: "SETUP", nativeChain: true, account: active!.cosmosAddress,
+                    timestamp: history.find(item => item.hash === update.hash)?.timestamp || Date.now(), status: update.status,
+                    gasCost: `${ethers.formatUnits(update.feeUqor, 6)} QOR`, error: update.error,
+                  }, ...history.filter(item => item.hash !== update.hash)].slice(0, 100));
+                }, async update => {
+                  await this.writeActivity(history => [{
+                    hash: update.hash, type: "TRANSACTION", evmChain: true, evmHash: update.hash,
+                    account: active!.cosmosAddress, from: active!.classicalAddress, to: quote.intent.to,
+                    amount: formatEther(BigInt(quote.intent.value)), token: "QOR", gasCost: "",
+                    timestamp: history.find(item => item.hash === update.hash)?.timestamp || Date.now(),
+                    status: update.status, error: update.error,
+                  }, ...history.filter(item => item.hash !== update.hash)].slice(0, 100));
+                });
+              } finally { this.transferInProgress = false; }
             } else {
-              const quote = pending.quote!;
+              const quote = pending.quote as QorTransferQuote;
               this.transferQuotes.set(quote.id, quote);
               result = (await this.handleInternalMessage({ type: "EXECUTE_TRANSFER", token: "QOR", to: pending.intent.to, amount: pending.intent.amount, quoteId: quote.id }, assertCurrent)).txHash;
             }

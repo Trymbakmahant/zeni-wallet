@@ -19,7 +19,8 @@
     "build:sdk": "pnpm --filter @zeni-wallet/connect-protocol --filter @zeni-wallet/connect --filter @zeni-wallet/react build",
     "pack:sdk": "pnpm build:sdk && node scripts/pack-connect-sdk.mjs",
     "publish:sdk": "node scripts/publish-connect-sdk.mjs",
-    "check:sdk-release": "pnpm test:connect && pnpm pack:sdk && node scripts/check-sdk-install.mjs"
+    "check:sdk-release": "pnpm test:connect && pnpm pack:sdk && node scripts/check-sdk-install.mjs",
+    "build:vault": "forge build --root packages/contracts --evm-version paris && node packages/contracts/script/export-vault.mjs"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

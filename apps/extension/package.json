@@ -1,6 +1,6 @@
 {
   "name": "@zeni/extension",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "description": "Zeni Chrome Extension (Manifest V3)",
@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:security": "node --test test/*.test.mjs",
     "test:browser": "node scripts/browser-approval.mjs",
-    "test:browser:extension": "node scripts/browser-extension-approval.mjs"
+    "test:browser:extension": "node scripts/browser-extension-approval.mjs",
+    "test:browser:vault": "node scripts/browser-vault.mjs"
   },
   "dependencies": {
     "@zeni/core": "workspace:*",

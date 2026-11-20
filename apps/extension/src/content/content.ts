@@ -3,21 +3,7 @@
  * Isolated execution realm between untrusted web page and the extension background worker.
  */
 
-// 1. Inject inpage script tag
-function injectScript(filePath: string) {
-  try {
-    const container = document.head || document.documentElement;
-    const script = document.createElement("script");
-    script.setAttribute("type", "text/javascript");
-    script.setAttribute("src", chrome.runtime.getURL(filePath));
-    container.insertBefore(script, container.firstChild);
-    script.onload = () => script.remove();
-  } catch (error) {
-    console.error("Zeni: failed to inject inpage script", error);
-  }
-}
-
-injectScript("inpage.js");
+// inpage.js is injected by Chrome in the MAIN world; no script tag or CSP bypass.
 
 // 2. Open long-lived port to background service worker
 let bgPort: chrome.runtime.Port | null = null;
@@ -58,16 +44,16 @@ window.addEventListener("message", (event: MessageEvent) => {
 
   const { clientReqId, payload } = event.data;
   if (!Number.isSafeInteger(clientReqId) || !payload || typeof payload.method !== "string" || payload.method.length > 100) return;
-  const signing = payload.method === "personal_sign" || payload.method === "zeni_sendQor";
-  if (signing) {
+  const signing = payload.method === "personal_sign" || payload.method === "zeni_sendQor" || payload.method === "eth_sendTransaction";
+  if (payload.params !== undefined || signing) {
     try {
-      if (!Array.isArray(payload.params) || JSON.stringify(payload.params).length > 12000) throw new Error("Invalid parameters");
+      if (!Array.isArray(payload.params) || JSON.stringify(payload.params).length > 110000) throw new Error("Invalid parameters");
     } catch {
       window.postMessage({ target: "zeni-inpage-response", clientReqId, error: { code: -32602, message: "Invalid or oversized signing parameters." } }, window.location.origin);
       return;
     }
   }
   const port = getBackgroundPort();
-  // Only supported signing methods forward bounded parameters; the worker validates every field.
-  port.postMessage({ clientReqId, payload: { method: payload.method, ...(signing ? { params: payload.params } : {}) } });
+  // The worker allowlists methods and validates all bounded parameters.
+  port.postMessage({ clientReqId, payload: { method: payload.method, ...(payload.params !== undefined ? { params: payload.params } : {}) } });
 });

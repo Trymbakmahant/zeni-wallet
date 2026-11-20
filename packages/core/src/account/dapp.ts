@@ -1,8 +1,9 @@
 import { getAddress, getBytes, formatEther } from 'ethers';
 import { QORECHAIN_CONFIG } from './constants.js';
 import { bech32ToEvmAddress } from '../crypto/derivation.js';
+import { validateEvmRequest, type EvmIntent } from './evm-request.js';
 
-export type DappIntent = { kind: 'transfer'; to: string; amount: string } | { kind: 'message'; text: string; hex: string };
+export type DappIntent = { kind: 'transfer'; to: string; amount: string } | { kind: 'message'; text: string; hex: string } | EvmIntent;
 /** Validate every field before displaying an approval; unsupported transaction semantics fail closed. */
 export function validateDappRequest(method: string, params: unknown, activeAddress: string): DappIntent {
   const active = getAddress(activeAddress);
@@ -15,7 +16,7 @@ export function validateDappRequest(method: string, params: unknown, activeAddre
     if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(text)) throw new Error('Messages containing hidden control characters cannot be signed.');
     return { kind: 'message', text, hex };
   }
-  if (method === 'eth_sendTransaction') throw new Error('Use zeni_sendQor for a hybrid-signed native QOR transfer. EVM sends are disabled.');
+  if (method === 'eth_sendTransaction') return validateEvmRequest(params, activeAddress);
   if (method !== 'zeni_sendQor') throw new Error('Unsupported signing method.');
   if (params.length !== 1 || !params[0] || typeof params[0] !== 'object' || Array.isArray(params[0])) throw new Error('Provide exactly one transaction.');
   const tx = params[0] as Record<string, unknown>;

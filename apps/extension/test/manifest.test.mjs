@@ -3,16 +3,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const manifest = JSON.parse(readFileSync(new URL('../public/manifest.json', import.meta.url), 'utf8'));
-const sites = ['https://zeni-connect-demo.vercel.app/*', 'https://zeni-wallet.vercel.app/*'];
+const sites = ['https://*/*', 'http://localhost/*', 'http://127.0.0.1/*'];
 
-test('store beta injects only on the demo and docs HTTPS origins', () => {
-  assert.equal(manifest.content_scripts.length, 1);
-  assert.deepEqual(manifest.content_scripts[0].matches, sites);
-  assert.equal(manifest.content_scripts[0].all_frames, false);
-  assert.equal(manifest.web_accessible_resources.length, 1);
-  assert.deepEqual(manifest.web_accessible_resources[0].matches, sites);
-  assert.deepEqual(manifest.web_accessible_resources[0].resources, ['inpage.js']);
-  assert.equal(manifest.content_scripts[0].match_origin_as_fallback, undefined);
+test('provider supports HTTPS apps and loopback development without subframes or script tags', () => {
+  assert.equal(manifest.content_scripts.length, 2);
+  for (const script of manifest.content_scripts) {
+    assert.deepEqual(script.matches, sites);
+    assert.equal(script.all_frames, false);
+    assert.equal(script.run_at, 'document_start');
+    assert.equal(script.match_origin_as_fallback, undefined);
+  }
+  assert.deepEqual(manifest.content_scripts[0].js, ['content.js']);
+  assert.equal(manifest.content_scripts[0].world, undefined);
+  assert.deepEqual(manifest.content_scripts[1].js, ['inpage.js']);
+  assert.equal(manifest.content_scripts[1].world, 'MAIN');
+  assert.deepEqual(manifest.web_accessible_resources, []);
 });
 
 test('store beta requests only storage and the two necessary RPC hosts', () => {

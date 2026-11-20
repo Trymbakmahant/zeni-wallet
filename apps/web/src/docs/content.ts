@@ -10,6 +10,7 @@ export const sections = [
   { id: 'react', title: 'React integration', group: 'Build with Zeni', description: 'ZeniConnectProvider, useZeni, ZeniConnectButton, hook, QR code' },
   { id: 'browser', title: 'Browser extension', group: 'Build with Zeni', description: 'useBrowserWallet, EIP-6963, window.zeni, extension discovery, approved websites, no relay' },
   { id: 'javascript', title: 'JavaScript / TypeScript', group: 'Build with Zeni', description: 'ZeniProvider, connect, display_uri, request, disconnect, provider events' },
+  { id: 'contract-transactions', title: 'Contract transactions', group: 'Build with Zeni', description: 'extension 0.1.4, eth_sendTransaction, contract deploy, swap, token approve, vault demo, EVM, gas, receipts' },
   { id: 'requests', title: 'Signing & transactions', group: 'Build with Zeni', description: 'personal_sign, zeni_sendQor, QOR, EIP-191, message, signature, broadcast, transaction ID, fees' },
   { id: 'mobile', title: 'Mobile wallet', group: 'Build with Zeni', description: 'iOS, Xcode, QR scanner, deep link, Face ID, device, phone' },
   { id: 'relay', title: 'Host a relay', group: 'Reference', description: 'Docker, Caddy, HTTPS, domain, ALLOWED_ORIGINS, server, deployment' },
@@ -160,3 +161,26 @@ pnpm dev:connect
 
 # Demo:  http://localhost:5174
 # Relay: http://localhost:8787`;
+
+export const contractExample = `import { Interface, parseEther, toQuantity } from 'ethers';
+
+// provider and account come from useBrowserWallet() after connection.
+// Requires the Zeni v0.1.4 extension build, on Diana testnet.
+const vault = new Interface(['function deposit() payable']);
+const hash = await provider.request({
+  method: 'eth_sendTransaction',
+  params: [{
+    from: account,
+    to: vaultAddress, // Your deployed contract on chain 9800.
+    data: vault.encodeFunctionData('deposit'),
+    value: toQuantity(parseEther('0.01')),
+    chainId: '0x2648',
+  }],
+});
+// A 0x-prefixed EVM hash means submitted, not confirmed.
+const receipt = await provider.request({
+  method: 'eth_getTransactionReceipt', params: [hash],
+});
+// null: pending; receipt.status === '0x1': success; '0x0': reverted.
+// Poll with a delay while pending; never automatically resend.
+// Zeni assigns the nonce AFTER native authorization setup.`;
