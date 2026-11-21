@@ -1,5 +1,5 @@
 import { Github } from '../components/BrandIcons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Tabs, TabsList, TabsTab, TabsPanel } from '@ui-sdk/react/tabs';
 import { Dialog, DialogContent, DialogTitle, DialogTrigger, DialogClose } from '@ui-sdk/react/dialog';
 import { ArrowUpRight, ArrowRight, ArrowLeft, BookOpen, Search, X, Code2, Smartphone, Radio, ChevronDown, ShieldCheck, Sun, Moon } from 'lucide-react';
@@ -23,6 +23,7 @@ export function DocsPage() {
   const [active, setActive] = useState('overview');
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const searchInput = useRef<HTMLInputElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const results = sections.filter(section => `${section.title} ${section.description}`.toLowerCase().includes(query.trim().toLowerCase()));
   useEffect(() => {
@@ -30,16 +31,24 @@ export function DocsPage() {
     document.querySelector('meta[name="description"]')?.setAttribute('content', 'Use the Zeni SDK to onboard users, connect mobile or browser wallets, sign messages, and request wallet-approved QOR transfers on QoreChain testnet.');
     const onKey = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key === 'k') { event.preventDefault(); setSearchOpen(open => !open); } };
     window.addEventListener('keydown', onKey);
-    const observer = new IntersectionObserver(entries => { const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top); if (visible[0]) setActive(visible[0].target.id); }, { rootMargin: '-100px 0px -60% 0px' });
-    sections.forEach(section => { const element = document.getElementById(section.id); if (element) observer.observe(element); });
+    const updateActive = () => {
+      const offset = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      let current = { id: sections[0].id, top: -Infinity };
+      sections.forEach(section => { const element = document.getElementById(section.id); if (!element) return; const top = element.getBoundingClientRect().top; const reached = top <= offset + parseFloat(getComputedStyle(element).scrollMarginTop) + 1 || (atBottom && top < window.innerHeight); if (reached && top > current.top) current = { id: section.id, top }; });
+      setActive(current.id);
+    };
+    let scrollFrame = 0;
+    const onScroll = () => { cancelAnimationFrame(scrollFrame); scrollFrame = requestAnimationFrame(updateActive); };
+    window.addEventListener('scroll', onScroll, { passive: true });
     const frame = requestAnimationFrame(() => document.getElementById(location.hash.slice(1))?.scrollIntoView());
-    return () => { window.removeEventListener('keydown', onKey); observer.disconnect(); cancelAnimationFrame(frame); };
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('scroll', onScroll); cancelAnimationFrame(scrollFrame); cancelAnimationFrame(frame); };
   }, []);
   const navigation = <>{['Start here', 'Build with Zeni', 'Reference'].map(group => <div className="docs-nav-group" key={group}><span>{group}</span>{sections.filter(section => section.group === group).map(section => <a key={section.id} href={`#${section.id}`} aria-current={active === section.id ? 'location' : undefined} onClick={() => { setActive(section.id); setMobileOpen(false); }}>{section.title}{active === section.id && <span className="docs-nav-dot" />}</a>)}</div>)}</>;
   return <div className="docs-page" data-docs-theme={theme}>
     <a href="#docs-main" className="skip-link">Skip to documentation</a>
     <header className="docs-header"><a className="docs-brand" href="/" aria-label="Zeni home"><span className="docs-brand-mark">Z</span>ZENI<span className="docs-brand-divider">/</span><span className="docs-brand-label">Docs</span></a><div className="docs-header-actions">
-      <Dialog open={searchOpen} onOpenChange={setSearchOpen}><DialogTrigger className="docs-search-trigger" aria-label="Search documentation"><Search size={15} /><span>Search docs…</span><kbd>⌘ K</kbd></DialogTrigger><DialogContent className="docs-search-dialog" data-docs-theme={theme}><div className="docs-search-heading"><DialogTitle>Find in the docs</DialogTitle><DialogClose aria-label="Close search"><X size={18} /></DialogClose></div><label className="docs-search-field"><Search size={18} /><input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Try “React”, “relay”, or “signing”" aria-label="Search documentation" /></label><nav aria-label="Search results" className="docs-search-results">{results.length ? results.map(result => <a href={`#${result.id}`} key={result.id} onClick={() => { setSearchOpen(false); setActive(result.id); }}><BookOpen size={16} /><div><strong>{result.title}</strong><span>{result.group}</span></div><ArrowRight size={15} /></a>) : <p>No results. Try “connection” or “QOR”.</p>}</nav><div className="docs-search-footer">Search Zeni documentation<span><kbd>esc</kbd> to close</span></div></DialogContent></Dialog>
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}><DialogTrigger className="docs-search-trigger" aria-label="Search documentation"><Search size={15} /><span>Search docs…</span><kbd>⌘ K</kbd></DialogTrigger><DialogContent className="docs-search-dialog" data-docs-theme={theme} initialFocus={() => searchInput.current}><div className="docs-search-heading"><DialogTitle>Find in the docs</DialogTitle><DialogClose aria-label="Close search"><X size={18} /></DialogClose></div><label className="docs-search-field"><Search size={18} /><input ref={searchInput} value={query} onChange={e => setQuery(e.target.value)} placeholder="Try “React”, “relay”, or “signing”" aria-label="Search documentation" /></label><nav aria-label="Search results" className="docs-search-results">{results.length ? results.map(result => <a href={`#${result.id}`} key={result.id} onClick={() => { setSearchOpen(false); setActive(result.id); }}><BookOpen size={16} /><div><strong>{result.title}</strong><span>{result.group}</span></div><ArrowRight size={15} /></a>) : <p>No results. Try “connection” or “QOR”.</p>}</nav><div className="docs-search-footer">Search Zeni documentation<span><kbd>esc</kbd> to close</span></div></DialogContent></Dialog>
       <button type="button" className="docs-theme-toggle" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>
         {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
       </button>
