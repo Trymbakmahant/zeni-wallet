@@ -20,6 +20,16 @@ const units = (n, s) => {
   return (w + (f + '0'.repeat(AMM_ASSETS[s].decimals)).slice(0, AMM_ASSETS[s].decimals)).replace(/^0+/, '') || '0';
 };
 
+const anchor = (t, poolId, symA, amtA, symB, amtB, type = 'amm_liquidity_added') => ({
+  timestamp: new Date(t).toISOString(), txhash: 'BB'.repeat(32),
+  events: [{ type, attributes: [
+    { key: 'pool_id', value: String(poolId) },
+    ...(type === 'amm_pool_created'
+      ? [{ key: 'token_a', value: `${units(amtA, symA)}${d(symA)}` }, { key: 'token_b', value: `${units(amtB, symB)}${d(symB)}` }]
+      : [{ key: 'reserve_a', value: units(amtA, symA) }, { key: 'reserve_b', value: units(amtB, symB) }]),
+  ] }],
+});
+
 test('markets price each asset in fUSD through its most liquid pool', () => {
   const markets = computeMarkets([
     pool('1', 'fETH', 'QOR', '960415', '1041349'),                         // dust pool, ignored for fETH
@@ -65,6 +75,22 @@ test('price history derives USD points per market from executed swaps', () => {
   assert.equal(history.fETH.trades[0].side, 'buy');
   assert.equal(history.fBTC.trades[0].side, 'sell');
   assert.equal(history.fBTC.trades[0].amountUsd, 21000);
+});
+
+test('price history anchors points at pool creation and liquidity events', () => {
+  const pools = [
+    pool('2', 'fUSD', 'QOR', '369729710', '12938383185'),
+    pool('3', 'fETH', 'fUSD', '136063510507896433', '393123761'),
+  ];
+  const t0 = 1_700_000_000_000;
+  const history = computePriceHistory(pools, [
+    anchor(t0 + 0, 2, 'fUSD', 100, 'QOR', 2000, 'amm_pool_created'),  // spot QOR = $0.05
+    anchor(t0 + 1, 3, 'fETH', 0.1, 'fUSD', 300, 'amm_liquidity_added'), // spot fETH = $3000
+    swap(t0 + 2, 3, 'fUSD', String(units(200, 'fUSD')), 'fETH', String(units(0.05, 'fETH'))), // trade fETH = $4000
+  ]);
+  assert.deepEqual(history.QOR.points, [[t0, 0.05]]);
+  assert.deepEqual(history.fETH.points, [[t0 + 1, 3000], [t0 + 2, 4000]]);
+  assert.equal(history.fETH.trades.length, 1); // anchors chart but are not trades
 });
 
 test('price history prices QOR-quoted trades at the latest observed QOR rate', () => {

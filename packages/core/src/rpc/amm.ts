@@ -134,6 +134,8 @@ function num(raw: string, symbol: AmmAsset): number {
 
 interface AmmoSwapEvent { t: number; txHash: string; poolId: string; inDenom: string; outDenom: string; inRaw: string; outRaw: string }
 
+interface AmmAnchorEvent { t: number; poolId: string; reserveA: string; reserveB: string }
+
 /** Parse amm_swap events out of indexed swap transactions, newest tx_responses first is fine — we sort. */
 export function parseSwapEvents(txResponses: any[]): AmmoSwapEvent[] {
   const events: AmmoSwapEvent[] = [];
@@ -154,6 +156,28 @@ export function parseSwapEvents(txResponses: any[]): AmmoSwapEvent[] {
   return events.sort((x, y) => x.t - y.t);
 }
 
+const coinAmount = (s: unknown) => /^\d+/.exec(typeof s === "string" ? s : "")?.[0] ?? "";
+
+/** Pool creation and liquidity events expose post-event reserves — exact spot-price anchors. */
+export function parseLiquidityEvents(txResponses: any[]): AmmAnchorEvent[] {
+  const events: AmmAnchorEvent[] = [];
+  for (const tx of txResponses ?? []) {
+    const t = Date.parse(tx?.timestamp ?? "");
+    if (!Number.isFinite(t)) continue;
+    for (const event of tx?.events ?? []) {
+      const attrs = Object.fromEntries((event.attributes ?? []).map((a: any) => [a.key, a.value]));
+      const created = event?.type === "amm_pool_created";
+      const liquidity = event?.type === "amm_liquidity_added" || event?.type === "amm_liquidity_removed";
+      if (!created && !liquidity) continue;
+      const reserveA = created ? coinAmount(attrs.token_a) : attrs.reserve_a;
+      const reserveB = created ? coinAmount(attrs.token_b) : attrs.reserve_b;
+      if (!/^\d+$/.test(reserveA ?? "") || !/^\d+$/.test(reserveB ?? "") || attrs.pool_id === undefined) continue;
+      events.push({ t, poolId: String(attrs.pool_id), reserveA, reserveB });
+    }
+  }
+  return events;
+}
+
 /**
  * Reconstruct per-market USD price history from executed on-chain swaps.
  * Each market uses its currently dominant pool (matching `computeMarkets`). QOR needs a
@@ -172,18 +196,42 @@ export function computePriceHistory(pools: any[], txResponses: any[]): Partial<R
   for (const m of markets) if (m.poolId) history.set(m.symbol, { points: [], trades: [] });
 
   const events = parseSwapEvents(txResponses);
+  const anchors = parseLiquidityEvents(txResponses);
+  const timeline = [
+    ...events.map((e) => ({ kind: "swap" as const, ...e })),
+    ...anchors.map((e) => ({ kind: "anchor" as const, ...e })),
+  ].sort((x, y) => x.t - y.t);
+
   const quoteUsd: Partial<Record<AmmAsset, number>> = { fUSD: 1 };
-  for (const e of events) {
+  for (const e of timeline) {
     const pool = poolById.get(e.poolId);
     if (!pool) continue;
+    const qorPair = [pool.a, pool.b].includes("QOR") && [pool.a, pool.b].includes("fUSD");
+
+    if (e.kind === "anchor") {
+      const ra = num(e.reserveA, pool.a), rb = num(e.reserveB, pool.b);
+      if (!(ra > 0) || !(rb > 0)) continue;
+      if (qorPair) quoteUsd.QOR = pool.a === "QOR" ? rb / ra : ra / rb;
+      for (const m of markets) {
+        if (e.poolId !== m.poolId) continue;
+        const h = history.get(m.symbol);
+        if (!h) continue;
+        const self = m.symbol === pool.a ? ra : rb, other = m.symbol === pool.a ? rb : ra;
+        const quote = m.symbol === pool.a ? pool.b : pool.a;
+        const rateUsd = quoteUsd[quote];
+        const priceUsd = m.symbol === "fUSD" ? 1 : rateUsd === undefined ? NaN : (other / self) * rateUsd;
+        if (!Number.isFinite(priceUsd) || priceUsd <= 0) continue;
+        h.points.push([e.t, priceUsd]);
+      }
+      continue;
+    }
+
     const inSym = byDenom.get(e.inDenom), outSym = byDenom.get(e.outDenom);
     if (!inSym || !outSym) continue;
     const inAmt = num(e.inRaw, inSym), outAmt = num(e.outRaw, outSym);
     if (!(inAmt > 0) || !(outAmt > 0)) continue;
     // Keep the running QOR->fUSD rate fresh from the QOR/fUSD pool.
-    if ([pool.a, pool.b].includes("QOR") && [pool.a, pool.b].includes("fUSD")) {
-      quoteUsd.QOR = inSym === "QOR" ? outAmt / inAmt : inAmt / outAmt;
-    }
+    if (qorPair) quoteUsd.QOR = inSym === "QOR" ? outAmt / inAmt : inAmt / outAmt;
     for (const m of markets) {
       if (e.poolId !== m.poolId) continue;
       const h = history.get(m.symbol);
@@ -222,13 +270,16 @@ export class AmmSwapClient extends NativeTransactionClient {
   }
 
   async priceHistory(): Promise<Partial<Record<AmmAsset, AmmMarketHistory>>> {
-    const [pools, inTxs, outTxs] = await Promise.all([
+    const [pools, inTxs, outTxs, addTxs, removeTxs, createTxs] = await Promise.all([
       this.rest("/qorechain/amm/v1/pools?pagination.limit=200"),
       this.txSearch("MsgSwapExactIn"),
       this.txSearch("MsgSwapExactOut"),
+      this.txSearch("MsgAddLiquidity"),
+      this.txSearch("MsgRemoveLiquidity"),
+      this.txSearch("MsgCreatePool"),
     ]);
     if (!Array.isArray(pools.pools)) throw new Error("Could not read AMM pools.");
-    return computePriceHistory(pools.pools, [...inTxs, ...outTxs]);
+    return computePriceHistory(pools.pools, [...inTxs, ...outTxs, ...addTxs, ...removeTxs, ...createTxs]);
   }
 
   async markets(): Promise<AmmMarket[]> {
