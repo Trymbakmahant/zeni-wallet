@@ -15,8 +15,11 @@ import {
   DerivedAccountKeys,
   EncryptedVaultEnvelope,
   deriveAccountKeys,
+  derivePqcKeypair,
   isValidMnemonic,
   repairPqcPublicKeyHash,
+  pqcSign,
+  pqcVerify,
   QorTransferClient,
   QorTransferQuote,
   AmmSwapClient,
@@ -1025,12 +1028,62 @@ class BackgroundController {
         return (historyData.activityHistory || []).filter((item: any) => this.activityBelongsTo(item, active));
       }
 
+      case "GET_MARKETS": {
+        return await new AmmSwapClient(this.client.provider).markets();
+      }
+
       case "GET_PRICE_HISTORY": {
         return await new AmmSwapClient(this.client.provider).priceHistory();
       }
 
-      case "GET_MARKETS": {
-        return await new AmmSwapClient(this.client.provider).markets();
+      case "SIGN_MESSAGE": {
+        const active = this.getActiveAccount();
+        if (!active) throw new Error("Unlock Zeni to create a stamp.");
+        const text = typeof message.text === "string" ? message.text : "";
+        if (!text.trim() || text.length > 2000) throw new Error("Enter a message up to 2000 characters.");
+        const payload = `zeni:stamp:v1|${active.classicalAddress}|${text}`;
+        const classicalSignature = await new ethers.Wallet(active.classicalPrivateKey).signMessage(ethers.toUtf8Bytes(payload));
+        const keypair = derivePqcKeypair(active);
+        const pqcSignature = pqcSign(
+          keypair.secretKey,
+          ethers.getBytes(ethers.keccak256(ethers.toUtf8Bytes(payload)))
+        );
+        return {
+          stamp: {
+            spec: "zeni-stamp/v1",
+            address: active.classicalAddress,
+            pqcPublicKey: ethers.hexlify(keypair.publicKey),
+            message: text,
+            payload,
+            classicalSignature,
+            pqcSignature: ethers.hexlify(pqcSignature),
+            timestamp: Date.now(),
+          },
+        };
+      }
+
+      case "VERIFY_STAMP": {
+        const s = message.stamp;
+        if (!s || typeof s !== "object") throw new Error("Paste a Zeni stamp JSON.");
+        const address = typeof s.address === "string" ? s.address : "";
+        const payload = typeof s.payload === "string" && s.payload.startsWith("zeni:stamp:v1|")
+          ? s.payload
+          : `zeni:stamp:v1|${address}|${typeof s.message === "string" ? s.message : ""}`;
+        let recovered = "";
+        let classicalOk = false;
+        try {
+          recovered = ethers.verifyMessage(ethers.toUtf8Bytes(payload), s.classicalSignature);
+          classicalOk = recovered.toLowerCase() === address.toLowerCase();
+        } catch { /* malformed classical signature */ }
+        let pqcOk = false;
+        try {
+          pqcOk = pqcVerify(
+            ethers.getBytes(s.pqcPublicKey),
+            ethers.getBytes(ethers.keccak256(ethers.toUtf8Bytes(payload))),
+            ethers.getBytes(s.pqcSignature)
+          );
+        } catch { /* malformed pqc material */ }
+        return { ok: classicalOk && pqcOk, classicalOk, pqcOk, recovered };
       }
 
       default:

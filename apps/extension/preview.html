@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Zeni Preview</title>
+    <script>
+      // Dev-only chrome API mock so the popup renders unlocked in a normal page.
+      const store = { connectedOrigins: ["https://zeni-wallet.vercel.app", "http://localhost:5173"] };
+      const listeners = [];
+      const addr = "0x9f3a1C2b4D5e6F708192A3b4C5d6E7f8091a2B3c";
+      const replies = {
+        GET_SESSION_STATUS: { isInitialized: true, isUnlocked: true, activeAddress: addr, cosmosAddress: "qor1xyz", pqcPublicKeyHash: "0xabc", accounts: [{ index: 0, name: "Account 1", address: addr, cosmosAddress: "qor1xyz" }], activeAccountIndex: 0 },
+        GET_STATUS: { activeAddress: addr, onChainBalance: "12.5", tokenBalances: { fUSD: "100" } },
+        GET_PENDING_APPROVALS: [],
+        GET_ACCOUNT_ACTIVITY: { items: [], hasMore: false, updatedAt: Date.now(), error: null },
+        GET_MARKETS: [
+          { symbol: "QOR", priceUsd: 0.028576, liquidityUsd: 739.46, poolId: "2", quote: "fUSD" },
+          { symbol: "fUSD", priceUsd: 1, liquidityUsd: 739.46, poolId: "2", quote: "QOR" },
+          { symbol: "fETH", priceUsd: 2889.27, liquidityUsd: 786.25, poolId: "3", quote: "fUSD" },
+          { symbol: "fBTC", priceUsd: 53800.96, liquidityUsd: 1082.24, poolId: "4", quote: "QOR" },
+        ],
+        PREPARE_SWAP: { id: "q1", poolId: "2", tokenIn: "QOR", tokenOut: "fUSD", amountIn: "100", amountOut: "2.835412", minAmountOut: "2.821235", swapFee: "0.3", impactBps: 77, slippageBps: 50, registrationRequired: false, maxNetworkFee: "0.04", expiresAt: Date.now() + 120000 },
+      };
+      replies.GET_STATUS.tokenBalances = { fUSD: "100", fETH: "0.05", fBTC: "0" };
+      // Synthetic price history so the Markets charts render in preview.
+      replies.GET_PRICE_HISTORY = {};
+      for (const m of replies.GET_MARKETS) {
+        const pts = [], trades = [];
+        const now = Date.now();
+        for (let i = 40; i >= 0; i--) {
+          const t = now - i * 6 * 3600_000;
+          const wobble = 1 + Math.sin(i / 3) * 0.04 + (Math.random() - 0.5) * 0.02;
+          pts.push([t, m.priceUsd * wobble]);
+          if (i % 4 === 0) trades.push({ t, priceUsd: m.priceUsd * wobble, amountUsd: 40 + Math.random() * 300, amountIn: "10 " + m.symbol, amountOut: "3.2 fUSD", side: i % 8 ? "buy" : "sell", txHash: "AB".repeat(32) });
+        }
+        replies.GET_PRICE_HISTORY[m.symbol] = { points: pts, trades };
+      }
+      replies.GET_PRICE_HISTORY.fUSD.points = replies.GET_PRICE_HISTORY.fUSD.points.map(([t]) => [t, 1]);
+      window.chrome = {
+        runtime: { lastError: undefined, sendMessage: (msg, cb) => setTimeout(() => cb({ success: true, data: replies[msg.type] ?? {} }), 5) },
+        storage: {
+          local: {
+            get: (keys, cb) => { const r = {}; [].concat(keys).forEach(k => r[k] = store[k]); cb ? cb(r) : null; return Promise.resolve(r); },
+            set: (obj) => { Object.assign(store, obj); listeners.forEach(l => l(Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, { newValue: v }])), "local")); return Promise.resolve(); },
+          },
+          onChanged: { addListener: l => listeners.push(l), removeListener: () => {} },
+        },
+        tabs: { create: ({ url }) => console.log("open", url) },
+      };
+    </script>
+  </head>
+  <body class="bg-[#000000] text-white antialiased font-sans m-0 p-0 overflow-hidden select-none">
+    <div id="root" class="w-[360px] h-[600px] flex flex-col"></div>
+    <script type="module" src="/src/popup/main.tsx"></script>
+  </body>
+</html>
