@@ -13,8 +13,9 @@ export * from "./rpc/evm-transaction.js";
 export * from "./rpc/evm-read.js";
 export * from "./rpc/explorer.js";
 export * from "./rpc/pqc-status.js";
+export * from "./rpc/sessions.js";
 
 export * from "./rpc/activity.js";
 
 // Raw ML-DSA-87 primitives for built-in tools (e.g. Zeni Stamp).
-export { pqcSign, pqcVerify } from "@qorechain/sdk";
+export { pqcSign, pqcVerify, signAuthenticatorLinkSecp256k1 } from "@qorechain/sdk";

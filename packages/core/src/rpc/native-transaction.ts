@@ -74,14 +74,15 @@ export class NativeTransactionClient {
     }
   }
 
-  protected async broadcastNative(account: DerivedAccountKeys, message: EncodeObject, classical: boolean, quote: NativeFeeBudget, assertUnlocked: () => void, observer?: NativeTxObserver): Promise<NativeTxUpdate & { nextSequence: bigint }> {
+  protected async broadcastNative(account: DerivedAccountKeys, message: EncodeObject | EncodeObject[], classical: boolean, quote: NativeFeeBudget, assertUnlocked: () => void, observer?: NativeTxObserver): Promise<NativeTxUpdate & { nextSequence: bigint }> {
+    const messages = Array.isArray(message) ? message : [message];
     const sequence = parseAccountSequence(await this.rest(`/cosmos/auth/v1beta1/accounts/${account.cosmosAddress}`));
     const registry = qorechainRegistry();
     const keypair = derivePqcKeypair(account);
     try {
       const params: EthSignParams = {
         account: { privateKey: account.classicalPrivateKey, publicKey: ethers.SigningKey.computePublicKey(account.classicalPrivateKey, true), pqc: keypair },
-        chainId: QORECHAIN_CONFIG.cosmosChainId, ...sequence, messages: [message],
+        chainId: QORECHAIN_CONFIG.cosmosChainId, ...sequence, messages,
         fee: { amount: [{ denom: "uqor", amount: quote.setupFeeCap }], gas: NATIVE_GAS_CAP.toString() },
         encodeMessage: (m) => registry.encodeAsAny(m),
         signBytesVersion: classical ? undefined : await resolveSignBytesVersion({ chainId: QORECHAIN_CONFIG.cosmosChainId, rest: QORECHAIN_CONFIG.restUrl, fetch: this.fetchImpl }),

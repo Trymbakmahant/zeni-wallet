@@ -32,6 +32,10 @@ import {
   bech32ToEvmAddress,
   encryptVault,
   decryptVault,
+  SessionClient,
+  signAuthenticatorLinkSecp256k1,
+  hexToBytes,
+  bytesToHex,
 } from "@zeni/core";
 import { ethers, formatEther, parseEther } from "ethers";
 
@@ -1084,6 +1088,109 @@ class BackgroundController {
           );
         } catch { /* malformed pqc material */ }
         return { ok: classicalOk && pqcOk, classicalOk, pqcOk, recovered };
+      }
+
+      case "LIST_SESSIONS": {
+        const active = this.getActiveAccount();
+        let address = active?.cosmosAddress;
+        if (!address) address = (await chrome.storage.local.get("cosmosAddress")).cosmosAddress;
+        if (!address) return { sessions: [], config: null, address: null };
+        const client = new SessionClient(this.client.provider);
+        const [sessions, config] = await Promise.all([
+          client.listSessions(address),
+          client.sessionConfig().catch(() => null),
+        ]);
+        return { sessions, config, address };
+      }
+
+      case "CREATE_SESSION": {
+        const active = this.getActiveAccount();
+        if (!active) throw new Error("Unlock Zeni to create a session.");
+        if (this.transferInProgress) throw new Error("A transaction is already in progress.");
+        const label = typeof message.label === "string" ? message.label.trim() : "";
+        const expiryUnix = Number(message.expiryUnix);
+        if (!Number.isFinite(expiryUnix)) throw new Error("Pick when the session expires.");
+        const rule = {
+          perTxLimit: String(message.perTxLimit ?? "0"),
+          dailyLimit: String(message.dailyLimit ?? "0"),
+          allowedDenoms: Array.isArray(message.allowedDenoms) && message.allowedDenoms.length
+            ? message.allowedDenoms.map(String) : ["uqor"],
+          allowedEvmCalls: Array.isArray(message.allowedEvmCalls)
+            ? message.allowedEvmCalls.map(String).filter((s: string) => s.trim()).map((s: string) => s.trim().toLowerCase())
+            : [],
+        };
+        const permissions = rule.allowedEvmCalls.length ? (["send", "evm"] as const).slice() : (["send"] as const).slice();
+        // The wallet generates the agent key unless the agent supplied its own
+        // public key plus a link proof (pubkeyHex + possessionProofHex).
+        let pubkey: Uint8Array;
+        let possessionProof: Uint8Array;
+        let sessionPrivateKey: string | undefined;
+        if (typeof message.pubkeyHex === "string" && typeof message.possessionProofHex === "string") {
+          pubkey = hexToBytes(message.pubkeyHex);
+          possessionProof = hexToBytes(message.possessionProofHex);
+        } else {
+          const w = ethers.Wallet.createRandom();
+          pubkey = ethers.getBytes(ethers.SigningKey.computePublicKey(w.privateKey, true));
+          possessionProof = signAuthenticatorLinkSecp256k1({
+            chainId: QORECHAIN_CONFIG.cosmosChainId, account: active.cosmosAddress, privateKey: w.privateKey,
+          }).possessionProof;
+          sessionPrivateKey = w.privateKey;
+        }
+        const client = new SessionClient(this.client.provider);
+        const budget = await client.sessionFeeBudget();
+        this.transferInProgress = true;
+        this.resetAutoLock();
+        try {
+          await this.assertNoPendingNative(active);
+          const assertActive = () => {
+            if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review the session again.");
+          };
+          await client.ensureSessionReady(active, budget, assertActive, async (u) => {
+            await this.writeActivity((history) => [{
+              hash: u.hash, type: "SETUP", nativeChain: true, account: active.cosmosAddress,
+              timestamp: history.find((i) => i.hash === u.hash)?.timestamp || Date.now(),
+              status: u.status, gasCost: `${ethers.formatUnits(u.feeUqor, 6)} QOR`, error: u.error,
+            }, ...history.filter((i) => i.hash !== u.hash)]);
+          });
+          const update = await client.linkSession(active, {
+            pubkey, possessionProof, scheme: "secp256k1", label,
+            expiryUnix, permissions: [...permissions], rule,
+          }, budget, assertActive, async (u) => {
+            await this.writeActivity((history) => [{
+              hash: u.hash, type: "SESSION", nativeChain: true, account: active.cosmosAddress,
+              timestamp: history.find((i) => i.hash === u.hash)?.timestamp || Date.now(),
+              status: u.status, gasCost: `${ethers.formatUnits(u.feeUqor, 6)} QOR`, error: u.error,
+              sessionAction: "link", sessionLabel: label,
+            }, ...history.filter((i) => i.hash !== u.hash)]);
+          });
+          return { hash: update.hash, pubkeyHex: bytesToHex(pubkey), sessionPrivateKey };
+        } finally { this.transferInProgress = false; }
+      }
+
+      case "REVOKE_SESSION": {
+        const active = this.getActiveAccount();
+        if (!active) throw new Error("Unlock Zeni to revoke a session.");
+        if (this.transferInProgress) throw new Error("A transaction is already in progress.");
+        const pubkeyHex = typeof message.pubkeyHex === "string" ? message.pubkeyHex : "";
+        if (!/^[0-9a-fA-F]{40,66}$/.test(pubkeyHex)) throw new Error("Invalid session key.");
+        const client = new SessionClient(this.client.provider);
+        const budget = await client.sessionFeeBudget();
+        this.transferInProgress = true;
+        this.resetAutoLock();
+        try {
+          await this.assertNoPendingNative(active);
+          const update = await client.revokeSession(active, { scheme: "secp256k1", pubkeyHex }, budget, () => {
+            if (this.getActiveAccount() !== active) throw new Error("Wallet locked or account changed. Review the revocation again.");
+          }, async (u) => {
+            await this.writeActivity((history) => [{
+              hash: u.hash, type: "SESSION", nativeChain: true, account: active.cosmosAddress,
+              timestamp: history.find((i) => i.hash === u.hash)?.timestamp || Date.now(),
+              status: u.status, gasCost: `${ethers.formatUnits(u.feeUqor, 6)} QOR`, error: u.error,
+              sessionAction: "revoke", sessionLabel: message.label,
+            }, ...history.filter((i) => i.hash !== u.hash)]);
+          });
+          return { hash: update.hash };
+        } finally { this.transferInProgress = false; }
       }
 
       default:

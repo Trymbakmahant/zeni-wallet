@@ -1,14 +1,14 @@
 // Zeni's own app suite. Every entry is built or operated by the Zeni team —
 // no third-party projects are listed here.
 
-export type ToolId = "stamp" | "connections";
+export type ToolId = "stamp" | "connections" | "sessions";
 
 export interface ZeniTool {
   id: ToolId;
   name: string;
   tagline: string;
   accent: string;
-  icon: "stamp" | "connections";
+  icon: "stamp" | "connections" | "sessions";
 }
 
 export interface ZeniWebApp {
@@ -42,6 +42,13 @@ export const ZENI_TOOLS: ZeniTool[] = [
     tagline: "See which sites hold a wallet connection. Revoke in one tap.",
     accent: "#38BDF8",
     icon: "connections",
+  },
+  {
+    id: "sessions",
+    name: "Zeni Sessions",
+    tagline: "Agent keys with chain-enforced spend mandates — limits, expiry, instant revoke.",
+    accent: "#FBBF24",
+    icon: "sessions",
   },
 ];
 
@@ -83,13 +90,6 @@ export const NETWORK_LINKS: ZeniWebApp[] = [
 
 // Upcoming Zeni mini-apps — our own takes on the ecosystem's biggest themes.
 export const ZENI_ROADMAP: ZeniRoadmap[] = [
-  {
-    id: "sessions",
-    name: "Zeni Sessions",
-    tagline: "Scoped spend mandates for AI agents — budget, allowlist, expiry.",
-    accent: "#E06341",
-    icon: "sessions",
-  },
   {
     id: "escrow",
     name: "Timelock Send",

@@ -3,20 +3,27 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BadgeCheck,
+  Ban,
   Bot,
   Check,
   CircleCheck,
   Copy,
   Globe,
   Hourglass,
+  KeyRound,
   Link2,
   Mail,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
   Sparkles,
   Stamp,
   Tag,
+  TriangleAlert,
   Unplug,
   XCircle,
 } from "lucide-react";
+import { formatUnits, parseUnits } from "ethers";
 import {
   ZENI_TOOLS,
   ZENI_ROADMAP,
@@ -356,6 +363,314 @@ const ConnectionsTool: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   );
 };
 
+/* ---------------------------- Agent Sessions ----------------------------- */
+
+interface SessionItem {
+  pubkeyHex: string;
+  scheme: string;
+  label: string;
+  permissions: string[];
+  expiryUnix: number;
+  createdAtUnix: number;
+  revoked: boolean;
+  expired: boolean;
+  active: boolean;
+  rule?: { id: string; perTxLimit: string; dailyLimit: string; allowedDenoms: string[]; allowedEvmCalls?: string[] };
+}
+
+const qor = (uqor: string) => {
+  try {
+    const v = formatUnits(uqor || "0", 6);
+    return v.replace(/\.?0+$/, "") || "0";
+  } catch { return "0"; }
+};
+
+const timeLeft = (expiryUnix: number) => {
+  const s = expiryUnix - Math.floor(Date.now() / 1000);
+  if (s <= 0) return "expired";
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`;
+};
+
+const SessionsTool: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const [sessions, setSessions] = useState<SessionItem[] | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "create">("list");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ pubkeyHex: string; sessionPrivateKey?: string; hash: string } | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+
+  const [label, setLabel] = useState("");
+  const [perTx, setPerTx] = useState("1");
+  const [daily, setDaily] = useState("5");
+  const [ttl, setTtl] = useState<"1" | "24" | "168">("24");
+  const [contract, setContract] = useState("");
+
+  const load = async () => {
+    try {
+      const res = await sendMessage("LIST_SESSIONS");
+      setSessions(res.sessions || []);
+      setAccount(res.address || null);
+      setListError(null);
+    } catch (e: any) {
+      setSessions([]);
+      setListError(e?.message || "Could not load sessions.");
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const create = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      let perTxLimit: string, dailyLimit: string;
+      try {
+        perTxLimit = parseUnits(perTx || "0", 6).toString();
+        dailyLimit = parseUnits(daily || "0", 6).toString();
+      } catch {
+        throw new Error("Enter numeric limits in QOR.");
+      }
+      const contractAddr = contract.trim().toLowerCase();
+      if (contractAddr && !/^0x[0-9a-f]{40}$/.test(contractAddr)) {
+        throw new Error("The contract allowlist entry must be a 0x address.");
+      }
+      const res = await sendMessage("CREATE_SESSION", {
+        label, expiryUnix: Math.floor(Date.now() / 1000) + Number(ttl) * 3600,
+        perTxLimit, dailyLimit, allowedDenoms: ["uqor"],
+        allowedEvmCalls: contractAddr ? [contractAddr] : [],
+      });
+      setCreated(res);
+      setView("list");
+      setLabel("");
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "Could not create the session.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revoke = async (s: SessionItem) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await sendMessage("REVOKE_SESSION", { pubkeyHex: s.pubkeyHex, label: s.label });
+      setConfirmRevoke(null);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || "Could not revoke the session.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const agentJson = created
+    ? JSON.stringify({
+        spec: "zeni-session/v1", chainId: "qorechain-diana", scheme: "secp256k1",
+        account, pubkeyHex: created.pubkeyHex, privateKey: created.sessionPrivateKey,
+      }, null, 2)
+    : "";
+
+  if (created) {
+    return (
+      <div className="flex flex-col space-y-3 pb-3">
+        <SubHeader title="Agent key created" onBack={() => setCreated(null)} />
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+            <CircleCheck className="w-4 h-4" /> Session linked on-chain
+          </div>
+          <p className="text-[11px] text-zinc-400 leading-snug">
+            {created.sessionPrivateKey
+              ? "Hand this key to your agent. Its spending limits are enforced by QoreChain — it physically cannot exceed them."
+              : "The agent's key is linked. Its limits are enforced by QoreChain."}
+          </p>
+        </div>
+        {created.sessionPrivateKey && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+              <TriangleAlert className="w-4 h-4" /> Copy now — shown once
+            </div>
+            <div className="bg-[#0B0B0D] border border-[#222226] rounded-lg p-2.5 text-[10px] font-mono text-zinc-300 break-all leading-relaxed">
+              {agentJson}
+            </div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(agentJson); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+              className="w-full py-2 rounded-xl bg-[#141416] hover:bg-[#1E1E22] border border-[#222226] text-xs font-semibold text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
+              {copied ? "Copied" : "Copy agent key JSON"}
+            </button>
+          </div>
+        )}
+        <p className="text-[10px] text-zinc-600 px-1 leading-snug">
+          Run the demo agent: node packages/core/scripts/session-agent.mjs --key agent.json — it
+          spends inside the mandate, then shows QoreChain rejecting an overspend.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col space-y-3 pb-3">
+      <SubHeader title="Agent Sessions" onBack={onBack} />
+      <p className="text-[11px] text-zinc-500 leading-snug px-1">
+        Delegate a scoped key to an agent. Per-transaction caps, daily budgets and expiry are
+        enforced by QoreChain consensus — not by this app. Revoking takes effect instantly.
+      </p>
+
+      {view === "list" && (
+        <>
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-semibold text-zinc-400">
+              {sessions?.length ? `${sessions.filter((s) => s.active).length} active` : ""}
+            </span>
+            <div className="flex gap-1.5">
+              <button onClick={() => void load()} title="Refresh" className="w-7 h-7 rounded-lg bg-[#141416] hover:bg-[#1E1E22] border border-[#222226] flex items-center justify-center text-zinc-400 transition-colors cursor-pointer">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => { setError(null); setView("create"); }} className="h-7 px-2.5 rounded-lg bg-white hover:bg-zinc-200 text-black text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer">
+                <Plus className="w-3.5 h-3.5" /> New session
+              </button>
+            </div>
+          </div>
+
+          {listError && <p className="text-[11px] text-red-400 px-1">{listError}</p>}
+
+          {sessions && sessions.length === 0 && (
+            <div className="py-8 text-center text-zinc-500 text-xs flex flex-col items-center space-y-1.5">
+              <Bot className="w-5 h-5 text-zinc-600" />
+              <span className="font-medium text-zinc-400">No sessions yet</span>
+              <span className="max-w-[240px]">Create one and give the key to a bot — the chain holds the leash.</span>
+            </div>
+          )}
+
+          <div className="flex flex-col space-y-2">
+            {sessions?.map((s) => (
+              <div key={s.pubkeyHex} className="rounded-2xl border border-[#222226] bg-[#111114] p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${s.active ? "bg-emerald-500/15 border border-emerald-500/25" : "bg-[#1A1A1E] border border-[#2A2A2F]"}`}>
+                    <KeyRound className={`w-4 h-4 ${s.active ? "text-emerald-400" : "text-zinc-600"}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-xs text-white truncate">{s.label || "Session"}</div>
+                    <div className="text-[10px] text-zinc-500 font-mono truncate">{s.pubkeyHex.slice(0, 18)}…</div>
+                  </div>
+                  <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
+                    s.active ? "bg-emerald-500/15 text-emerald-400" : s.revoked ? "bg-red-500/15 text-red-400" : "bg-zinc-500/15 text-zinc-400"
+                  }`}>
+                    {s.revoked ? "revoked" : s.expired ? "expired" : "active"}
+                  </span>
+                </div>
+                {s.rule && (
+                  <div className="grid grid-cols-3 gap-1.5 text-center">
+                    <div className="rounded-lg bg-[#0B0B0D] border border-[#1E1E22] py-1.5">
+                      <div className="text-[9px] text-zinc-600 uppercase">Per tx</div>
+                      <div className="text-[11px] font-semibold text-zinc-200">{qor(s.rule.perTxLimit)} QOR</div>
+                    </div>
+                    <div className="rounded-lg bg-[#0B0B0D] border border-[#1E1E22] py-1.5">
+                      <div className="text-[9px] text-zinc-600 uppercase">Daily</div>
+                      <div className="text-[11px] font-semibold text-zinc-200">{qor(s.rule.dailyLimit)} QOR</div>
+                    </div>
+                    <div className="rounded-lg bg-[#0B0B0D] border border-[#1E1E22] py-1.5">
+                      <div className="text-[9px] text-zinc-600 uppercase">Expiry</div>
+                      <div className="text-[11px] font-semibold text-zinc-200">{timeLeft(s.expiryUnix)}</div>
+                    </div>
+                  </div>
+                )}
+                {!!s.rule?.allowedEvmCalls?.length && (
+                  <div className="text-[10px] font-mono text-zinc-500 truncate px-0.5">
+                    calls locked to {s.rule.allowedEvmCalls[0].slice(0, 12)}…
+                  </div>
+                )}
+                {s.active && confirmRevoke !== s.pubkeyHex && (
+                  <button onClick={() => setConfirmRevoke(s.pubkeyHex)} className="w-full py-1.5 rounded-lg bg-[#141416] hover:bg-red-500/10 border border-[#222226] hover:border-red-500/30 text-[11px] font-semibold text-zinc-400 hover:text-red-400 transition-colors cursor-pointer flex items-center justify-center gap-1">
+                    <Ban className="w-3 h-3" /> Revoke on-chain
+                  </button>
+                )}
+                {s.active && confirmRevoke === s.pubkeyHex && (
+                  <div className="flex gap-1.5">
+                    <button onClick={() => setConfirmRevoke(null)} disabled={busy} className="flex-1 py-1.5 rounded-lg bg-[#141416] border border-[#222226] text-[11px] font-semibold text-zinc-400 transition-colors cursor-pointer">Cancel</button>
+                    <button onClick={() => void revoke(s)} disabled={busy} className="flex-1 py-1.5 rounded-lg bg-red-500/90 hover:bg-red-500 text-[11px] font-bold text-white transition-colors cursor-pointer disabled:opacity-50">
+                      {busy ? "Revoking…" : "Confirm revoke"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {error && <p className="text-[11px] text-red-400 px-1">{error}</p>}
+        </>
+      )}
+
+      {view === "create" && (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide px-1">Label</label>
+            <input
+              value={label} onChange={(e) => setLabel(e.target.value)} maxLength={64}
+              placeholder="Trading bot"
+              className="w-full bg-[#111114] border border-[#222226] rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 outline-none focus:border-[#FBBF24]/50 transition-colors"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide px-1">Max per tx (QOR)</label>
+              <input value={perTx} onChange={(e) => setPerTx(e.target.value)} inputMode="decimal" placeholder="1"
+                className="w-full bg-[#111114] border border-[#222226] rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 outline-none focus:border-[#FBBF24]/50 transition-colors" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide px-1">Max per day (QOR)</label>
+              <input value={daily} onChange={(e) => setDaily(e.target.value)} inputMode="decimal" placeholder="5"
+                className="w-full bg-[#111114] border border-[#222226] rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 outline-none focus:border-[#FBBF24]/50 transition-colors" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide px-1">Expires after</label>
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#111114] border border-[#222226]">
+              {([["1", "1 hour"], ["24", "24 hours"], ["168", "7 days"]] as const).map(([v, t]) => (
+                <button key={v} onClick={() => setTtl(v)} className={`py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${ttl === v ? "bg-white text-black" : "text-zinc-500 hover:text-zinc-300"}`}>{t}</button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide px-1">Contract allowlist (optional)</label>
+            <input
+              value={contract} onChange={(e) => setContract(e.target.value)} spellCheck={false}
+              placeholder="0x… — agent may call only this contract"
+              className="w-full bg-[#111114] border border-[#222226] rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 font-mono outline-none focus:border-[#FBBF24]/50 transition-colors"
+            />
+            <p className="text-[10px] text-zinc-600 px-1 leading-snug">
+              Locks the key to one contract — e.g. the ZeniAttestedSend cross-VM pay contract.
+              Calls to anything else are rejected by consensus.
+            </p>
+          </div>
+          <div className="rounded-xl border border-[#222226] bg-[#0B0B0D] p-3 flex items-start gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <p className="text-[10px] text-zinc-500 leading-snug">
+              The agent key can send QOR{contract.trim() ? " and call your allowlisted contract" : ""} only.
+              QoreChain rejects anything over the limits, off the allowlist, after expiry, or after
+              you revoke — even if this app is offline.
+            </p>
+          </div>
+          {error && <p className="text-[11px] text-red-400 px-1">{error}</p>}
+          <button
+            onClick={() => void create()} disabled={busy || !label.trim()}
+            className="w-full py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          >
+            <Bot className="w-3.5 h-3.5" />
+            {busy ? "Linking on-chain…" : "Create session (1 tx)"}
+          </button>
+          <button onClick={() => setView("list")} className="w-full py-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer">Back</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* --------------------------------- Home ---------------------------------- */
 
 const ROADMAP_ICONS = { sessions: Bot, escrow: Hourglass, seal: Mail, names: Tag } as const;
@@ -419,8 +734,10 @@ export const AppsView: React.FC = () => {
 
   if (tool === "stamp") return <StampTool onBack={() => setTool(null)} />;
   if (tool === "connections") return <ConnectionsTool onBack={() => setTool(null)} />;
+  if (tool === "sessions") return <SessionsTool onBack={() => setTool(null)} />;
 
   const yourApps: LauncherItem[] = [
+    { id: "sessions", name: "Sessions", accent: ZENI_TOOLS[2].accent, Icon: Bot, onClick: () => setTool("sessions") },
     { id: "stamp", name: "Stamp", accent: ZENI_TOOLS[0].accent, Icon: Stamp, onClick: () => setTool("stamp") },
     { id: "connections", name: "Connections", accent: ZENI_TOOLS[1].accent, Icon: Link2, onClick: () => setTool("connections") },
   ];
@@ -441,17 +758,17 @@ export const AppsView: React.FC = () => {
 
       {/* Featured */}
       <button
-        onClick={() => setTool("stamp")}
-        className="relative overflow-hidden text-left rounded-2xl border border-[#E06341]/30 p-4 cursor-pointer group transition-colors hover:border-[#E06341]/60"
-        style={{ background: "radial-gradient(120% 140% at 100% 0%, rgba(224,99,65,0.28) 0%, rgba(224,99,65,0.06) 45%, #0E0E11 75%)" }}
+        onClick={() => setTool("sessions")}
+        className="relative overflow-hidden text-left rounded-2xl border border-[#FBBF24]/30 p-4 cursor-pointer group transition-colors hover:border-[#FBBF24]/60"
+        style={{ background: "radial-gradient(120% 140% at 100% 0%, rgba(251,191,36,0.24) 0%, rgba(251,191,36,0.05) 45%, #0E0E11 75%)" }}
       >
-        <Stamp className="absolute -right-3 -bottom-4 w-24 h-24 text-[#E06341]/10 rotate-[-12deg]" />
-        <div className="flex items-center gap-1 text-[10px] font-semibold text-[#E06341] mb-2">
+        <Bot className="absolute -right-3 -bottom-4 w-24 h-24 text-[#FBBF24]/10 rotate-[-12deg]" />
+        <div className="flex items-center gap-1 text-[10px] font-semibold text-[#FBBF24] mb-2">
           <Sparkles className="w-3 h-3" /> New in Zeni
         </div>
-        <div className="text-base font-bold text-white leading-tight">Zeni Stamp</div>
+        <div className="text-base font-bold text-white leading-tight">Agent Sessions</div>
         <div className="text-xs text-zinc-400 mt-1 leading-snug max-w-[220px]">
-          Hybrid-sign any message with your post-quantum key.
+          Give an agent a key. QoreChain enforces the leash — limits, expiry, instant revoke.
         </div>
         <span className="inline-flex mt-3 py-1.5 px-4 rounded-full bg-white group-hover:bg-zinc-200 text-black text-xs font-bold transition-colors">
           Open
