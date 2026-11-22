@@ -109,7 +109,128 @@ export function computeMarkets(pools: any[]): AmmMarket[] {
   return markets;
 }
 
+export interface AmmTrade {
+  t: number;
+  priceUsd: number;
+  amountUsd: number;
+  amountIn: string;
+  amountOut: string;
+  /** Asset this market received in the trade. */
+  side: "buy" | "sell";
+  txHash: string;
+}
+
+export interface AmmMarketHistory {
+  symbol: AmmAsset;
+  /** Chronological [timestampMs, priceUsd] points from executed swaps in the market's pool. */
+  points: [number, number][];
+  /** Newest-first executed trades, capped at 25. */
+  trades: AmmTrade[];
+}
+
+function num(raw: string, symbol: AmmAsset): number {
+  return Number(ethers.formatUnits(uint(raw), AMM_ASSETS[symbol].decimals));
+}
+
+interface AmmoSwapEvent { t: number; txHash: string; poolId: string; inDenom: string; outDenom: string; inRaw: string; outRaw: string }
+
+/** Parse amm_swap events out of indexed swap transactions, newest tx_responses first is fine — we sort. */
+export function parseSwapEvents(txResponses: any[]): AmmoSwapEvent[] {
+  const events: AmmoSwapEvent[] = [];
+  for (const tx of txResponses ?? []) {
+    const t = Date.parse(tx?.timestamp ?? "");
+    if (!Number.isFinite(t)) continue;
+    for (const event of tx?.events ?? []) {
+      if (event?.type !== "amm_swap") continue;
+      const attrs = Object.fromEntries((event.attributes ?? []).map((a: any) => [a.key, a.value]));
+      if (!/^\d+$/.test(attrs.amount_in ?? "") || !/^\d+$/.test(attrs.amount_out ?? "")) continue;
+      events.push({
+        t, txHash: typeof tx?.txhash === "string" ? tx.txhash : "",
+        poolId: String(attrs.pool_id), inDenom: attrs.denom_in, outDenom: attrs.denom_out,
+        inRaw: attrs.amount_in, outRaw: attrs.amount_out,
+      });
+    }
+  }
+  return events.sort((x, y) => x.t - y.t);
+}
+
+/**
+ * Reconstruct per-market USD price history from executed on-chain swaps.
+ * Each market uses its currently dominant pool (matching `computeMarkets`). QOR needs a
+ * direct fUSD-pool trade to be priced; other assets use a running fUSD or QOR quote rate.
+ */
+export function computePriceHistory(pools: any[], txResponses: any[]): Partial<Record<AmmAsset, AmmMarketHistory>> {
+  const byDenom = new Map<string, AmmAsset>(Object.entries(AMM_ASSETS).map(([symbol, cfg]) => [cfg.denom, symbol as AmmAsset]));
+  const poolById = new Map<string, { a: AmmAsset; b: AmmAsset }>();
+  for (const pool of pools ?? []) {
+    const a = byDenom.get(pool?.token_a), b = byDenom.get(pool?.token_b);
+    if (pool?.status !== "active" || !a || !b) continue;
+    poolById.set(String(pool.id), { a, b });
+  }
+  const markets = computeMarkets(pools);
+  const history = new Map<AmmAsset, { points: [number, number][]; trades: AmmTrade[] }>();
+  for (const m of markets) if (m.poolId) history.set(m.symbol, { points: [], trades: [] });
+
+  const events = parseSwapEvents(txResponses);
+  const quoteUsd: Partial<Record<AmmAsset, number>> = { fUSD: 1 };
+  for (const e of events) {
+    const pool = poolById.get(e.poolId);
+    if (!pool) continue;
+    const inSym = byDenom.get(e.inDenom), outSym = byDenom.get(e.outDenom);
+    if (!inSym || !outSym) continue;
+    const inAmt = num(e.inRaw, inSym), outAmt = num(e.outRaw, outSym);
+    if (!(inAmt > 0) || !(outAmt > 0)) continue;
+    // Keep the running QOR->fUSD rate fresh from the QOR/fUSD pool.
+    if ([pool.a, pool.b].includes("QOR") && [pool.a, pool.b].includes("fUSD")) {
+      quoteUsd.QOR = inSym === "QOR" ? outAmt / inAmt : inAmt / outAmt;
+    }
+    for (const m of markets) {
+      if (e.poolId !== m.poolId) continue;
+      const h = history.get(m.symbol);
+      const quote = m.symbol === pool.a ? pool.b : pool.a;
+      if (!h) continue;
+      const rateUsd = quoteUsd[quote];
+      const priceUsd = m.symbol === "fUSD" ? 1 : rateUsd === undefined ? NaN : (m.symbol === inSym ? outAmt / inAmt : inAmt / outAmt) * rateUsd;
+      if (!Number.isFinite(priceUsd) || priceUsd <= 0) continue;
+      h.points.push([e.t, priceUsd]);
+      h.trades.unshift({
+        t: e.t, priceUsd,
+        amountUsd: inAmt * (quoteUsd[inSym] ?? (inSym === m.symbol ? priceUsd : 0)),
+        amountIn: `${inAmt} ${inSym}`, amountOut: `${outAmt} ${outSym}`,
+        side: outSym === m.symbol ? "buy" : "sell",
+        txHash: e.txHash,
+      });
+      if (h.trades.length > 25) h.trades.pop();
+    }
+  }
+  return Object.fromEntries(history);
+}
+
 export class AmmSwapClient extends NativeTransactionClient {
+  private async txSearch(action: string): Promise<any[]> {
+    const out: any[] = [];
+    let offset = 0;
+    while (offset < 1000) {
+      const page = await this.rest(`/cosmos/tx/v1beta1/txs?query=${encodeURIComponent(`message.action='/qorechain.amm.v1.${action}'`)}&pagination.limit=100&pagination.offset=${offset}&order_by=ORDER_BY_ASC`);
+      const rows = page?.tx_responses;
+      if (!Array.isArray(rows) || !rows.length) break;
+      out.push(...rows);
+      if (rows.length < 100) break;
+      offset += 100;
+    }
+    return out;
+  }
+
+  async priceHistory(): Promise<Partial<Record<AmmAsset, AmmMarketHistory>>> {
+    const [pools, inTxs, outTxs] = await Promise.all([
+      this.rest("/qorechain/amm/v1/pools?pagination.limit=200"),
+      this.txSearch("MsgSwapExactIn"),
+      this.txSearch("MsgSwapExactOut"),
+    ]);
+    if (!Array.isArray(pools.pools)) throw new Error("Could not read AMM pools.");
+    return computePriceHistory(pools.pools, [...inTxs, ...outTxs]);
+  }
+
   async markets(): Promise<AmmMarket[]> {
     const pools = await this.rest("/qorechain/amm/v1/pools?pagination.limit=200");
     if (!Array.isArray(pools.pools)) throw new Error("Could not read AMM pools.");
