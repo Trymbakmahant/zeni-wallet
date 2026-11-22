@@ -5,13 +5,14 @@ import { UnlockView } from "./views/UnlockView";
 import { PortfolioView } from "./views/PortfolioView";
 import { ActivityView } from "./views/ActivityView";
 import { SettingsView } from "./views/SettingsView";
+import { TradeView } from "./views/TradeView";
 import { AccountSwitcher } from "./components/AccountSwitcher";
 import { StartupScreen } from "./components/StartupScreen";
-import { Home, Clock, Settings, ShieldCheck, Lock, Copy, Check } from "lucide-react";
+import { Home, ArrowLeftRight, Clock, Settings, ShieldCheck, Lock, Copy, Check } from "lucide-react";
 
 const MainLayout: React.FC = () => {
   const { isInitialized, isLocked, pendingApprovals, lock, activeAddress } = useWallet();
-  const [activeTab, setActiveTab] = useState<"home" | "activity" | "settings">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "trade" | "activity" | "settings">("home");
   const [copied, setCopied] = useState(false);
 
   const copyAddress = () => {
@@ -65,12 +66,13 @@ const MainLayout: React.FC = () => {
       {/* Main Content Area */}
       <main key={activeAddress} className="flex-1 overflow-y-auto px-4 py-3 bg-[#000000]">
         {activeTab === "home" && <PortfolioView />}
+        {activeTab === "trade" && <TradeView />}
         {activeTab === "activity" && <ActivityView />}
         {activeTab === "settings" && <SettingsView />}
       </main>
 
-      {/* Bottom Nav: Home | Activity | Settings */}
-      <nav className="grid grid-cols-3 border-t border-[#18181B] bg-[#000000] py-2.5 px-2 select-none shrink-0">
+      {/* Bottom Nav: Home | Trade | Activity | Settings */}
+      <nav className="grid grid-cols-4 border-t border-[#18181B] bg-[#000000] py-2.5 px-2 select-none shrink-0">
         <button
           onClick={() => setActiveTab("home")}
           className={`flex flex-col items-center gap-1 text-[11px] transition-colors cursor-pointer ${
@@ -79,6 +81,16 @@ const MainLayout: React.FC = () => {
         >
           <Home className={`w-4 h-4 ${activeTab === "home" ? "text-[#E06341]" : ""}`} />
           <span>Home</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("trade")}
+          className={`flex flex-col items-center gap-1 text-[11px] transition-colors cursor-pointer ${
+            activeTab === "trade" ? "text-white font-semibold" : "text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <ArrowLeftRight className={`w-4 h-4 ${activeTab === "trade" ? "text-[#E06341]" : ""}`} />
+          <span>Trade</span>
         </button>
 
         <button

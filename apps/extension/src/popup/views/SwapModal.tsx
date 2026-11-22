@@ -4,10 +4,20 @@ import { useWallet } from "../context/WalletContext";
 import { CryptoIcon } from "../components/CryptoIcon";
 import { type AmmQuote, type SwapResult } from "@zeni/core";
 
-export const SwapModal: React.FC = () => {
+interface SwapFormProps {
+  variant?: "modal" | "page";
+  initialIn?: string;
+  initialOut?: string;
+  onDone?: () => void;
+}
+
+export const SwapForm: React.FC<SwapFormProps> = ({ variant = "modal", initialIn = "QOR", initialOut = "fUSD", onDone }) => {
   const { openModal, tokens, prepareSwap, executeSwap } = useWallet();
-  const [tokenIn, setTokenIn] = useState("QOR");
-  const [tokenOut, setTokenOut] = useState("fUSD");
+  const isPage = variant === "page";
+  const done = onDone ?? (() => openModal(null));
+  const cardBg = isPage ? "bg-[#111114]" : "bg-black";
+  const [tokenIn, setTokenIn] = useState(initialIn);
+  const [tokenOut, setTokenOut] = useState(initialOut);
   const [amountIn, setAmountIn] = useState("");
   const [slippage, setSlippage] = useState("0.5");
   const [showSettings, setShowSettings] = useState(false);
@@ -19,7 +29,7 @@ export const SwapModal: React.FC = () => {
   const [isQuoting, setIsQuoting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const activeInToken = tokens.find((t) => t.symbol === tokenIn) || tokens[0];
+  const activeInToken = tokens.find((t) => t.symbol === tokenIn) || tokens[0] || { balance: "0" };
   const activeQuote = reviewedQuote || quote;
   const currentInputs = useRef("");
   currentInputs.current = [tokenIn, tokenOut, amountIn, slippage].join("|");
@@ -79,12 +89,13 @@ export const SwapModal: React.FC = () => {
     finally { setIsQuoting(false); }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex flex-col justify-end">
-      <div className="relative bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto overflow-x-hidden animate-slide-up">
+  const body = (
+      <div className={isPage
+        ? "relative flex flex-col min-h-[440px]"
+        : "relative bg-[#0D0D10] border-t border-[#222226] rounded-t-3xl p-5 w-full max-h-[92%] flex flex-col overflow-y-auto overflow-x-hidden animate-slide-up"}>
         {/* Custom Token Selection Drawer */}
         {selectingTokenFor && (
-          <div className="absolute inset-0 bg-[#0D0D10] z-30 flex flex-col p-5 rounded-t-3xl animate-fade-in">
+          <div className={`absolute inset-0 z-30 flex flex-col animate-fade-in ${isPage ? "bg-black" : "bg-[#0D0D10] p-5 rounded-t-3xl"}`}>
             <div className="flex items-center justify-between pb-3 border-b border-[#222226]">
               <div>
                 <h3 className="font-bold text-base text-white">Select a Token</h3>
@@ -149,6 +160,21 @@ export const SwapModal: React.FC = () => {
         )}
 
         {/* Header */}
+        {isPage ? (
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> QoreChain native AMM
+            </span>
+            <button
+              type="button"
+              disabled={isSubmitting || !!reviewedQuote}
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[#141416] text-[11px] text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <Settings2 className="w-3.5 h-3.5" /> {slippage}%
+            </button>
+          </div>
+        ) : (
         <div className="flex items-center justify-between pb-3 border-b border-[#222226]">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-[#E06341]/15 flex items-center justify-center text-[#E06341]">
@@ -175,6 +201,7 @@ export const SwapModal: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
 
         {/* Slippage Settings Drawer */}
         {showSettings && (
@@ -213,10 +240,10 @@ export const SwapModal: React.FC = () => {
               View on Explorer <ExternalLink className="w-4 h-4" />
             </a>
             <p className="text-[11px] text-zinc-400">Select Testnet in the explorer. This transaction is also saved in Activity.</p>
-            <button type="button" onClick={() => openModal(null)} className="text-sm text-white py-2">Done</button>
+            <button type="button" onClick={done} className="text-sm text-white py-2">Done</button>
           </div>
         ) : (
-          <form onSubmit={handleSwap} className="space-y-3 pt-4 flex-1 flex flex-col min-w-0 max-w-full">
+          <form onSubmit={handleSwap} className={`space-y-3 flex-1 ${isPage ? "pt-2" : "pt-4"} flex flex-col min-w-0 max-w-full`}>
             {(actionError || error) && (
               <div className="w-full max-w-full overflow-hidden p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2.5 shadow-sm">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -227,7 +254,7 @@ export const SwapModal: React.FC = () => {
             )}
 
             {/* Token In */}
-            <div className="p-3.5 rounded-2xl bg-black border border-[#222226]">
+            <div className={`p-3.5 rounded-2xl ${cardBg} border border-[#222226]`}>
               <div className="flex justify-between items-center text-xs text-zinc-400 mb-1">
                 <span>You Pay</span>
                 <span className="text-right break-all">Balance: {activeInToken.balance} <button type="button" disabled={isSubmitting || isQuoting || !!reviewedQuote} onClick={handleMax} className="text-[#E06341] ml-1">MAX</button></span>
@@ -269,10 +296,10 @@ export const SwapModal: React.FC = () => {
             </div>
 
             {/* Token Out */}
-            <div className="p-3.5 rounded-2xl bg-black border border-[#222226]">
+            <div className={`p-3.5 rounded-2xl ${cardBg} border border-[#222226]`}>
               <div className="flex justify-between items-center text-xs text-zinc-400 mb-1">
                 <span>You Receive (Estimated)</span>
-                <span>Slippage: {slippage}%</span>
+                {!isPage && <span>Slippage: {slippage}%</span>}
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-full text-xl font-bold font-mono text-white">{activeQuote?.amountOut || (isQuoting ? "…" : "—")}</div>
@@ -302,11 +329,13 @@ export const SwapModal: React.FC = () => {
               </div>
             )}
 
-            <div className="sticky bottom-0 z-10 bg-[#0D0D10] pt-3 pb-1 mt-auto">
+            <div className={isPage ? "pt-1" : "sticky bottom-0 z-10 bg-[#0D0D10] pt-3 pb-1 mt-auto"}>
               <button
                 type="submit"
                 disabled={isSubmitting || !activeQuote || isQuoting}
-                className="w-full py-3.5 rounded-xl bg-[#E06341] hover:bg-[#EB6841] text-white font-semibold text-sm shadow-xl shadow-[#E06341]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed ${isPage
+                  ? "bg-[#E06341] hover:bg-[#EB6841] text-white disabled:bg-[#18181B] disabled:text-zinc-500"
+                  : "bg-[#E06341] hover:bg-[#EB6841] text-white shadow-xl shadow-[#E06341]/20 disabled:opacity-50"}`}
               >
                 {isSubmitting ? (
                   <span>Signing & confirming swap…</span>
@@ -321,6 +350,11 @@ export const SwapModal: React.FC = () => {
           </form>
         )}
       </div>
-    </div>
+  );
+
+  return isPage ? body : (
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex flex-col justify-end">{body}</div>
   );
 };
+
+export const SwapModal: React.FC = () => <SwapForm />;

@@ -67,7 +67,55 @@ export function swapReceivedAmount(receipt: any, account: string, symbol: AmmAss
   return found ? ethers.formatUnits(amount, AMM_ASSETS[symbol].decimals) : undefined;
 }
 
+export interface AmmMarket {
+  symbol: AmmAsset;
+  priceUsd: number;
+  liquidityUsd: number;
+  poolId: string;
+  quote: AmmAsset;
+}
+
+/** Price each swap asset in fUSD from on-chain reserves, using its most liquid active pool. */
+export function computeMarkets(pools: any[]): AmmMarket[] {
+  const byDenom = new Map(Object.entries(AMM_ASSETS).map(([symbol, cfg]) => [cfg.denom, symbol as AmmAsset]));
+  const amount = (raw: string, symbol: AmmAsset) => Number(ethers.formatUnits(uint(raw), AMM_ASSETS[symbol].decimals));
+  const usable = pools.flatMap((pool) => {
+    const a = byDenom.get(pool?.token_a), b = byDenom.get(pool?.token_b);
+    if (pool?.status !== "active" || !a || !b) return [];
+    const ra = amount(pool.reserve_a, a), rb = amount(pool.reserve_b, b);
+    return ra > 0 && rb > 0 ? [{ id: String(pool.id), a, b, ra, rb }] : [];
+  });
+  const side = (p: typeof usable[number], s: AmmAsset) => p.a === s ? { self: p.ra, other: p.rb, otherSym: p.b } : { self: p.rb, other: p.ra, otherSym: p.a };
+  const qorPool = usable.filter((p) => [p.a, p.b].includes("QOR") && [p.a, p.b].includes("fUSD"))
+    .sort((x, y) => side(y, "fUSD").self - side(x, "fUSD").self)[0];
+  const usd: Partial<Record<AmmAsset, number>> = { fUSD: 1 };
+  if (qorPool) { const s = side(qorPool, "QOR"); usd.QOR = s.other / s.self; }
+  const markets: AmmMarket[] = [];
+  for (const symbol of Object.keys(AMM_ASSETS) as AmmAsset[]) {
+    if (symbol === "fUSD") {
+      markets.push({ symbol, priceUsd: 1, liquidityUsd: qorPool ? side(qorPool, "fUSD").self * 2 : 0, poolId: qorPool?.id ?? "", quote: "QOR" });
+      continue;
+    }
+    let best: AmmMarket | undefined;
+    for (const p of usable) {
+      if (![p.a, p.b].includes(symbol)) continue;
+      const s = side(p, symbol), otherUsd = usd[s.otherSym];
+      if (s.otherSym === symbol || otherUsd === undefined) continue;
+      const liquidityUsd = s.other * otherUsd * 2;
+      if (!best || liquidityUsd > best.liquidityUsd) best = { symbol, priceUsd: (s.other / s.self) * otherUsd, liquidityUsd, poolId: p.id, quote: s.otherSym };
+    }
+    if (best) markets.push(best);
+  }
+  return markets;
+}
+
 export class AmmSwapClient extends NativeTransactionClient {
+  async markets(): Promise<AmmMarket[]> {
+    const pools = await this.rest("/qorechain/amm/v1/pools?pagination.limit=200");
+    if (!Array.isArray(pools.pools)) throw new Error("Could not read AMM pools.");
+    return computeMarkets(pools.pools);
+  }
+
   async balances(address: string): Promise<Record<AmmAsset, string>> {
     const amounts: Record<string, bigint> = {};
     let next = "";

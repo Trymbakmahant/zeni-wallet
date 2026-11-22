@@ -1025,6 +1025,10 @@ class BackgroundController {
         return (historyData.activityHistory || []).filter((item: any) => this.activityBelongsTo(item, active));
       }
 
+      case "GET_MARKETS": {
+        return await new AmmSwapClient(this.client.provider).markets();
+      }
+
       default:
         throw new Error(`Unknown message type: ${message.type}`);
     }
