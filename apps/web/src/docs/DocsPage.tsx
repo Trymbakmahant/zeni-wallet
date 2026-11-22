@@ -99,6 +99,56 @@ export function DocsPage() {
           <p>Public reads include eth_call, eth_estimateGas, balances, code, block queries, transaction lookup, and receipts. Log queries require an address and an explicit range of at most 2,000 blocks. wallet_switchEthereumChain accepts Diana (0x2648) only. Private keys and raw signed transactions are never returned to the website.</p>
           <p>Disable duplicate submits while approval or confirmation is pending. On an uncertain broadcast, keep the transaction hash and check Activity/receipts before retrying. A QOR window budget does not limit token allowances or other contract effects; users should inspect approval details before signing.</p>
         </Section>
+        <Section id="agent-sessions" title="The agent holds a key. The chain holds the leash." eyebrow="AGENT SESSIONS / X-ABSTRACTACCOUNT">
+          <p>Agent Sessions delegate a disposable, scoped key to a bot. The mandate is registered in QoreChain’s <code>x/abstractaccount</code> module — per-transaction caps, daily budgets, denom and contract allowlists, expiry, replay nonces, and instant revocation are enforced by <strong>consensus</strong>, not by this app. A stolen agent key can only do what the chain permits, and a quantum-forged one is bounded the same way.</p>
+          <Note title="Everything below is live on Diana">Nothing is simulated: the link, the executions, the rejections, and the revocation are real testnet transactions you can inspect on the explorer.</Note>
+          <h3>1 · Link a scoped key</h3>
+          <p>In the extension open <strong>Apps → Agent Sessions → New session</strong>: label, QOR per-transaction and daily caps, expiry, and an optional <strong>contract allowlist</strong> (the key’s <code>evm</code> permission is then locked to that contract via <code>allowed_evm_calls</code>). One owner-signed transaction registers the spending rule and the key together. The agent key JSON is shown once — save it as <code>agent.json</code>.</p>
+          <CodeBlock code={`# Verify the mandate landed on-chain (your qor1… address):
+curl -s "https://api-testnet.qore.host/qorechain/abstractaccount/v1/accounts/<QOR1>/authenticators"
+curl -s "https://api-testnet.qore.host/qorechain/abstractaccount/v1/accounts/<QOR1>/spending_rules"`} label="Verify the mandate on-chain" />
+          <h3>2 · Run the agent — consensus rejects the overspend</h3>
+          <p>The agent script holds only the scoped key. It signs domain-separated authorizations; a relayer account (the owner’s phrase is fine — it only pays fees) wraps them in the hybrid-signed envelope.</p>
+          <CodeBlock code={`node packages/core/scripts/session-agent.mjs \\
+  --key agent.json \\
+  --relayer "your testnet recovery phrase" \\
+  --amount 10000`} label="Native-lane execution + rejection" />
+          <p>Expected: the in-mandate spend executes (<code>tx &lt;hash&gt; — EXECUTED</code>); the spend 1 uqor over the cap is refused by the chain (<code>CHAIN REJECTED</code> — abstractaccount spending-limit error, not a client check).</p>
+          <h3>3 · Kill it instantly</h3>
+          <p>Apps → Agent Sessions → <strong>Revoke on-chain</strong>, then rerun the same command — the in-mandate spend is now dead before execution. Expiry works the same way without any action.</p>
+          <h3>4 · Attested cross-VM payments</h3>
+          <p><code>ZeniAttestedSend.sol</code> forwards QOR and, in the <em>same transaction</em>, records a receipt on the allowlisted <code>qday-receipts</code> CosmWasm contract through the <code>0x…0901</code> bridge. A revert on either side undoes both — no payment without its native proof. Deploy it, then create a session whose contract allowlist is set to it:</p>
+          <CodeBlock code={`cd packages/contracts && forge build && cd ../..
+node packages/core/scripts/deploy-attested.mjs --owner "your testnet recovery phrase"
+# → DEPLOYED ZeniAttestedSend: 0x…
+
+# Bridge calls need an open EVM window listing the targets; the owner opens it:
+node packages/core/scripts/session-agent.mjs --key agent.json \\
+  --relayer "your testnet recovery phrase" --window --contract 0xYOUR_CONTRACT`} label="Deploy + open the EVM window" />
+          <CodeBlock code={`node packages/core/scripts/session-agent.mjs --key agent.json \\
+  --relayer "your testnet recovery phrase" \\
+  --lane evm --contract 0xYOUR_CONTRACT --to 0xRECIPIENT --amount 10000`} label="Attested pay: QOR + native receipt in one tx" />
+          <h3>5 · Let it run autonomously</h3>
+          <p><code>--loop</code> turns the script into an agent: it polls a tasks file and pays each new entry once — refusing over-cap tasks before they are even broadcast, and halting the moment you revoke.</p>
+          <CodeBlock code={`echo '[]' > agent-tasks.json
+node packages/core/scripts/session-agent.mjs --key agent.json \\
+  --relayer "your testnet recovery phrase" \\
+  --lane evm --contract 0xYOUR_CONTRACT --loop --tasks ./agent-tasks.json
+
+# Drop work into the array — it executes without you:
+# [{"to":"0x…","amountUqor":10000,"note":"invoice-1"}]`} label="Autonomous mode" />
+          <div className="docs-table-wrap"><table><caption>Useful flags</caption><thead><tr><th>Flag</th><th>Effect</th></tr></thead><tbody>
+            {[['--lane evm --contract 0x…', 'Attested pay through ZeniAttestedSend instead of a native send'],
+             ['--loop --tasks <file>', 'Watch a JSON array and pay each new task once'],
+             ['--interval <sec>', 'Poll rate for the loop (default 10)'],
+             ['--window', 'Owner-only: open the EVM window for [contract, 0x0901]'],
+             ['--gas <limit>', 'Gas for the EVM-lane call (default 700000)'],
+             ['--amount <uqor>', 'In-mandate amount for single-shot runs (default 10000)']].map(([name, text]) => <tr key={name}><td><code>{name}</code></td><td>{text}</td></tr>)}
+          </tbody></table></div>
+          <details className="docs-faq"><summary>Under-cap EVM pay rejected for a spending-limit reason<ChevronDown size={16} /></summary><p>The EVM lane measures value in wei (aqor). Recreate the session with larger limits or use a smaller amount.</p></details>
+          <details className="docs-faq"><summary>Attested pay refused — allowlist or window error<ChevronDown size={16} /></summary><p>Reopen the window (step 4) listing the contract and <code>0x…0901</code>, and confirm the session’s allowlist entry is the deployed contract.</p></details>
+          <details className="docs-faq"><summary>Out of gas inside the EVM call<ChevronDown size={16} /></summary><p>The cross-VM call plus CosmWasm execution exceeded the limit — rerun with <code>--gas 1500000</code>.</p></details>
+        </Section>
         <Section id="javascript" title="No framework required." eyebrow="03 / JAVASCRIPT & TYPESCRIPT"><p><code>ZeniProvider</code> exposes an EIP-1193-style request interface. Listen for <code>display_uri</code>, render the URI as a local QR code, and wait for <code>connect()</code> to resolve after mobile approval.</p><CodeBlock code={jsExample} label="connect.ts" /><Note title="Keep pairing links private">A pairing URI contains the encryption key. Render QR images locally and keep the URI out of logs, analytics, and remote QR services.</Note><p>Use <code>on(event, listener)</code> and <code>removeListener(event, listener)</code> for <code>display_uri</code>, <code>connect</code>, <code>accountsChanged</code>, and <code>disconnect</code>.</p></Section>
         <Section id="requests" title="Request. Review. Approve." eyebrow="04 / SIGNING"><p>Connecting reveals the approved public address. Signing is a separate action: the user sees the request and approves it in Zeni. Private keys stay in the selected wallet.</p><p>For a transfer, your app sends one <code>zeni_sendQor</code> request. Zeni handles approval, local signing, and broadcasting to QoreChain; your app receives the native transaction ID. You do not need to export a signed transaction or broadcast it a second time.</p><Tabs defaultValue="message" className="docs-tabs"><TabsList aria-label="Signing request examples"><TabsTab value="message">Sign a message</TabsTab><TabsTab value="transfer">Send QOR</TabsTab></TabsList><TabsPanel value="message"><CodeBlock code={signExample} label="Message signing · React" /><p>Messages use standard EIP-191 ECDSA signatures and accept readable UTF-8 text, hex encoded, up to 4,096 bytes. These are not post-quantum message signatures.</p></TabsPanel><TabsPanel value="transfer"><CodeBlock code={transferExample} label="QOR transfer · TypeScript" /><p>Recipients can use qor1… or 0x… addresses. Zeni reviews the recipient, amount, and maximum network/setup fees. Each native bank transfer carries both classical and PQC signatures. Amounts support up to six decimals; the request value uses hexadecimal 18-decimal units and must be a multiple of 10¹². The result is a native transaction ID (64 hex characters, without 0x), for the native explorer and Cosmos receipt API. First-time key registration is a separate classical-signed bootstrap with proof of possession.</p></TabsPanel></Tabs><p>Show a pending state until the request resolves and handle rejection or expiry without resubmitting. If a transfer times out, ask the user to check wallet Activity and the explorer before retrying: a missing response does not prove the transfer failed.</p><Note title="Building a sign-in flow?">Issue a fresh, single-use challenge from your server with your domain, purpose, nonce, and expiry. Verify the signature and consume the nonce. Signing “hello” is a demonstration, not a login system.</Note></Section>
         <Section id="mobile" title="The phone stays in control." eyebrow="05 / MOBILE WALLET"><ol className="docs-steps"><li><span>01</span><div><h3>Open Zeni on iOS</h3><p>Build the iOS app from the repository in Xcode. Create and back up a new testnet wallet, import a recovery phrase, or unlock your existing wallet.</p></div></li><li><span>02</span><div><h3>Scan, then connect</h3><p>In the <a href="#playground">playground above</a>, choose Mobile wallet, then tap the <strong>QR scanner in the top-right corner</strong> of Zeni. Scan the QR and check the website address before approving.</p></div></li><li><span>03</span><div><h3>Review the request</h3><p>Tap the app card below the wallet header to see connected apps and their requests. A new signature or transfer request opens a review prompt while Zeni is active. Check the app name, website address, recipient, amount, and fees before approving. On the same phone, use <strong>Open Zeni to approve requests</strong> to return to the session.</p></div></li></ol><p>Connection links use <code>zeni://connect#…</code>. The <code>zeni://request</code> link reopens an existing session. A physical phone requires a reachable HTTPS relay; localhost refers to the phone itself. The simulator can use the Mac’s localhost with a Debug build and a pasted link.</p><CodeBlock code="node apps/ios/Scripts/build-wallet-engine.mjs" label="Rebuild the bundled signing engine" /></Section>

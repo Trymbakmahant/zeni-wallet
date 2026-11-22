@@ -11,6 +11,7 @@ export const sections = [
   { id: 'browser', title: 'Browser extension', group: 'Build with Zeni', description: 'useBrowserWallet, EIP-6963, window.zeni, extension discovery, approved websites, no relay' },
   { id: 'javascript', title: 'JavaScript / TypeScript', group: 'Build with Zeni', description: 'ZeniProvider, connect, display_uri, request, disconnect, provider events' },
   { id: 'contract-transactions', title: 'Contract transactions', group: 'Build with Zeni', description: 'extension 0.1.4, eth_sendTransaction, contract deploy, swap, token approve, vault demo, EVM, gas, receipts' },
+  { id: 'agent-sessions', title: 'Agent sessions', group: 'Build with Zeni', description: 'agent keys, abstractaccount, consensus spending limits, contract allowlist, revoke, cross-VM attested pay, autonomous agent, relayer' },
   { id: 'requests', title: 'Signing & transactions', group: 'Build with Zeni', description: 'personal_sign, zeni_sendQor, QOR, EIP-191, message, signature, broadcast, transaction ID, fees' },
   { id: 'mobile', title: 'Mobile wallet', group: 'Build with Zeni', description: 'iOS, Xcode, QR scanner, deep link, Face ID, device, phone' },
   { id: 'relay', title: 'Host a relay', group: 'Reference', description: 'Docker, Caddy, HTTPS, domain, ALLOWED_ORIGINS, server, deployment' },
