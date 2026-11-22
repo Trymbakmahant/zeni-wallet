@@ -190,7 +190,7 @@ pnpm zip:ext              # Package the extension release
 
 The ZIP is written to `artifacts/extension/` and copied to `apps/web/public/downloads/`. Browser checks are available through `test:browser`, `test:browser:extension`, and `test:browser:vault` in the extension package; see their scripts for local Chrome/Anvil prerequisites. Mocked and local-chain tests do not replace a funded Diana testnet check.
 
-Read the [PQC verification guide](docs/PQC-VERIFICATION.md), [security review](docs/SECURITY_REVIEW.md), and [Chrome Web Store submission guide](docs/CHROME_WEB_STORE.md).
+Read the [PQC verification guide](docs/PQC-VERIFICATION.md), [security review](docs/SECURITY_REVIEW.md), [agent sessions live test guide](docs/AGENT_SESSIONS.md), and [Chrome Web Store submission guide](docs/CHROME_WEB_STORE.md).
 
 ## Repository layout
 
