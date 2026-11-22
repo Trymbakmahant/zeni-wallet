@@ -3,13 +3,10 @@ import {
   ArrowLeft,
   ArrowUpRight,
   BadgeCheck,
-  BookOpen,
   Bot,
   Check,
   CircleCheck,
   Copy,
-  Droplets,
-  FlaskConical,
   Globe,
   Hourglass,
   Link2,
@@ -22,8 +19,6 @@ import {
 } from "lucide-react";
 import {
   ZENI_TOOLS,
-  ZENI_WEB_APPS,
-  NETWORK_LINKS,
   ZENI_ROADMAP,
   type ToolId,
 } from "../data/appRegistry";
@@ -36,11 +31,6 @@ const sendMessage = (type: string, payload: Record<string, any> = {}): Promise<a
       else reject(new Error(response?.error || "Background worker error"));
     });
   });
-
-const openUrl = (url: string) => {
-  if (chrome?.tabs?.create) chrome.tabs.create({ url });
-  else window.open(url, "_blank", "noopener,noreferrer");
-};
 
 const SubHeader: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
   <div className="flex items-center gap-2 pt-1 pb-1">
@@ -430,15 +420,9 @@ export const AppsView: React.FC = () => {
   if (tool === "stamp") return <StampTool onBack={() => setTool(null)} />;
   if (tool === "connections") return <ConnectionsTool onBack={() => setTool(null)} />;
 
-  const [vaultLab, docs] = ZENI_WEB_APPS;
-  const [faucet, explorer] = NETWORK_LINKS;
   const yourApps: LauncherItem[] = [
     { id: "stamp", name: "Stamp", accent: ZENI_TOOLS[0].accent, Icon: Stamp, onClick: () => setTool("stamp") },
     { id: "connections", name: "Connections", accent: ZENI_TOOLS[1].accent, Icon: Link2, onClick: () => setTool("connections") },
-    { id: vaultLab.id, name: "Vault Lab", accent: vaultLab.accent, Icon: FlaskConical, onClick: () => openUrl(vaultLab.url), external: true },
-    { id: docs.id, name: "Docs", accent: docs.accent, Icon: BookOpen, onClick: () => openUrl(docs.url), external: true },
-    { id: faucet.id, name: "Faucet", accent: faucet.accent, Icon: Droplets, onClick: () => openUrl(faucet.url), external: true },
-    { id: explorer.id, name: "Explorer", accent: explorer.accent, Icon: Globe, onClick: () => openUrl(explorer.url), external: true },
   ];
   const comingSoon: LauncherItem[] = ZENI_ROADMAP.map((r) => ({
     id: r.id,
