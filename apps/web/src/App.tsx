@@ -128,7 +128,6 @@ export const App: React.FC = () => {
           <motion.h1 {...intro(0.2)} className="text-[44px] sm:text-6xl md:text-7xl font-semibold tracking-[-0.04em] leading-[0.98] max-w-4xl"><span className="text-[#d65329]">Post-quantum keys.</span><br />One familiar wallet.</motion.h1>
           <motion.p {...intro(0.32)} className="mt-6 text-lg sm:text-xl text-framer-dark1/75 max-w-2xl leading-relaxed">Send native QOR with <strong>classical and post-quantum signatures.</strong> Approve contract calls with built-in PQ authorization setup on QoreChain Diana.</motion.p>
           <motion.div {...intro(0.42)} className="mt-8 flex flex-wrap justify-center gap-4"><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer" className="framer-btn-orange text-white px-7 py-3.5 font-semibold inline-flex gap-2.5 items-center"><Chrome size={20} />Add to Chrome</a><a href="/docs#playground" className="framer-btn-dark text-white px-7 py-3.5 font-semibold inline-flex gap-2 items-center">Try Connect Demo <ArrowUpRight size={17} className="text-white/60" /></a></motion.div>
-          <a href="/docs#ai-prompt" className="mt-4 text-sm font-medium underline underline-offset-4 hover:text-framer-orange">Building a dApp? Get an AI integration prompt</a>
           <div className="mt-6 flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-[12px] sm:text-xs text-framer-dark1/60 font-medium"><span className="flex items-center gap-1.5"><Chrome size={15} className="text-framer-orange" />Chrome Extension</span><span aria-hidden="true">•</span><span>secp256k1 + ML-DSA-87</span><span aria-hidden="true">•</span><span className="font-mono font-semibold text-framer-dark1">Diana testnet · 9800</span></div>
           <ParallaxShowcase badges={badges.map(({ icon: Icon, ...badge }, i) => <FloatingBadge index={i} href={badge.href} key={badge.title} className={`dashed-badge feature-badge ${["feature-badge-0", "feature-badge-1", "feature-badge-2", "feature-badge-3", "feature-badge-4", "feature-badge-5"][i]}`}><div className={`w-9 h-9 rounded-xl shrink-0 grid place-items-center ${badge.color}`}><Icon size={19} /></div><div className="text-left"><div className="text-[12px] lg:text-[12px] font-mono uppercase tracking-wider text-framer-dark1/50">{badge.eyebrow}</div><div className="text-xs lg:text-sm font-bold mt-0.5">{badge.title}</div></div></FloatingBadge>)}><PhonePreview /></ParallaxShowcase>
           <p className="mt-7 max-w-full text-[12px] text-framer-dark1/50 font-mono">Wallet preview · sample balances · QoreChain testnet</p>
@@ -138,21 +137,6 @@ export const App: React.FC = () => {
       <ScrollScene name="wallet-preview"><ExtensionShowcase /></ScrollScene>
       <SecurityJourney />
       <ScrollScene name="connect"><ConnectShowcase /></ScrollScene>
-      <section aria-labelledby="ai-integration-title" className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
-        <div className="grid gap-6 border-y border-framer-dark1/15 py-8 md:grid-cols-2 md:items-center">
-          <div>
-            <p className="mb-3 text-xs font-mono uppercase tracking-wider text-framer-dark1/65">For developers / AI integration guides</p>
-            <h2 id="ai-integration-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">Try the button. Then build it.</h2>
-          </div>
-          <div>
-            <p className="text-framer-dark1/75 leading-relaxed">Choose RainbowKit, wagmi, the browser API, or mobile QR. Test the connection, copy the matching code, or give your coding assistant a prompt tailored to your app.</p>
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold">
-              <a href="/docs#playground" className="inline-flex items-center gap-1 hover:underline">Explore the four integrations <ArrowUpRight size={15} /></a>
-              <a href="/docs#ai-prompt" className="inline-flex items-center gap-1 hover:underline">Customize an AI prompt <ArrowUpRight size={15} /></a>
-            </div>
-          </div>
-        </div>
-      </section>
       <ScrollScene name="install"><InstallSection /></ScrollScene>
     </main>
     <ScrollScene name="footer" variant="footer"><footer className="border-t border-framer-dark1/10 py-10 sm:py-12 px-6 text-xs text-framer-dark1/60"><div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-6"><div className="flex flex-wrap justify-center items-center gap-2"><Logo small /><span className="font-bold text-framer-dark1 text-sm">ZENI WALLET</span><span className="text-[12px] font-mono ml-1">© {new Date().getFullYear()} Zeni · Open source, MIT licensed.</span></div><nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[12px] font-mono"><a href="#hero">Home</a><a href={CHROME_WEB_STORE} target="_blank" rel="noreferrer">Chrome Web Store</a><a href="/docs">Documentation</a><a href="/privacy.html">Privacy policy</a><a href={CONNECT_DEMO} target="_blank" rel="noreferrer">Connect Demo</a><a href="#extension-preview-section">Extension UI</a><a href="#why-zeni">Why Zeni?</a><a href="#pqc">NIST ML-DSA-87</a></nav></div></footer></ScrollScene>
