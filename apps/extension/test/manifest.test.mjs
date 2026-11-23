@@ -30,5 +30,6 @@ test('store beta requests only storage and the two necessary RPC hosts', () => {
 test('manifest and extension package versions agree', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   assert.equal(manifest.version, pkg.version);
-  assert.equal(manifest.name, 'Zeni Wallet — QoreChain Testnet');
+  assert.equal(manifest.name, 'Zeni — Self-Custody Wallet for QoreChain');
+  assert.ok(manifest.description.length <= 132);
 });

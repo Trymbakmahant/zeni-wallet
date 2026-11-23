@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Zeni Wallet \u2014 QoreChain Testnet",
+  "name": "Zeni \u2014 Self-Custody Wallet for QoreChain",
   "version": "0.1.5",
-  "description": "Self-custody wallet for QoreChain Diana Testnet with hybrid-signed QOR transfers, native swaps and app connections.",
+  "description": "Manage testnet assets, swap tokens, and connect to apps on QoreChain Diana Testnet. Your wallet keys stay on your device.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
