@@ -54,7 +54,7 @@ export function WalletComparison() {
           <div className="why-card-copy"><span className="why-mini-label">NATIVE QORECHAIN TRANSFERS</span><h3>Two signatures.<br />Working together.</h3><p>Send native QOR with both classical and post-quantum signatures. Built into your wallet, ready for your approval.</p></div>
         </article>
         <article className="why-card why-keys-card">
-          <div className="why-card-copy"><h3>Your keys.<br />Right where they belong.</h3><p>Encrypted on your device. You hold the recovery phrase and approve every request.</p></div>
+          <div className="why-card-copy"><h3>Your agent.<br />Your limits.</h3><p>Give an agent its own key. For example: 1 QOR per transfer, 5 QOR per day, for 24 hours. QoreChain enforces the limits. Revoke the session early in Apps.</p></div>
           <div className="why-lock-art" aria-hidden="true"><div className="why-lock-shackle" /><div className="why-lock-body"><Fingerprint size={65} strokeWidth={1.3} /></div><span className="why-lock-key"><KeyRound size={47} strokeWidth={1.4} /></span></div>
         </article>
         <article className="why-card why-approval-card">
