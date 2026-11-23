@@ -64,14 +64,29 @@ try {
   await call('Runtime.enable');
   await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1200, deviceScaleFactor: 1, mobile: false });
   await call('Page.navigate', { url });
-  await until(`!!document.querySelector('.pg-mobile')`);
+  await until(`!!document.querySelector('.pg-rainbow button')`);
   await delay(500);
   await evaluate(`document.querySelector('.connect-playground').scrollIntoView({behavior: 'instant', block: 'center'})`);
   await screenshot('docs-playground');
-  assert.equal(await evaluate(`document.querySelector('.pg-submit').disabled`), true);
+  assert.equal(await evaluate(`!!document.querySelector('.pg-submit')`), false);
   assert.equal(await evaluate(`!!document.querySelector('#playground iframe')`), false);
-  await click('.pg-extension');
-  await until(`document.querySelector('.pg-error')?.textContent.includes('not detected')`);
+  for (const [index, title, marker] of [[1, 'RainbowKit', 'connectorsForWallets'], [2, 'wagmi', 'useConnect'], [3, 'Browser API', 'eth_requestAccounts'], [4, 'Mobile QR', 'ZeniConnectButton']]) {
+    await click(`.pg-guides button:nth-child(${index})`);
+    const buttons = ['.pg-rainbow button', '.pg-wagmi button', '.pg-extension', '.pg-mobile'];
+    await until(`!!document.querySelector(${JSON.stringify(buttons[index - 1])})`);
+    for (const other of buttons.filter((_, i) => i !== index - 1)) assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(other)})`), false);
+    await until(`document.querySelector('.pg-code-heading').textContent.includes(${JSON.stringify(title)}) &&
+      document.querySelector('.pg-guide-content').textContent.includes(${JSON.stringify(marker)}) &&
+      !!document.querySelector('button[aria-label="Copy ${title} AI prompt code"]')`);
+  }
+  await click('.pg-guides button:nth-child(1)');
+  await click('.pg-rainbow button');
+  await until(`document.querySelector('[role="dialog"]')?.textContent.includes('QoreX')`);
+  await click('[role="dialog"] button[aria-label="Close"]');
+  await click('.pg-guides button:nth-child(3)');
+  assert.equal(await evaluate(`document.querySelector('.pg-extension').disabled`), true);
+  await until(`document.querySelector('.pg-controls').textContent.includes('extension not detected')`);
+  await click('.pg-guides button:nth-child(4)');
   await click('.pg-mobile');
   await until(`document.querySelector('.pg-pairing img')?.src.startsWith('data:image/png')`);
   await click('.pg-cancel');
@@ -122,6 +137,7 @@ try {
   assert.ok(await evaluate(`document.querySelector('.pg-result-error').textContent.includes('Check wallet Activity')`));
   await click('.pg-disconnect');
   await peer.disconnect().catch(() => {}); peer = null;
+  await click('.pg-guides button:nth-child(3)');
   await until(`!!document.querySelector('.pg-extension')`);
 
   // Prompt customization and exact clipboard contents, using a controlled clipboard in headless Chrome.

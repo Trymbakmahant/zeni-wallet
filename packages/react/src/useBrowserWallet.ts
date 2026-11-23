@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAddress } from 'ethers';
+import { connectExtension, findZeni } from './connectExtension.js';
 
 type Listener = (...values: unknown[]) => void;
 export interface BrowserProvider {
@@ -33,7 +34,8 @@ export function useBrowserWallet() {
   const detect = useCallback(() => {
     const injected = (window as Window & { zeni?: unknown }).zeni;
     if (zeniProvider(injected)) { provider.current = injected; setDetected(true); }
-    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    const announced = findZeni();
+    if (announced) { provider.current = announced; setDetected(true); }
     return provider.current;
   }, []);
   useEffect(() => {
@@ -68,13 +70,9 @@ export function useBrowserWallet() {
     const version = ++operation.current;
     pending.current = true; setConnecting(true); setError(null);
     try {
-      const accounts = await wallet.request({ method: 'eth_requestAccounts' });
+      const { account } = await connectExtension(wallet);
       if (version !== operation.current) return;
-      const address = firstAccount(accounts);
-      if (!address) throw new Error('No account was approved. Unlock Zeni and try again.');
-      if (!isDiana(await wallet.request({ method: 'eth_chainId' }))) throw new Error('Use QoreChain Diana testnet (chain 9800) in Zeni.');
-      if (version !== operation.current) return;
-      setAccount(address); setActive(wallet);
+      setAccount(getAddress(account)); setActive(wallet);
     } catch (failure) {
       if (version === operation.current) setError(failure instanceof Error ? failure.message : 'Could not connect to the Zeni extension.');
     } finally {
