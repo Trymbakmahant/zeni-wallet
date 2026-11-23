@@ -12,7 +12,8 @@ import { StartupScreen } from "./components/StartupScreen";
 import { Home, ArrowLeftRight, LayoutGrid, Clock, Settings, ShieldCheck, Lock, Copy, Check } from "lucide-react";
 
 const MainLayout: React.FC = () => {
-  const { isInitialized, isLocked, pendingApprovals, lock, activeAddress } = useWallet();
+  const { isInitialized, isLocked, pendingApprovals, pendingRelease, lock, activeAddress } = useWallet();
+  const [dismissedRelease, setDismissedRelease] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"home" | "trade" | "apps" | "activity" | "settings">("home");
   const [copied, setCopied] = useState(false);
 
@@ -25,6 +26,22 @@ const MainLayout: React.FC = () => {
 
   if (!isInitialized) {
     return <OnboardingView />;
+  }
+
+  if (pendingRelease && pendingRelease !== dismissedRelease && !pendingApprovals.length && new URLSearchParams(location.search).get("approval") !== "1") {
+    return <main className="flex h-full flex-col justify-center gap-5 bg-black px-6 text-white">
+      <span className="text-xs font-mono uppercase tracking-wider text-[#E06341]">Zeni Wallet updated</span>
+      <h1 className="text-3xl font-semibold">What's new in {pendingRelease}</h1>
+      {pendingRelease === "0.1.5" && <ul className="list-disc space-y-3 pl-5 text-sm text-zinc-300">
+        <li>Open Trade to see QOR markets and price history from on-chain swaps.</li>
+        <li>Open Apps to manage connected sites and create or revoke agent sessions.</li>
+      </ul>}
+      <p className="text-sm text-zinc-400">Your existing wallet is still on this device. No setup or recovery phrase is needed.</p>
+      <button className="rounded-xl bg-white px-4 py-3 font-semibold text-black" onClick={() => {
+        setDismissedRelease(pendingRelease);
+        void chrome.storage.local.set({ lastSeenRelease: pendingRelease }).catch(() => {});
+      }}>{isLocked ? "Continue to unlock" : "Continue to wallet"}</button>
+    </main>;
   }
 
   if (isLocked) {

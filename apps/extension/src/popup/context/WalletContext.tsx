@@ -33,6 +33,7 @@ interface WalletContextType {
   startupError: string | null;
   retryStartup: () => void;
   isInitialized: boolean;
+  pendingRelease: string | null;
   isLocked: boolean;
   activeAddress: string | null;
   cosmosAddress: string | null;
@@ -73,6 +74,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupAttempt, setStartupAttempt] = useState(0);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [pendingRelease, setPendingRelease] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState<boolean>(true);
   const [activeAddress, setActiveAddress] = useState<string | null>(null);
   const [cosmosAddress, setCosmosAddress] = useState<string | null>(null);
@@ -123,6 +125,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setAccounts(status.accounts || []);
     setActiveAccountIndex(status.activeAccountIndex ?? 0);
     setIsInitialized(status.isInitialized);
+    setPendingRelease(status.pendingRelease ?? null);
     setIsLocked(!status.isUnlocked);
     setActiveAddress(status.activeAddress);
     setCosmosAddress(status.cosmosAddress);
@@ -340,6 +343,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         startupError,
         retryStartup,
         isInitialized,
+        pendingRelease,
         isLocked,
         activeAddress,
         cosmosAddress,

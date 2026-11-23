@@ -32,6 +32,7 @@ function fixture() {
   const chrome = {
     storage: { local, session: { remove() {} } },
     runtime: { getContexts: async () => Array.from(windows.values()).map(w => ({ windowId: w.id })), id: 'wallet-id', getURL: (path) => `chrome-extension://wallet-id/${path}`,
+      getManifest: () => ({version: '0.1.5'}),
       onMessage: { addListener: (cb) => { events.message = cb; } },
       onConnect: { addListener: (cb) => { events.connect = cb; } },
     },
@@ -132,6 +133,26 @@ function fixture() {
     create: () => message('CREATE_VAULT', { mnemonic: 'valid mnemonic', password: 'strong password' }),
   };
 }
+
+test('legacy and updated vaults get release notes without modifying wallet data; fresh installs do not', async () => {
+  const f = fixture();
+  const status = async () => (await f.message('GET_SESSION_STATUS')).data;
+  assert.equal((await status()).pendingRelease, null);
+  await f.create();
+  assert.equal((await status()).pendingRelease, null);
+  await f.message('LOCK_VAULT');
+  for (const previous of [undefined, '0.1.4']) {
+    if (previous) f.stored.lastSeenRelease = previous;
+    else delete f.stored.lastSeenRelease;
+    const before = structuredClone(f.stored);
+    const data = await status();
+    assert.equal(data.isInitialized, true);
+    assert.equal(data.isUnlocked, false);
+    assert.equal(data.pendingRelease, '0.1.5');
+    assert.deepEqual(f.stored, before);
+  }
+  assert.equal((await f.message('UNLOCK_VAULT', {password: 'strong password'})).success, true);
+});
 
 test('content scripts cannot invoke privileged wallet messages', async () => {
   const f = fixture();

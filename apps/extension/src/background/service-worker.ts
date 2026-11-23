@@ -163,6 +163,7 @@ class BackgroundController {
     if (generation !== this.vaultGeneration) throw new Error("Wallet state changed. Try again.");
     await chrome.storage.local.set({
       encryptedVault: envelope,
+      lastSeenRelease: chrome.runtime.getManifest().version,
       activeAccountIndex: 0,
       connectedOrigins: [],
       activeAddress: keys.classicalAddress,
@@ -609,13 +610,16 @@ class BackgroundController {
       case "GET_SESSION_STATUS": {
         // Route the popup from local vault state without waiting for network balances.
         const stored = await chrome.storage.local.get([
-          "encryptedVault", "activeAddress", "cosmosAddress", "pqcPublicKeyHash",
+          "encryptedVault", "activeAddress", "cosmosAddress", "pqcPublicKeyHash", "lastSeenRelease",
         ]);
         const active = this.getActiveAccount();
         return {
           accounts: this.publicAccounts(),
           activeAccountIndex: this.unlockedVault?.activeAccountIndex ?? 0,
           isInitialized: !!stored.encryptedVault,
+          // Pre-0.1.5 vaults have no marker; an empty profile is never an upgrade.
+          pendingRelease: stored.encryptedVault && stored.lastSeenRelease !== chrome.runtime.getManifest().version
+            ? chrome.runtime.getManifest().version : null,
           isUnlocked: this.isUnlocked(),
           activeAddress: active?.classicalAddress || stored.activeAddress || null,
           cosmosAddress: active?.cosmosAddress || stored.cosmosAddress || null,
