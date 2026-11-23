@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import * as ethers from 'ethers';
-import { validateDappRequest, mergeAccountActivity, EVM_READ_METHODS, validateEvmRead, MAX_DAPP_REQUEST_BYTES } from '../../../packages/core/dist/index.js';
+import { newVaultPasswordError, validateDappRequest, mergeAccountActivity, EVM_READ_METHODS, validateEvmRead, MAX_DAPP_REQUEST_BYTES } from '../../../packages/core/dist/index.js';
 
 const source = readFileSync(new URL('../src/background/service-worker.ts', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
@@ -32,7 +32,7 @@ function fixture() {
   const chrome = {
     storage: { local, session: { remove() {} } },
     runtime: { getContexts: async () => Array.from(windows.values()).map(w => ({ windowId: w.id })), id: 'wallet-id', getURL: (path) => `chrome-extension://wallet-id/${path}`,
-      getManifest: () => ({version: '0.1.5'}),
+      getManifest: () => ({version: '0.1.6'}),
       onMessage: { addListener: (cb) => { events.message = cb; } },
       onConnect: { addListener: (cb) => { events.connect = cb; } },
     },
@@ -67,7 +67,7 @@ function fixture() {
     },
     repairPqcPublicKeyHash: (value) => value,
     AmmSwapClient: class { async balances() { return { QOR: "0", fUSD: "0", fETH: "0", fBTC: "0" }; } },
-    validateDappRequest, mergeAccountActivity, EVM_READ_METHODS, validateEvmRead, MAX_DAPP_REQUEST_BYTES,
+    newVaultPasswordError, validateDappRequest, mergeAccountActivity, EVM_READ_METHODS, validateEvmRead, MAX_DAPP_REQUEST_BYTES,
     AccountActivityClient: class {
       async page() {
         historyCalls++;
@@ -141,14 +141,14 @@ test('legacy and updated vaults get release notes without modifying wallet data;
   await f.create();
   assert.equal((await status()).pendingRelease, null);
   await f.message('LOCK_VAULT');
-  for (const previous of [undefined, '0.1.4']) {
+  for (const previous of [undefined, '0.1.5']) {
     if (previous) f.stored.lastSeenRelease = previous;
     else delete f.stored.lastSeenRelease;
     const before = structuredClone(f.stored);
     const data = await status();
     assert.equal(data.isInitialized, true);
     assert.equal(data.isUnlocked, false);
-    assert.equal(data.pendingRelease, '0.1.5');
+    assert.equal(data.pendingRelease, '0.1.6');
     assert.deepEqual(f.stored, before);
   }
   assert.equal((await f.message('UNLOCK_VAULT', {password: 'strong password'})).success, true);
@@ -174,6 +174,19 @@ test('creation validates credentials, returns no keys, and cannot overwrite a va
   const unlocked = await f.message('UNLOCK_VAULT', { password: 'strong password' });
   assert.equal(unlocked.success, true);
   assert.equal(unlocked.data, true);
+});
+
+test('new wallets accept six-character passwords without composition rules', async () => {
+  const f = fixture();
+  const create = password => f.message('CREATE_VAULT', { mnemonic: 'valid mnemonic', password });
+  for (const [invalid, reason] of [['abcde', /6 characters/], ['x'.repeat(1025), /too long/]]) {
+    assert.match((await create(invalid)).error, reason);
+    assert.equal(f.stored.encryptedVault, undefined);
+  }
+  assert.equal((await create('abcdef')).success, true);
+  await f.message('LOCK_VAULT');
+  assert.equal((await f.message('UNLOCK_VAULT', {password: 'abcde'})).success, false);
+  assert.equal((await f.message('UNLOCK_VAULT', {password: 'abcdef'})).success, true);
 });
 
 test('locking during decryption cancels the unlock', async () => {

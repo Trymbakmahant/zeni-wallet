@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowLeft, Copy, Check, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import { useWallet } from "../context/WalletContext";
-import { generateNewMnemonic } from "@zeni/core";
+import { generateNewMnemonic, newVaultPasswordError, NEW_VAULT_PASSWORD_HINT } from "@zeni/core";
 
 export const OnboardingView: React.FC = () => {
   const { createWallet } = useWallet();
@@ -15,6 +15,11 @@ export const OnboardingView: React.FC = () => {
   const [backedUpChecked, setBackedUpChecked] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [attempted, setAttempted] = useState(false);
+  const credentialError = newVaultPasswordError(password);
+  const invalidCredential = !!credentialError && (!!password || attempted);
+  const confirmationError = (confirmPassword || attempted) && password !== confirmPassword
+    ? "The two entries must match exactly." : "";
 
   const startCreate = () => {
     const generated = generateNewMnemonic(128);
@@ -34,14 +39,8 @@ export const OnboardingView: React.FC = () => {
 
   const handleFinish = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (password.length < 12) {
-      setError("Password must be at least 12 characters");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
+    setAttempted(true);
+    if (isLoading || credentialError || password !== confirmPassword) return;
 
     setIsLoading(true);
     setError("");
@@ -229,7 +228,7 @@ export const OnboardingView: React.FC = () => {
       {/* Step: Set Password */}
       {step === "set_password" && (
         <div className="flex flex-col h-full justify-between p-5 z-10">
-          <form onSubmit={handleFinish} className="flex flex-col h-full justify-between">
+          <form noValidate onSubmit={handleFinish} className="flex flex-col h-full justify-between overflow-y-auto">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <button
@@ -248,54 +247,67 @@ export const OnboardingView: React.FC = () => {
 
               <h2 className="text-xl font-bold tracking-tight mb-1 text-white">Set Unlock Password</h2>
               <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-                This password will unlock your Zeni wallet only on this device.
+                Choose a password to unlock this wallet on your device. A longer, unique password is harder to guess.
               </p>
 
               {error && (
-                <div className="w-full max-w-full overflow-hidden p-3 mb-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 text-center animate-shake break-words break-all leading-relaxed">
+                <div role="alert" className="w-full max-w-full overflow-hidden p-3 mb-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 text-center animate-shake break-words break-all leading-relaxed">
                   {error}
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1.5">New Password (min 12 chars)</label>
+                  <label htmlFor="new-credential" className="text-xs text-zinc-400 block mb-1.5">New password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="new-credential"
+                      autoComplete="new-password"
+                      aria-describedby="credential-hint"
+                      aria-invalid={invalidCredential}
+                      onChange={(e) => { setPassword(e.target.value); setError(""); }}
                       required
-                      placeholder="Enter new password"
+                      placeholder="Enter your password"
                       className="w-full bg-[#0D0D10] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-zinc-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                       className="absolute right-3.5 top-3.5 text-zinc-400 hover:text-white cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                  <p id="credential-hint" aria-live="polite" className={`mt-1.5 text-xs ${invalidCredential ? "text-red-300" : "text-zinc-400"}`}>
+                    {invalidCredential ? credentialError : NEW_VAULT_PASSWORD_HINT}
+                  </p>
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1.5">Confirm Password</label>
+                  <label htmlFor="confirm-credential" className="text-xs text-zinc-400 block mb-1.5">Confirm password</label>
                   <input
                     type={showPassword ? "text" : "password"}
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    id="confirm-credential"
+                    autoComplete="new-password"
+                    aria-describedby="confirmation-error"
+                    aria-invalid={!!confirmationError}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
                     required
-                    placeholder="Confirm your password"
+                    placeholder="Enter it again"
                     className="w-full bg-[#0D0D10] border border-[#27272A] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-white text-white placeholder-zinc-500"
                   />
+                  <p id="confirmation-error" aria-live="polite" className="mt-1.5 text-xs text-red-300">{confirmationError}</p>
                 </div>
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || password.length < 12 || password !== confirmPassword}
+              disabled={isLoading}
               className="w-full py-3.5 rounded-full bg-[#E06341] hover:bg-[#EB6841] text-white font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#E06341]/20 transition-all active:scale-[0.99] cursor-pointer mt-4"
             >
               {isLoading ? "Encrypting Vault..." : "Complete Setup"}

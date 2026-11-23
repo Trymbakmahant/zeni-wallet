@@ -17,6 +17,7 @@ import {
   deriveAccountKeys,
   derivePqcKeypair,
   isValidMnemonic,
+  newVaultPasswordError,
   repairPqcPublicKeyHash,
   pqcSign,
   pqcVerify,
@@ -150,7 +151,8 @@ class BackgroundController {
   public async createVault(mnemonic: string, password: string): Promise<DerivedAccountKeys> {
     if (await this.isInitialized()) throw new Error("A wallet already exists. Reset it explicitly before creating another.");
     if (typeof mnemonic !== "string" || !isValidMnemonic(mnemonic)) throw new Error("Invalid recovery phrase");
-    if (typeof password !== "string" || password.length < 12 || password.length > 1024) throw new Error("Password must be between 12 and 1024 characters");
+    const credentialError = newVaultPasswordError(password);
+    if (credentialError) throw new Error(credentialError);
     const generation = this.vaultGeneration;
     const keys = deriveAccountKeys(mnemonic);
     const vaultData: VaultData = {

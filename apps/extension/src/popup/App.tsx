@@ -32,9 +32,9 @@ const MainLayout: React.FC = () => {
     return <main className="flex h-full flex-col justify-center gap-5 bg-black px-6 text-white">
       <span className="text-xs font-mono uppercase tracking-wider text-[#E06341]">Zeni Wallet updated</span>
       <h1 className="text-3xl font-semibold">What's new in {pendingRelease}</h1>
-      {pendingRelease === "0.1.5" && <ul className="list-disc space-y-3 pl-5 text-sm text-zinc-300">
-        <li>Open Trade to see QOR markets and price history from on-chain swaps.</li>
-        <li>Open Apps to manage connected sites and create or revoke agent sessions.</li>
+      {pendingRelease === "0.1.6" && <ul className="list-disc space-y-3 pl-5 text-sm text-zinc-300">
+        <li>When creating or importing a wallet, choose a password of at least 6 characters. A longer, unique password is safer.</li>
+        <li>Setup now explains when a password is too short or the confirmation does not match. Your current password still works.</li>
       </ul>}
       <p className="text-sm text-zinc-400">Your existing wallet is still on this device. No setup or recovery phrase is needed.</p>
       <button className="rounded-xl bg-white px-4 py-3 font-semibold text-black" onClick={() => {

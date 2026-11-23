@@ -1,5 +1,14 @@
 import { bytesToHex, hexToBytes } from "./utils.js";
 
+export const NEW_VAULT_PASSWORD_HINT = "Use at least 6 characters. Numbers and symbols are optional.";
+
+// Creation policy only. Decryption must continue to accept existing credentials unchanged.
+export function newVaultPasswordError(value: unknown): string | null {
+  if (typeof value !== "string") return NEW_VAULT_PASSWORD_HINT;
+  if (value.length > 1024) return "Password is too long. Use a shorter password.";
+  return Array.from(value).length < 6 ? NEW_VAULT_PASSWORD_HINT : null;
+}
+
 export interface EncryptedVaultEnvelope {
   version: 1;
   kdf: {
